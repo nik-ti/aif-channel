@@ -110,13 +110,21 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
     # One item at a time, deliberately: two placed concurrently would each see
     # the same open stories and each open one for the same news.
     for item in candidates:
-        if allowed and published >= batch_size:
+        # A human pressed the button. The pacing cap is there to stop the
+        # channel talking too much on its own; it is not a second opinion on a
+        # decision somebody already made deliberately.
+        forced = bool(item["forced"]) if "forced" in item.keys() else False
+
+        # Re-asked per item, because the answer differs for a forced one.
+        may_send, why_not = publisher.check_limits(forced=forced)
+
+        if may_send and published >= batch_size:
             break
-        if not allowed and placed >= batch_size * 2:
+        if not may_send and not forced and placed >= batch_size * 2:
             break
 
         try:
-            outcome = await process_item(item, place_only=not allowed)
+            outcome = await process_item(item, place_only=not may_send)
         except Exception as error:  # noqa: BLE001 - one bad item must not stop the rest
             log.exception("Item %s blew up: %s", item["id"], error)
             db.bump_attempts(item["id"])
@@ -133,8 +141,12 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
 
             allowed, reason = publisher.check_limits()
             if not allowed:
-                log.info("Stopping this round: %s", reason)
-                break
+                remaining = [c for c in candidates
+                             if ("forced" in c.keys() and c["forced"])]
+                if not remaining:
+                    log.info("Stopping this round: %s", reason)
+                    break
+                log.info("%s — continuing for %d forced item(s)", reason, len(remaining))
 
     # Roundups. Held items only ever reach the gate when a NEW item arrives on
     # their story; a story that goes quiet would hold them forever. This is the

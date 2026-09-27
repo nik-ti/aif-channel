@@ -65,12 +65,22 @@ def compose(post_html: str, url: str) -> str:
     return _strip_foreign_links(post_html.strip(), url)
 
 
-def check_limits() -> tuple[bool, str]:
-    """Returns (allowed, why not). A minimum gap, an hourly cap, a daily cap."""
+def check_limits(*, forced: bool = False) -> tuple[bool, str]:
+    """Returns (allowed, why not). A minimum gap, an hourly cap, a daily cap.
+
+    A forced item ignores the two caps: they exist to stop the channel talking
+    too much on its own, and a human pressing the button has already decided
+    this one is worth saying. It still waits out the gap, which is a different
+    thing — that one keeps two posts from landing on top of each other, and
+    Telegram cares about it whoever asked for the post.
+    """
     gap = db.seconds_since_last_post()
     if gap < config.MIN_SECONDS_BETWEEN_POSTS:
         return False, (f"only {gap:.0f}s since the last post "
                        f"(minimum {config.MIN_SECONDS_BETWEEN_POSTS}s)")
+
+    if forced:
+        return True, ""
 
     this_hour = db.posts_sent_since(60)
     if this_hour >= config.MAX_POSTS_PER_HOUR:
