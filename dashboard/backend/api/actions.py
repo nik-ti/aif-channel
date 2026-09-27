@@ -57,6 +57,11 @@ def force_publish(request: OverrideRequest, channel: str | None = None):
             raise HTTPException(status_code=404, detail=f"no item {request.item_id}")
         if row["status"] == "published":
             raise HTTPException(status_code=409, detail="that item is already published")
+        if row["status"] == "queued" and row["status_reason"] == "forced by a human":
+            # Already on its way. Saying so beats writing a second disagreement
+            # into a table whose whole worth is one row per real disagreement.
+            return {"ok": True, "item_id": request.item_id, "was": row["status"],
+                    "message": "already forced; it is in the queue"}
 
         with connection:
             connection.execute(

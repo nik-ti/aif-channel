@@ -322,6 +322,13 @@ def insert_item(
         return cursor.lastrowid
     except sqlite3.IntegrityError:
         # The UNIQUE(origin, external_id) rule fired: we have seen this before.
+        # The rollback is the point. A failed statement leaves the implicit
+        # transaction OPEN, and this is the most common outcome in the whole
+        # system — re-reading a feed hands back the same articles. Without it
+        # the write lock is held until something else happens to commit, which
+        # is why forcing a post from the dashboard would fail with "database is
+        # locked" for no visible reason.
+        conn().rollback()
         return None
 
 
@@ -525,7 +532,14 @@ def next_queued_items(limit: int) -> list[sqlite3.Row]:
 
 
 def expire_stale_items(ttl_minutes: int) -> int:
-    """Bin queued items that have waited too long. Returns how many were binned."""
+    """Bin queued items that have waited too long. Returns how many were binned.
+
+    A forced item is exempt. The clock runs from when the news arrived, not from
+    when it was queued, so anything a human rescued from the dashboard was
+    already older than the limit the moment they clicked — which killed it
+    before the pipeline had a chance to publish it. Someone noticing a bad
+    rejection an hour later is the normal case, not the exception.
+    """
     cursor = conn().execute(
         f"""
         UPDATE items
@@ -533,6 +547,7 @@ def expire_stale_items(ttl_minutes: int) -> int:
                status_reason = 'sat in the queue longer than {int(ttl_minutes)} minutes',
                updated_at = ?
          WHERE status = 'queued'
+           AND COALESCE(forced, 0) = 0
            AND fetched_at < datetime('now', '-{int(ttl_minutes)} minutes')
         """,
         (now_iso(),),
@@ -682,6 +697,7 @@ def create_post(
         conn().commit()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
+        conn().rollback()   # same reason as insert_item: a failed write holds the lock
         return None
 
 
