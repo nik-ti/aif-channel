@@ -95,6 +95,14 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         # that judge whether an item is worth posting.
         ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),
     ],
+    # A short name for the whole thread, not a copy of one of its posts.
+    # headline is the first wire item's raw title, frozen; summary is the last
+    # post. Neither reads as the name of a running situation, which is what the
+    # dashboard needs to show and what a person scanning a list of stories
+    # actually wants.
+    "stories": [
+        ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),
+    ],
 }
 
 # Indexes over migrated columns. They cannot live in schema.sql, which runs
@@ -872,6 +880,12 @@ def get_story_posts(story_id: int) -> list[sqlite3.Row]:
         """,
         (story_id,),
     ))
+
+
+def set_story_name(story_id: int, name: str) -> None:
+    """Give a story its short human name — see nodes/stories.py."""
+    conn().execute("UPDATE stories SET name = ? WHERE id = ?", (name[:90], story_id))
+    conn().commit()
 
 
 def record_story_post(story_id: int, published_item_id: int, summary: str,

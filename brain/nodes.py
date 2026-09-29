@@ -226,6 +226,10 @@ async def story_organizer_node(state: dict) -> dict[str, Any]:
         else:
             story_id = db.create_story(headline=headline, summary=headline,
                                        item_id=item["id"], at=db.now_iso())
+            # A short name for the thread, so a list of stories reads as a list
+            # of situations rather than of whichever wire item opened each one.
+            # Nothing depends on it: a story with no name still works.
+            await stories.name_story(story_id, f"{headline}\n\n{(item['body'] or '')[:400]}")
             story = stories.load_one(story_id, now)
             db.bump_counter("story_opened")
         log.info("Item %s opens story %s: %s", item["id"], story.id, why[:120])

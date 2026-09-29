@@ -101,6 +101,7 @@ class Story:
     """One running story: the items in it, and what the reader has been told."""
     id: int
     headline: str                                    # the first item's title, fixed
+    name: str = ""                                   # a short name for the thread
     summary: str = ""                                # what the story IS now, from the last post
     item_ids: list[int] = field(default_factory=list)
     first_at: datetime | None = None
@@ -386,6 +387,52 @@ GATE_SCHEMA = {
 # reversal, not a repeat. Embeddings cannot tell up from down. So the number is
 # handed to the gate as evidence and the gate still decides, the same division
 # of labour dedup already uses.
+NAME_SYSTEM = """Name this running story the way a news desk names a thread on a
+whiteboard: the situation, not the latest headline about it.
+
+Four to seven words. No numbers, no dates, no verbs in the past tense, no
+punctuation at the end. It has to still fit when the story moves on, so name
+the subject and the axis, not today's figure.
+
+  "US 30-year yield hits 5.47%, highest since 2004"  ->  US Treasury yields
+  "*US OFFERS 40 MILLION BARRELS FROM RESERVE"       ->  US strategic oil reserve
+  "BARKIN: INFLATION'S PERSISTENCE IS CLEARER"       ->  Fed on inflation persistence
+  "Apple passes $5 trillion market cap"              ->  Apple market value
+
+Answer with JSON only."""
+
+NAME_SCHEMA = {
+    "type": "object", "additionalProperties": False, "required": ["name"],
+    "properties": {"name": {"type": "string"}},
+}
+
+
+async def name_story(story_id: int, material: str) -> str:
+    """A short name for the thread. Returns "" and changes nothing on failure."""
+    try:
+        answer = await asyncio.wait_for(
+            openrouter.chat_json(
+                model=config.STORY_MODEL, system=NAME_SYSTEM,
+                user=material[:1200], schema=NAME_SCHEMA, schema_name="name",
+                temperature=0.0, max_tokens=60),
+            timeout=config.STORY_TIMEOUT_SECONDS,
+        )
+    except Exception as error:  # noqa: BLE001 - a nameless story still works
+        log.debug("Could not name story %s: %s", story_id, error)
+        return ""
+    # The model sometimes invents its own key ("running_story_name") despite
+    # the schema, so take the one string it returned whatever it called it.
+    fields = answer or {}
+    value = fields.get("name")
+    if not value:
+        value = next((v for v in fields.values() if isinstance(v, str) and v.strip()), "")
+    name = str(value).strip().strip(".")
+    if name:
+        db.set_story_name(story_id, name)
+        log.info("Story %s named: %s", story_id, name)
+    return name
+
+
 ECHO_FLOOR = 0.79
 
 
@@ -591,6 +638,7 @@ def _hydrate(row, now: datetime) -> Story:
     story = Story(
         id=row["id"],
         headline=row["headline"],
+        name=row["name"] if "name" in row.keys() else "",
         summary=row["summary"],
         first_at=parse_time(row["first_at"]),
         last_item_at=parse_time(row["last_item_at"]),

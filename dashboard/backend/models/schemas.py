@@ -44,6 +44,7 @@ class StoryPost(BaseModel):
 class Story(BaseModel):
     id: int
     headline: str
+    name: str = ""
     summary: str
     status: str
     item_count: int

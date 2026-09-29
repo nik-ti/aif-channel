@@ -53,6 +53,7 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
         SELECT
             s.id,
             s.headline,
+            s.name,
             s.summary,
             s.status,
             s.last_post_at,
@@ -109,6 +110,9 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             {
                 "id": row["id"],
                 "headline": row["headline"],
+                # A short name for the thread. Falls back to the opening
+                # headline for stories that predate naming.
+                "name": (row["name"] if "name" in row.keys() else "") or row["headline"],
                 "summary": row["summary"],
                 # "status" and "state" are the same underlying value
                 # (live/closed) — the API spec asks for both field names.
