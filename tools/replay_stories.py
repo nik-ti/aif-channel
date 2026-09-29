@@ -61,7 +61,7 @@ async def replay(items: list[dict], write: bool) -> tuple[list[stories.Story], l
         # into this list. Without it the replay shows the model a longer list
         # than production ever would, and stops predicting production.
         open_now = [s for s in live if s.is_live(now)][:config.STORY_MAX_OPEN]
-        home, _why = await stories.place(item, open_now, now)
+        home, _why, _asked = await stories.place(item, open_now, now)
 
         if home is None:
             home = stories.Story(id=next_id, headline=(item["title"] or "")[:90],

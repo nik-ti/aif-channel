@@ -207,7 +207,16 @@ async def story_organizer_node(state: dict) -> dict[str, Any]:
                 return {"story": story, "story_id": story.id}
 
     open_stories = stories.load_open(now)
-    home, why = await stories.place(item, open_stories, now)
+    home, why, could_ask = await stories.place(item, open_stories, now)
+
+    if not could_ask:
+        # The model could not be reached or its answer could not be read. That
+        # is not an answer, and guessing "new story" here publishes duplicates:
+        # a story with no posts always sends its first. Leave it queued; the
+        # next round is two minutes away and it has 90 to spend.
+        if not dry:
+            db.set_item_status(item["id"], "queued", "waiting to be placed again")
+        return {"outcome": "retry"}
 
     if home is None:
         headline = (item["title"] or "")[:200]

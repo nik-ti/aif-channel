@@ -248,17 +248,21 @@ async def place(item: dict, stories: list["Story"], now: datetime
             timeout=config.STORY_TIMEOUT_SECONDS,
         )
     except Exception as error:  # noqa: BLE001
-        log.warning("Could not place item %s (%s) — starting its own story",
-                    item["id"], error)
+        # NOT the same as "this belongs nowhere". Opening a story here would
+        # give it no posts, and a story with no posts always publishes its
+        # first — which is how the same news went out twice under two story
+        # numbers. The caller leaves the item queued to ask again instead.
+        log.warning("Could not ask where item %s belongs (%s) — leaving it queued",
+                    item["id"], error or type(error).__name__)
         _record_failure("place", f"item {item['id']}")
-        return None, f"could not be asked: {error}"
+        return None, f"could not be asked: {error}", False
 
     _record_success()
     choice = answer.get("story") or 0
     reason = str(answer.get("reason", ""))[:200]
     if not isinstance(choice, int) or not 1 <= choice <= len(live):
-        return None, reason
-    return live[choice - 1], reason
+        return None, reason, True          # asked, and the answer was "none of them"
+    return live[choice - 1], reason, True
 
 
 GATE_SYSTEM = """You are the editor of a news channel. A story you are already

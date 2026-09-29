@@ -165,6 +165,13 @@ async def fetch_for(item) -> str | None:
         return cached
     if not url or not url.startswith("http"):
         return None
+    # A tweet's link is the tweet itself, and x.com answers a logged-out reader
+    # with its sign-in page. 39 of the first 58 fetches from X stored that page
+    # as "the article" and handed it to the writer and the editor, which is how
+    # a clean post about oil got rejected for containing X formatting it never
+    # had. The tweet text is already the whole source.
+    if any(host in url for host in ("x.com/", "twitter.com/")):
+        return None
 
     text = await _plain(url)
     used = "plain"
