@@ -169,6 +169,52 @@ async def _chat_text_once(
     raise LLMError(f"model {model} kept running out of room (stopped because: {reason})")
 
 
+# A model that cannot produce the schema is the quietest failure this system
+# has. Every station asking for one fails OPEN, so "no usable answer" and "yes,
+# publish" leave the same trace, and the log line reads the same either way.
+# The per-node alarms cannot see it: they fire on ten failures IN A ROW, and a
+# model that fails one call in thirty never makes a streak. deepseek-v3.2 spent
+# a week answering the dedup judge in prose 12 times out of 327 and nothing
+# ever said so. This is the one place every schema call passes through.
+SCHEMA_ALERT_RATE = 0.10
+SCHEMA_ALERT_MIN_SAMPLE = 30
+_schema_alerted: set[str] = set()
+
+
+def _is_shape_failure(error: Exception) -> bool:
+    """Did the model reply, but not in a usable shape?"""
+    text = str(error)
+    return ("could not read JSON" in text or "ran out of room" in text
+            or "rejected strict mode" in text)
+
+
+def _record_schema_answer(model: str, usable: bool) -> None:
+    """Count whether a model answered in the shape it was asked for."""
+    from utils import db
+    db.bump_counter(f"schema_{'ok' if usable else 'bad'}:{model}")
+    if usable or model in _schema_alerted:
+        return
+
+    tallies = db.counters_today("schema_")
+    good = tallies.get(f"schema_ok:{model}", 0)
+    bad = tallies.get(f"schema_bad:{model}", 0)
+    total = good + bad
+    if total < SCHEMA_ALERT_MIN_SAMPLE or bad / total <= SCHEMA_ALERT_RATE:
+        return
+
+    _schema_alerted.add(model)
+    from utils import telegram_error
+    telegram_error.send_error(
+        f"{model} failed to answer in the required shape on {bad} of today's "
+        f"{total} calls ({bad / total:.0%}). Every station that asks for one "
+        f"fails open, so those calls were treated as approvals and nothing "
+        f"else will look wrong: duplicates get published and the log still "
+        f"says the check ran.\n\n"
+        f"Run: python3 tools/check_echo.py --labelled --model <candidate>",
+        node_name="openrouter_schema",
+    )
+
+
 async def chat_json(
     *, model: str, system: str, user: str, schema: dict | None = None,
     schema_name: str = "output", temperature: float = 0.0, max_tokens: int = 500,
@@ -191,16 +237,25 @@ async def chat_json(
     last: Exception | None = None
     for position, candidate in enumerate(chain):
         try:
-            return await _chat_json_once(
+            answer = await _chat_json_once(
                 model=candidate, system=system, user=user, schema=schema,
                 schema_name=schema_name, temperature=temperature,
                 max_tokens=max_tokens,
             )
         except LLMError as error:
             last = error
+            # Only a reply that came back and could not be used counts against
+            # the model. A 429 or a dead socket is the network's fault, is
+            # already visible as a retry, and would drown the signal.
+            if schema is not None and _is_shape_failure(error):
+                _record_schema_answer(candidate, usable=False)
             if position + 1 < len(chain):
                 log.warning("Model %s failed (%s) — falling back to %s",
                             candidate, str(error)[:120], chain[position + 1])
+        else:
+            if schema is not None:
+                _record_schema_answer(candidate, usable=True)
+            return answer
     raise last if last else LLMError("no model was tried")
 
 
@@ -239,8 +294,23 @@ async def _chat_json_once(
     try:
         data = await _post(payload)
     except LLMError as error:
+        text = str(error)
+        # require_parameters matches on EVERY parameter in the request, not just
+        # the schema, so one unrelated parameter can leave zero eligible
+        # endpoints and the whole call 404s. Measured: openai/gpt-5-mini has no
+        # endpoint declaring `temperature`, so asking for both it and a schema
+        # returned "No endpoints found that can handle the requested
+        # parameters" every time, and the model looked dead when it was not —
+        # dropping require_parameters alone, OpenAI serves it and honours the
+        # schema. Narrow routing is worth having, but not at the price of
+        # losing a model outright.
+        if "No endpoints found" in text:
+            log.warning("No endpoint for %s with these parameters — retrying "
+                        "without require_parameters", model)
+            payload.pop("provider", None)
+            data = await _post(payload)
         # Not every model understands strict mode.
-        if schema is not None and ("response_format" in str(error) or "json_schema" in str(error)):
+        elif schema is not None and ("response_format" in text or "json_schema" in text):
             log.warning("Model %s rejected strict mode — retrying without it", model)
             payload["response_format"] = {"type": "json_object"}
             payload.pop("provider", None)

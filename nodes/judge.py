@@ -160,7 +160,12 @@ async def _judge(item, candidate, *, system: str, schema: dict,
                 schema=schema,
                 schema_name=schema_name,
                 temperature=0.0,
-                max_tokens=200,
+                # A ceiling, not a charge: a model answering in 40 tokens costs
+                # 40 whatever this says. It was 200, which is under what a
+                # reasoning model spends thinking before it writes anything, so
+                # the reply came back empty and the caller failed open. Four of
+                # this week's seven placement failures were exactly that.
+                max_tokens=700,
             ),
             timeout=config.JUDGE_TIMEOUT_SECONDS,
         )

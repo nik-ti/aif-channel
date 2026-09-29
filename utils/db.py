@@ -1080,6 +1080,23 @@ def recent_decline_rate(window: int) -> tuple[float, int]:
 # COUNTERS AND NOTES
 # =============================================================================
 
+def counters_today(prefix: str) -> dict[str, int]:
+    """Today's tallies whose kind starts with `prefix`. Never raises.
+
+    Used to turn scattered failures into a rate. A streak counter cannot see
+    them: twelve failures spread through three hundred calls never makes ten
+    in a row, so nothing ever fires.
+    """
+    try:
+        rows = conn().execute(
+            "SELECT kind, n FROM counters WHERE day = date('now') AND kind LIKE ?",
+            (prefix + "%",))
+        return {r["kind"]: r["n"] for r in rows}
+    except sqlite3.OperationalError as error:
+        logger.debug("Counters for %s not read: %s", prefix, error)
+        return {}
+
+
 def bump_counter(kind: str, n: int = 1) -> None:
     """Add to today's tally for one kind of event (ingested, published, ...).
 

@@ -119,7 +119,7 @@ async def _already_told(new_text: str, published_text: str, when: str) -> tuple[
             openrouter.chat_json(
                 model=config.ECHO_MODEL, system=SYSTEM, user=user,
                 schema=SCHEMA, schema_name="already_told",
-                temperature=0.0, max_tokens=200,
+                temperature=0.0, max_tokens=900,
             ),
             timeout=config.JUDGE_TIMEOUT_SECONDS,
         )

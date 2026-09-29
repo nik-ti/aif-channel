@@ -244,7 +244,7 @@ async def place(item: dict, stories: list["Story"], now: datetime
             openrouter.chat_json(
                 model=config.STORY_MODEL, system=PLACE_SYSTEM, user=user,
                 schema=PLACE_SCHEMA, schema_name="place",
-                temperature=0.0, max_tokens=200,
+                temperature=0.0, max_tokens=700,
             ),
             timeout=config.STORY_TIMEOUT_SECONDS,
         )
@@ -414,7 +414,7 @@ async def name_story(story_id: int, material: str) -> str:
             openrouter.chat_json(
                 model=config.STORY_MODEL, system=NAME_SYSTEM,
                 user=material[:1200], schema=NAME_SCHEMA, schema_name="name",
-                temperature=0.0, max_tokens=60),
+                temperature=0.0, max_tokens=250),
             timeout=config.STORY_TIMEOUT_SECONDS,
         )
     except Exception as error:  # noqa: BLE001 - a nameless story still works
@@ -544,7 +544,7 @@ async def should_post(story: Story, now: datetime) -> dict:
                       f"## What has come in since ({len(pending)} items)\n\n{fresh}"
                       f"{echo}"),
                 schema=GATE_SCHEMA, schema_name="gate",
-                temperature=0.0, max_tokens=400,
+                temperature=0.0, max_tokens=900,
             ),
             timeout=config.STORY_TIMEOUT_SECONDS,
         )
