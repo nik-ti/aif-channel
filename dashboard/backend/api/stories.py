@@ -59,9 +59,16 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             s.status,
             s.last_post_at,
             (SELECT COUNT(*) FROM items i WHERE i.story_id = s.id) AS item_count,
+            -- Only what actually reached Telegram. Counting every posts row
+            -- made a story whose only draft the editor rejected read as
+            -- "1 posted of 1 item" while it had published nothing.
             (SELECT COUNT(*) FROM posts p
                 JOIN items i2 ON i2.id = p.item_id
-                WHERE i2.story_id = s.id) AS post_count
+                WHERE i2.story_id = s.id
+                  AND p.status = 'sent' AND p.telegram_message_id IS NOT NULL) AS post_count,
+            (SELECT COUNT(*) FROM posts p
+                JOIN items i2 ON i2.id = p.item_id
+                WHERE i2.story_id = s.id AND p.status = 'declined') AS declined_count
         FROM stories s
         ORDER BY s.last_item_at DESC
         """,
@@ -124,6 +131,7 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
                 "state": row["status"],
                 "item_count": row["item_count"],
                 "post_count": row["post_count"],
+                "declined_count": row["declined_count"] if "declined_count" in row.keys() else 0,
                 "last_post_at": row["last_post_at"],
                 "posts": posts_by_story.get(row["id"], []),
             }

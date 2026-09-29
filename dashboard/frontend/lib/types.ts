@@ -56,6 +56,7 @@ export interface Story {
   status: string;
   item_count: number;
   post_count: number;
+  declined_count: number;
   state: string;
   last_post_at: string | null;
   first_at: string | null;

@@ -60,10 +60,14 @@ function StateTag({ state }: { state: string }) {
 // The ratio the owner asked for at a glance: how much of what the story
 // collected actually went out. A story sitting on unposted items gets the
 // same amber "held" color the Posts tab already uses for that state.
-function HoldMeter({ postCount, itemCount }: { postCount: number; itemCount: number }) {
+function HoldMeter({ postCount, itemCount, declinedCount }: {
+  postCount: number; itemCount: number; declinedCount: number;
+}) {
   const total = Math.max(itemCount, postCount, 1);
   const pct = Math.min(100, Math.round((postCount / total) * 100));
-  const held = Math.max(0, itemCount - postCount);
+  // What is waiting, not counting drafts the editor threw out — those are
+  // shown separately, because "held" and "rejected" are different problems.
+  const held = Math.max(0, itemCount - postCount - declinedCount);
   return (
     <div className="flex flex-col gap-1.5">
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary">
@@ -74,8 +78,18 @@ function HoldMeter({ postCount, itemCount }: { postCount: number; itemCount: num
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-ink-muted">
         <span className="tabular-nums">
-          {postCount} posted of {itemCount} item{itemCount === 1 ? "" : "s"}
+          {postCount} published of {itemCount} item{itemCount === 1 ? "" : "s"}
         </span>
+        {declinedCount > 0 && (
+          <span
+            className="inline-flex items-center gap-1.5 font-medium"
+            style={{ color: STATUS_INFO.declined.color }}
+            title="Posts the writer produced and the editor rejected — never sent"
+          >
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_INFO.declined.color }} />
+            {declinedCount} rejected
+          </span>
+        )}
         {held > 0 && (
           <span
             className="inline-flex items-center gap-1.5 font-medium"
@@ -136,7 +150,7 @@ function StoryCard({ story }: { story: Story }) {
               </span>
               {running && (
                 <span className="text-xs text-ink-muted" title={absoluteTime(story.first_at)}>
-                  Running {running}
+                  Running {running.replace(" ago", "")}
                 </span>
               )}
             </div>
@@ -149,7 +163,7 @@ function StoryCard({ story }: { story: Story }) {
           )}
         </button>
 
-        <HoldMeter postCount={story.post_count} itemCount={story.item_count} />
+        <HoldMeter postCount={story.post_count} itemCount={story.item_count} declinedCount={story.declined_count} />
 
         {story.summary && (
           <div className="rounded-md bg-surface-secondary px-3 py-2">

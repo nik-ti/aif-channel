@@ -50,6 +50,7 @@ class Story(BaseModel):
     status: str
     item_count: int
     post_count: int
+    declined_count: int = 0
     state: str
     last_post_at: str | None = None
     posts: list[StoryPost] = []
