@@ -191,6 +191,7 @@ async def main() -> None:
         "declined": "❌ rejected by the editor",
         "duplicate": "🔁 already covered",
         "irrelevant": "⛔ not news, or not our subject",
+        "declined":   "✗ written, then rejected by the editor",
         "low_impact": "📉 real news, nothing to reprice",
         "held": "🤐 its story had not moved",
         "write_failed": "❌ the writer failed",

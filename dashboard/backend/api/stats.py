@@ -204,6 +204,7 @@ def get_stats(
                SUM(status IN ('merged', 'held')) AS folded,
                SUM(status = 'duplicate') AS duplicate,
                SUM(status IN ('low_impact', 'irrelevant')) AS filtered,
+               SUM(status = 'declined') AS declined,
                ROUND(AVG(NULLIF(importance, 0)), 2) AS avg_importance
         FROM items
         WHERE {item_where}

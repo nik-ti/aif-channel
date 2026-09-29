@@ -462,8 +462,13 @@ async def editor_node(state: dict) -> dict[str, Any]:
         # Final rejection.
         if not dry:
             db.set_post_status(state["post_id"], "declined")
+            # Not "irrelevant": that is the sorter's word for "not our subject",
+            # decided before anything is written. This item WAS our subject and
+            # cleared the bar — what failed is the post. One word for both made
+            # the dashboard say a story had been judged uninteresting when it
+            # had actually been written and thrown away.
             db.set_item_status(
-                item["id"], "irrelevant",
+                item["id"], "declined",
                 f"editor rejected it {decision['rules_broken']}: {decision['reason']}",
             )
         return {"editor_verdict": decision, "outcome": "declined",
