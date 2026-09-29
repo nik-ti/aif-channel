@@ -360,7 +360,11 @@ PERSONA_RECENT_POSTS = _get_int("PERSONA_RECENT_POSTS", 15)
 # Same model as the sorter and the judge. Both questions here are reading
 # comprehension over short text, which is what this model is cheapest at.
 STORY_MODEL = _get("STORY_MODEL", "deepseek/deepseek-v3.2")
-STORY_TIMEOUT_SECONDS = _get_int("STORY_TIMEOUT_SECONDS", 30)
+# Raised from 30 after measuring: with require_parameters narrowing routing to
+# providers that honour the schema, the slowest of 20 calls took 22.2s. A
+# placement that times out used to open a duplicate story, so the cost of being
+# impatient here is higher than the cost of waiting.
+STORY_TIMEOUT_SECONDS = _get_int("STORY_TIMEOUT_SECONDS", 45)
 
 # How many open stories the placement step is shown. It answers with an index
 # into this list, so a long one makes the prompt long and the numbering easy to

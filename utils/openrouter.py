@@ -224,6 +224,15 @@ async def _chat_json_once(
             "type": "json_schema",
             "json_schema": {"name": schema_name, "strict": True, "schema": schema},
         }
+        # Without this, OpenRouter may route to a provider that does not support
+        # structured output at all. Its own docs: enforcement "varies by
+        # provider ... others treat it as a strong hint, so exact compliance is
+        # not guaranteed on every endpoint". A provider that treats the schema
+        # as a hint is where the judge's prose answers, placement's timeouts and
+        # a {"running_story_name": ...} instead of {"name": ...} came from.
+        # require_parameters restricts routing to providers that actually
+        # support everything the request asks for.
+        payload["provider"] = {"require_parameters": True}
     else:
         payload["response_format"] = {"type": "json_object"}
 
@@ -234,6 +243,7 @@ async def _chat_json_once(
         if schema is not None and ("response_format" in str(error) or "json_schema" in str(error)):
             log.warning("Model %s rejected strict mode — retrying without it", model)
             payload["response_format"] = {"type": "json_object"}
+            payload.pop("provider", None)
             data = await _post(payload)
         else:
             raise
