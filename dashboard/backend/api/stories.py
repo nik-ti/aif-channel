@@ -54,6 +54,7 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             s.id,
             s.headline,
             s.name,
+            s.first_at,
             s.summary,
             s.status,
             s.last_post_at,
@@ -113,6 +114,9 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
                 # A short name for the thread. Falls back to the opening
                 # headline for stories that predate naming.
                 "name": (row["name"] if "name" in row.keys() else "") or row["headline"],
+                # When the story opened, so a card can say how long it has
+                # been running and not only when it last spoke.
+                "first_at": row["first_at"] if "first_at" in row.keys() else None,
                 "summary": row["summary"],
                 # "status" and "state" are the same underlying value
                 # (live/closed) — the API spec asks for both field names.

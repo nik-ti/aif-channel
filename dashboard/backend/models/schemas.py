@@ -45,6 +45,7 @@ class Story(BaseModel):
     id: int
     headline: str
     name: str = ""
+    first_at: str | None = None
     summary: str
     status: str
     item_count: int

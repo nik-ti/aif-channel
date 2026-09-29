@@ -20,6 +20,10 @@ export const STATUS_INFO: Record<string, StatusInfo> = {
   low_impact: { label: "Low impact", hint: "Real news, but nothing has to reprice on it", color: "#F97316" },
   irrelevant: { label: "Irrelevant", hint: "Not our topics, or not really news", color: "#DC2626" },
   declined: { label: "Declined", hint: "On topic and written, but the editor rejected the post", color: "#BE185D" },
+  // Not a raw items.status — this is the literal string the /stories endpoint
+  // buckets everything into that isn't published/merged/held, for that one
+  // response only (see components/ui/badge.tsx's older STATUS_TONE map).
+  rejected: { label: "Rejected", hint: "Did not go out — filtered, declined, or a duplicate", color: "#DC2626" },
   duplicate: { label: "Duplicate", hint: "Already covered", color: "#2563EB" },
   merged: { label: "Merged", hint: "Folded into another item's story post", color: "#64748B" },
   expired: { label: "Expired", hint: "Sat in the queue too long and went stale", color: "#9CA3AF" },

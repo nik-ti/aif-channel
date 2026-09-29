@@ -48,12 +48,17 @@ export interface StoryPost {
 export interface Story {
   id: number;
   headline: string;
+  // Short human name for the whole thread, written when the story opens —
+  // this is what a reader should see as the card's title, not `headline`
+  // (that's just the raw first wire item).
+  name: string;
   summary: string;
   status: string;
   item_count: number;
   post_count: number;
   state: string;
   last_post_at: string | null;
+  first_at: string | null;
   posts: StoryPost[];
 }
 

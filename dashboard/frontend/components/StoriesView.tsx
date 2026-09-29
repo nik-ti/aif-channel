@@ -1,7 +1,9 @@
-// Stories tab: every story, with every post/item inside it shown in full —
-// title, body, status, and the AI node's reason for that status. Live
-// stories first, closed ones tucked into a collapsed section so the tab
-// stays scannable once the channel has history.
+// Stories tab: every story as a card — its name, whether it's still live,
+// how much it has told the reader vs. how much it's holding back, and its
+// most recent post. Expanding a card shows every item filed under it in
+// full (title, body, status, the pipeline's reason). Live stories first,
+// closed ones collapsed below so the tab stays scannable once a channel has
+// history.
 "use client";
 
 import { useState } from "react";
@@ -9,45 +11,103 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { StatusReason } from "@/components/StatusReason";
-import { Badge, statusTone } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useStories } from "@/hooks/useApi";
+import { STATUS_INFO } from "@/lib/status";
 import type { Story, StoryPost } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-function formatTime(iso: string | null) {
-  if (!iso) return "none yet";
+function toDate(iso: string | null) {
+  if (!iso) return null;
   const date = new Date((iso.includes("T") ? iso : iso.replace(" ", "T")) + "Z");
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-// Color-coded status marker per the dashboard's spec (🟢 published, ⚫
-// merged, 🔴 rejected, 🟡 held).
-const STATUS_MARK: Record<StoryPost["status"], string> = {
-  published: "🟢",
-  merged: "⚫",
-  held: "🟡",
-  rejected: "🔴",
-};
+// "3h ago" / "2d ago" for the card face; the exact timestamp still shows up
+// as a tooltip so nothing is lost, only compressed.
+function timeAgo(iso: string | null): string | null {
+  const date = toDate(iso);
+  if (!date) return null;
+  const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.round(days / 30)}mo ago`;
+}
+
+function absoluteTime(iso: string | null) {
+  const date = toDate(iso);
+  return date ? date.toLocaleString() : iso ?? "";
+}
+
+// Green dot while the story can still take new items, gray once it's closed
+// — the same "active vs. done" colors the rest of the dashboard uses.
+function StateTag({ state }: { state: string }) {
+  const live = state === "live";
+  const color = live ? STATUS_INFO.published.color : STATUS_INFO.expired.color;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color }}>
+      <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", live && "animate-pulse")} style={{ background: color }} />
+      {live ? "Live" : "Closed"}
+    </span>
+  );
+}
+
+// The ratio the owner asked for at a glance: how much of what the story
+// collected actually went out. A story sitting on unposted items gets the
+// same amber "held" color the Posts tab already uses for that state.
+function HoldMeter({ postCount, itemCount }: { postCount: number; itemCount: number }) {
+  const total = Math.max(itemCount, postCount, 1);
+  const pct = Math.min(100, Math.round((postCount / total) * 100));
+  const held = Math.max(0, itemCount - postCount);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary">
+        <div
+          className="h-full rounded-full transition-[width]"
+          style={{ width: `${pct}%`, background: STATUS_INFO.published.color }}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-ink-muted">
+        <span className="tabular-nums">
+          {postCount} posted of {itemCount} item{itemCount === 1 ? "" : "s"}
+        </span>
+        {held > 0 && (
+          <span
+            className="inline-flex items-center gap-1.5 font-medium"
+            style={{ color: STATUS_INFO.held.color }}
+            title="Items filed under this story that haven't gone out as their own post yet"
+          >
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_INFO.held.color }} />
+            holding {held} back
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function StoryPostRow({ post }: { post: StoryPost }) {
   const label = post.status === "published" ? "Post" : "Item";
   return (
     <div className="flex flex-col gap-1.5 border-t border-border py-3 first:border-t-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <span aria-hidden>{STATUS_MARK[post.status] ?? "⚪"}</span>
-        <span className="text-sm font-medium text-ink-primary">
-          {label} ({post.status})
-        </span>
-        <Badge tone={statusTone(post.status)}>{post.status}</Badge>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+        <span className="font-medium text-ink-primary">{label}</span>
+        <StatusBadge status={post.status} />
+        <span>#{post.item_id}</span>
       </div>
-      <p className="text-xs text-ink-muted">ID: {post.item_id}</p>
       <p className="text-sm font-medium text-ink-primary">{post.title}</p>
       {post.body && post.body !== post.title && (
-        <p className="whitespace-pre-wrap text-sm text-ink-muted">{post.body}</p>
+        <p className="whitespace-pre-wrap break-words text-sm text-ink-muted">{post.body}</p>
       )}
       {post.status_reason && (
         <p className="text-xs text-ink-muted">
-          → <StatusReason reason={post.status_reason} />
+          <span className="font-medium text-ink-primary">Why: </span>
+          <StatusReason reason={post.status_reason} />
         </p>
       )}
     </div>
@@ -56,25 +116,31 @@ function StoryPostRow({ post }: { post: StoryPost }) {
 
 function StoryCard({ story }: { story: Story }) {
   const [open, setOpen] = useState(false);
+  const title = story.name || story.headline;
+  const ago = timeAgo(story.last_post_at);
+  const running = timeAgo(story.first_at);
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="gap-2">
         <button
           onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
           className="flex w-full items-start justify-between gap-3 text-left"
         >
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-ink-muted">
-              Story #{story.id} &middot; {story.state}
-            </span>
-            <CardTitle>{story.headline}</CardTitle>
-            {story.summary && <p className="text-sm text-ink-muted">{story.summary}</p>}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
-              <span>{story.item_count} items</span>
-              <span>{story.post_count} posts</span>
-              <span>Last post: {formatTime(story.last_post_at)}</span>
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <StateTag state={story.state} />
+              <span className="text-xs text-ink-muted" title={absoluteTime(story.last_post_at)}>
+                {ago ? `Posted ${ago}` : "Nothing published yet"}
+              </span>
+              {running && (
+                <span className="text-xs text-ink-muted" title={absoluteTime(story.first_at)}>
+                  Running {running}
+                </span>
+              )}
             </div>
+            <h3 className="break-words text-base font-semibold leading-snug text-ink-primary">{title}</h3>
           </div>
           {open ? (
             <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-ink-muted" />
@@ -82,6 +148,15 @@ function StoryCard({ story }: { story: Story }) {
             <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-muted" />
           )}
         </button>
+
+        <HoldMeter postCount={story.post_count} itemCount={story.item_count} />
+
+        {story.summary && (
+          <div className="rounded-md bg-surface-secondary px-3 py-2">
+            <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-muted">Last told the reader</p>
+            <p className="whitespace-pre-wrap break-words text-sm text-ink-primary">{story.summary}</p>
+          </div>
+        )}
       </CardHeader>
       {open && (
         <CardContent className="pt-0">
@@ -116,13 +191,13 @@ export function StoriesView({ channel }: { channel: string }) {
   const closed = data?.stories.filter((s) => s.state !== "live") ?? [];
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-ink-primary">Active stories ({live.length})</h2>
         {isFetching && <span className="text-xs text-ink-muted">Refreshing...</span>}
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {live.map((story) => (
           <StoryCard key={story.id} story={story} />
         ))}
@@ -138,7 +213,7 @@ export function StoriesView({ channel }: { channel: string }) {
           Closed stories ({closed.length})
         </button>
         {showClosed && (
-          <div className="mt-3 grid grid-cols-1 gap-3">
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {closed.map((story) => (
               <StoryCard key={story.id} story={story} />
             ))}
