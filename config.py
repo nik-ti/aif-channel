@@ -417,6 +417,13 @@ STORY_MAX_POSTS = _get_int("STORY_MAX_POSTS", 12)
 STORY_DIGEST_ITEMS = _get_int("STORY_DIGEST_ITEMS", 3)
 STORY_DIGEST_MINUTES = _get_int("STORY_DIGEST_MINUTES", 180)
 
+# The roundup breaks a DEADLOCK: material arriving while the editor keeps saying
+# no. Past this much silence there is no deadlock — the story has stopped, and
+# arithmetic has no business publishing on it. The 30-year Treasury yield went
+# out twice in seven hours on 29 September because three items had collected
+# over 37 hours of silence and the rule above fired without asking anyone.
+STORY_DIGEST_MAX_QUIET_HOURS = _get_int("STORY_DIGEST_MAX_QUIET_HOURS", 12)
+
 
 # =============================================================================
 # MISC
@@ -486,5 +493,12 @@ ARTICLE_MAX_CHARS = _get_int("ARTICLE_MAX_CHARS", 6000)
 ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.72)
 
 # How far back a reader remembers. Apple's repeat came three days later.
+# Measured 2026-09-29 on 8 hand-labelled pairs of this channel's own posts,
+# asking the exit question below. deepseek-v3.2 answered in prose instead of
+# JSON on 7 of 8 — and the exit check fails open, so in practice it was not
+# running at all. mistral-medium-3.1 got 8/8 on the schema AND 8/8 on the
+# verdict; gemini-2.5-flash got the schema right but let the 30-year Treasury
+# repeat through. Do not move this to a model without re-running that set.
+ECHO_MODEL = _get("ECHO_MODEL", "mistralai/mistral-medium-3.1")
 ECHO_WINDOW_HOURS = _get_int("ECHO_WINDOW_HOURS", 120)
 ECHO_MAX_COMPARED = _get_int("ECHO_MAX_COMPARED", 40)

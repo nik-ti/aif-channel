@@ -59,6 +59,7 @@ STATION_TO_NODE: dict[str, str] = {
     "gatekeeper": "gatekeeper",
     "writer": "writer",
     "editor": "editor",
+    "repeat_check": "repeat_check",
 }
 
 # node_name -> (source file, constant name) for nodes that have a prompt.
@@ -71,6 +72,7 @@ PROMPT_SOURCES: dict[str, tuple[str, str]] = {
     "gatekeeper": ("stories.py", "GATE_SYSTEM"),
     "writer": ("writer.py", "PROMPT"),
     "editor": ("editor.py", "PROMPT"),
+    "repeat_check": ("echo.py", "SYSTEM"),
 }
 
 # node_name -> config.py variable name that holds the model it runs on.
@@ -81,6 +83,7 @@ MODEL_VARS: dict[str, str] = {
     "gatekeeper": "STORY_MODEL",
     "writer": "WRITER_MODEL",
     "editor": "EDITOR_MODEL",
+    "repeat_check": "ECHO_MODEL",
     "embeddings": "EMBEDDING_MODEL",
 }
 
@@ -112,6 +115,10 @@ DESCRIPTIONS: dict[str, str] = {
     "writer": "Rewrites the story into the channel's one house style.",
     "editor": "Reads the finished post against its source and approves or "
               "rejects it before it can be published.",
+    "repeat_check": "The last station. Compares the finished post against every "
+                    "post of the last 5 days and asks whether a reader who saw "
+                    "the closest one learns anything new — the only check "
+                    "nothing can route around.",
     "embeddings": "Turns text into meaning-vectors so near-duplicate stories "
                   "can be shortlisted before the judge rules on them "
                   "(dedup check 4). No prompt — it is not an LLM call.",
@@ -119,7 +126,7 @@ DESCRIPTIONS: dict[str, str] = {
 
 # Fallback display order, used only if a profile's PIPELINE can't be parsed.
 NODE_ORDER = ["dedup_judge", "sorter", "story_organizer", "gatekeeper",
-              "writer", "editor", "embeddings"]
+              "writer", "editor", "repeat_check", "embeddings"]
 
 
 def _node_order_for(channel: str) -> list[str]:

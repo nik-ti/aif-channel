@@ -516,9 +516,13 @@ async def should_post(story: Story, now: datetime) -> dict:
 
     # The roundup: enough has piled up for long enough. Released without asking
     # the model, deliberately — this exists for the case where the story never
-    # gives the model a reason to say yes again.
+    # gives the model a reason to say yes again. Bounded above, because that
+    # case is a DEADLOCK and a story silent for half a day is not deadlocked,
+    # it is over; releasing on arithmetic there posts stale material nobody
+    # judged. Past the ceiling the model is asked like on any other path.
     if (len(story.pending) >= config.STORY_DIGEST_ITEMS
-            and quiet >= config.STORY_DIGEST_MINUTES):
+            and config.STORY_DIGEST_MINUTES <= quiet
+            <= config.STORY_DIGEST_MAX_QUIET_HOURS * 60):
         return {"verdict": "post", "angle": ROUNDUP_ANGLE,
                 "reason": f"roundup: {len(story.pending)} items waiting, "
                           f"{quiet:.0f} min since the last post"}
