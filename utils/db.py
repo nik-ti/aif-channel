@@ -62,9 +62,11 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("calendar_previous", "ALTER TABLE items ADD COLUMN calendar_previous TEXT DEFAULT ''"),
         ("article_text", "ALTER TABLE items ADD COLUMN article_text TEXT DEFAULT ''"),  # Cached to avoid fetching URL twice—see nodes/article.py.
         ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),  # Human override from dashboard; graph skips gate stations.
+        ("calendar_key", "ALTER TABLE items ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Stable name of the scheduled release—see calendar.key_for.
     ],
     "stories": [
         ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),  # Short name for dashboard/list (not headline/summary).
+        ("calendar_key", "ALTER TABLE stories ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Set when the story IS one scheduled release; placement then needs no model.
     ],
 }
 
@@ -217,6 +219,15 @@ def record_source_failure(name: str, error: str) -> int:
 
 # ITEMS
 
+def _calendar_key(match: dict | None) -> str:
+    """The scheduled release an item belongs to, as a name that survives a feed
+    refresh. Duplicated from nodes/calendar.key_for to keep utils/ free of a
+    nodes/ import."""
+    if not match:
+        return ""
+    return f"{match.get('country','')}|{match.get('title','')}|{match.get('at_utc','')}"
+
+
 def insert_item(
     *,
     origin: str,
@@ -243,16 +254,16 @@ def insert_item(
             INSERT INTO items (
                 origin, source_name, external_id, url, title, body, image_url,
                 video_url, video_kind,
-                calendar_title, calendar_forecast, calendar_previous,
+                calendar_title, calendar_forecast, calendar_previous, calendar_key,
                 published_at, norm_title, title_hash, topic_hint,
                 status, status_reason, fetched_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 origin, source_name, external_id, url, title,
                 body[: config.MAX_BODY_CHARS], image_url, video_url, video_kind,
                 (calendar or {}).get("title", ""), (calendar or {}).get("forecast", ""),
-                (calendar or {}).get("previous", ""),
+                (calendar or {}).get("previous", ""), _calendar_key(calendar),
                 published_at,
                 norm_title, title_hash, topic_hint,
                 status, status_reason, now_iso(), now_iso(),
@@ -658,14 +669,31 @@ def seconds_since_last_post() -> float:
 # STORIES: unit of work; items join stories, stories post when moved. All state rebuilt
 # from queries.
 
-def create_story(*, headline: str, summary: str, item_id: int, at: str) -> int:
+def story_for_calendar_key(key: str) -> sqlite3.Row | None:
+    """The live story that IS this scheduled release, if one is already open.
+
+    One release, one story, decided without a model. Placement used to ask a
+    model which open story a data print joined, and on 30 September it put the
+    month's PCE figure into a story about Fed officials talking about rate hikes.
+    """
+    if not key:
+        return None
+    return conn().execute(
+        "SELECT * FROM stories WHERE calendar_key = ? AND status = 'live' "
+        "ORDER BY id DESC LIMIT 1",
+        (key,),
+    ).fetchone()
+
+
+def create_story(*, headline: str, summary: str, item_id: int, at: str,
+                 calendar_key: str = "") -> int:
     """Create story and attach first item (single transaction); crash between risks empty
     story.
     """
     cursor = conn().execute(
-        "INSERT INTO stories (headline, summary, first_at, last_item_at) "
-        "VALUES (?, ?, ?, ?)",
-        (headline[:200], summary[:300], at, at),
+        "INSERT INTO stories (headline, summary, first_at, last_item_at, calendar_key) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (headline[:200], summary[:300], at, at, calendar_key),
     )
     story_id = int(cursor.lastrowid)
     conn().execute(

@@ -190,6 +190,30 @@ async def story_organizer_node(state: dict) -> dict[str, Any]:
                 log.info("Item %s resumes story %s", item["id"], existing_id)
                 return {"story": story, "story_id": story.id}
 
+    # A scheduled release is not a guess. The calendar named it before it
+    # happened, so every item about it belongs to one story, found by that name
+    # and not by asking a model which of thirty open stories looks closest. This
+    # is the branch that stops a PCE print landing in a story about Fed speeches.
+    release = item["calendar_key"] if "calendar_key" in item.keys() else ""
+    if release and not dry:
+        existing = db.story_for_calendar_key(release)
+        if existing is not None:
+            db.attach_item_to_story(item["id"], int(existing["id"]))
+            story = stories.load_one(int(existing["id"]), now)
+            if story is not None:
+                log.info("Item %s joins story %s: same scheduled release (%s)",
+                         item["id"], story.id, item["calendar_title"])
+                return {"story": story, "story_id": story.id}
+        headline = (item["title"] or "")[:200]
+        story_id = db.create_story(headline=headline, summary=headline,
+                                   item_id=item["id"], at=db.now_iso(),
+                                   calendar_key=release)
+        db.set_story_name(story_id, (item["calendar_title"] or headline)[:80])
+        story = stories.load_one(story_id, now)
+        log.info("Item %s opens story %s for the scheduled release %s",
+                 item["id"], story_id, item["calendar_title"])
+        return {"story": story, "story_id": story_id}
+
     open_stories = stories.load_open(now)
     home, why, could_ask = await stories.place(item, open_stories, now)
 

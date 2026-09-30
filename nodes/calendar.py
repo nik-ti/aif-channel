@@ -48,6 +48,23 @@ _ALIASES: list[tuple[tuple[str, ...], tuple[str, ...]]] = [
     (("main refinancing rate", "ecb"), ("ecb", "european central bank", "lagarde")),
     (("pmi",),                       ("pmi",)),
     (("crude oil inventories",),     ("crude inventories", "oil inventories", "eia")),
+    # Added 2026-09-30. The channel had run two months with no PCE entry at all,
+    # so the Fed's preferred inflation gauge could never match its own release:
+    # on 30 September the calendar held "Core PCE Price Index m/m" with a 0.3%
+    # forecast and six items about that print matched nothing, while one of them
+    # attached itself to Final GDP because it mentioned GDP in passing.
+    (("pce",),                       ("pce", "personal consumption")),
+    (("core pce",),                  ("core pce",)),
+    (("consumer confidence",),       ("consumer confidence",)),
+    (("jolts", "job openings"),      ("jolts", "job openings")),
+    (("adp",),                       ("adp",)),
+    (("durable goods",),             ("durable goods",)),
+    (("ism",),                       ("ism",)),
+    (("trade balance",),             ("trade balance", "trade deficit")),
+    (("housing starts",),            ("housing starts",)),
+    (("building permits",),          ("building permits",)),
+    (("industrial production",),     ("industrial production",)),
+    (("consumer sentiment",),        ("consumer sentiment", "michigan")),
 ]
 
 # The feed's currency code, and how the wire names that economy.
@@ -96,35 +113,63 @@ async def refresh() -> int:
     return len(rows)
 
 
-def match(text: str, when: datetime) -> dict | None:
+def match(text: str, when: datetime, headline: str = "") -> dict | None:
     """The scheduled release this item is about, or None.
 
-    `when` is when the item arrived. Candidates are releases whose time is
-    within a short window of it, for an economy the text names, whose title
-    the text refers to. The nearest in time wins.
+    `when` is when the item arrived. Candidates are releases whose time is within
+    a short window of it, for an economy the text names, whose title the text
+    refers to. A release named in the item's HEADLINE beats one mentioned only in
+    passing further down, and only then does the nearest in time win. That order
+    matters: an item headlined "softer US inflation" also mentioned a GDP
+    revision three lines later and was filed under Final GDP.
     """
     lowered = f" {text.lower()} "
+    head = f" {headline.lower()} " if headline else ""
     since = (when - _AFTER).strftime("%Y-%m-%d %H:%M:%S")
     until = (when + _BEFORE).strftime("%Y-%m-%d %H:%M:%S")
 
-    best, best_gap = None, None
-    for row in db.calendar_between(since, until):
+    candidates = list(db.calendar_between(since, until))
+    titles = {row["title"].lower() for row in candidates}
+
+    best, best_rank = None, None
+    for row in candidates:
         country_words = _COUNTRY_WORDS.get(row["country"])
         if not country_words or not any(w in lowered for w in country_words):
             continue
         title = row["title"].lower()
-        if not any(any(f in title for f in feed_words) and any(i in lowered for i in item_words)
-                   for feed_words, item_words in _ALIASES):
+        hits = [item_words for feed_words, item_words in _ALIASES
+                if any(f in title for f in feed_words)
+                and any(i in lowered for i in item_words)]
+        if not hits:
             continue
-        # "Core Retail Sales" and "Retail Sales" share a slot. The core one is
-        # only the match when the item says so.
+        # "Core Retail Sales" and "Retail Sales" share a slot, so the core row is
+        # only the match when the item says "core" — but ONLY when the plain row
+        # is actually there to take it instead. On 30 September the calendar held
+        # Core PCE and no headline PCE, and this rule silently threw away every
+        # item that just said "US PCE came in at 3.4%".
         if "core" in title and "core" not in lowered:
-            continue
-        gap = abs((when - datetime.fromisoformat(row["at_utc"]).replace(tzinfo=timezone.utc)).total_seconds())
-        if best is None or gap < best_gap:
-            best, best_gap = row, gap
+            plain = title.replace("core ", "").strip()
+            if plain in titles:
+                continue
+        in_headline = bool(head) and any(i in head for words in hits for i in words)
+        gap = abs((when - datetime.fromisoformat(row["at_utc"])
+                   .replace(tzinfo=timezone.utc)).total_seconds())
+        rank = (0 if in_headline else 1, gap)
+        if best_rank is None or rank < best_rank:
+            best, best_rank = row, rank
 
     return dict(best) if best is not None else None
+
+
+def key_for(match: dict | None) -> str:
+    """A stable name for one scheduled release, or "" when there is no match.
+
+    NOT the calendar row's id: refresh() empties the table and re-inserts, so the
+    ids change every few hours. Country, title and scheduled time do not.
+    """
+    if not match:
+        return ""
+    return f"{match['country']}|{match['title']}|{match['at_utc']}"
 
 
 def describe(item) -> str:

@@ -50,7 +50,9 @@ def _store_article(article: fetch_rss.Article) -> bool:
         url=article.url,
         title=article.title,
         body=article.summary,
-        calendar=calendar.match(f"{article.title} {article.summary}", datetime.now(timezone.utc)),
+        calendar=calendar.match(f"{article.title} {article.summary}",
+                                datetime.now(timezone.utc),
+                                headline=article.title),
         published_at=(article.published.strftime("%Y-%m-%d %H:%M:%S")
                       if article.published else None),
         norm_title=norm_title,
@@ -92,7 +94,9 @@ def _store_tweet(tweet: fetch_tweets.Tweet) -> bool:
         image_url="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.image_url,
         video_url="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.video,
         video_kind="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.video_kind,
-        calendar=calendar.match(tweet.text, datetime.now(timezone.utc)),
+        # A tweet has no separate headline, but its first line acts as one.
+        calendar=calendar.match(tweet.text, datetime.now(timezone.utc),
+                                headline=tweet.text.split("\n")[0]),
         published_at=None,   # X's own timestamp format differs; fetched_at is enough
         norm_title=norm_title,
         title_hash=fingerprint,
