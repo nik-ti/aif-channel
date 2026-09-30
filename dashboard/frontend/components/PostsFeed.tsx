@@ -143,6 +143,24 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
         </div>
       </dl>
 
+      {item.editor_verdict && item.editor_reason && (
+        <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
+          <span className="font-medium text-ink-primary">
+            {item.editor_verdict === "approve" ? "Why it was approved" : "Why it was rejected"}
+            {item.editor_confidence != null && (
+              <span className="font-normal text-ink-muted">
+                {" "}· {Math.round(item.editor_confidence * 100)}% sure
+              </span>
+            )}
+            {item.editor_attempt != null && item.editor_attempt > 1 && (
+              <span className="font-normal text-ink-muted"> · after a rewrite</span>
+            )}
+            <span className="font-medium text-ink-primary">: </span>
+          </span>
+          {item.editor_reason}
+        </p>
+      )}
+
       {item.status_reason && (
         <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
           <span className="font-medium text-ink-primary">Why: </span>
@@ -151,6 +169,16 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
       )}
 
       <div className="flex flex-wrap items-center gap-2">
+        {item.telegram_url && (
+          <a
+            href={item.telegram_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-11 items-center gap-1.5 rounded-md border border-sky-300 bg-sky-50 px-3 text-xs font-medium text-sky-800 hover:bg-sky-100 sm:h-8"
+          >
+            View in Telegram <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
         {item.url && (
           <a
             href={item.url}

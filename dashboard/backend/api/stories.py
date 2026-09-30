@@ -80,7 +80,13 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             i.status_reason AS item_status_reason,
             p.post_html,
             p.status AS post_status,
-            p.telegram_message_id
+            p.telegram_message_id,
+            (SELECT e.verdict FROM editor_decisions e
+              WHERE e.item_id = i.id ORDER BY e.id DESC LIMIT 1) AS editor_verdict,
+            (SELECT e.reason FROM editor_decisions e
+              WHERE e.item_id = i.id ORDER BY e.id DESC LIMIT 1) AS editor_reason,
+            (SELECT e.confidence FROM editor_decisions e
+              WHERE e.item_id = i.id ORDER BY e.id DESC LIMIT 1) AS editor_confidence
         FROM items i
         LEFT JOIN posts p ON p.item_id = i.id
         WHERE i.story_id IS NOT NULL
@@ -89,9 +95,12 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
         channel=name,
     )
 
+    username = paths.channel_username(name)
     posts_by_story: dict[int, list[dict]] = {}
     for row in item_rows:
         body = _strip_html(row["post_html"]) if row["post_html"] else (row["item_body"] or "")
+        message_id = row["telegram_message_id"]
+        sent = row["post_status"] == "sent" and message_id
         entry = {
             "id": row["item_id"],
             "item_id": row["item_id"],
@@ -99,6 +108,11 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             "body": body,
             "status": _display_status(row["item_status"]),
             "status_reason": row["item_status_reason"] or "",
+            "telegram_url": (f"https://t.me/{username}/{message_id}"
+                             if username and sent else None),
+            "editor_verdict": row["editor_verdict"],
+            "editor_reason": row["editor_reason"],
+            "editor_confidence": row["editor_confidence"],
         }
         posts_by_story.setdefault(row["story_id"], []).append(entry)
 

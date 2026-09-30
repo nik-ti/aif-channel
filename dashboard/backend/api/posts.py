@@ -91,10 +91,30 @@ def get_posts(
         total = sum(status_counts.values())
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    # The editor's own words are the answer to "why?" for a published item, where
+    # status_reason only ever says "sent as message N". The last decision is the
+    # one that counts: a rewritten post is judged twice and only the final
+    # verdict decided whether it went out.
     rows = query(
         f"""
         SELECT id, fetched_at AS time, source_name, title, body, url, story_id,
-               status, status_reason, importance, market, topic
+               status, status_reason, importance, market, topic,
+               (SELECT p.telegram_message_id FROM posts p
+                 WHERE p.item_id = items.id AND p.status = 'sent'
+                   AND p.telegram_message_id IS NOT NULL
+                 ORDER BY p.id DESC LIMIT 1)          AS telegram_message_id,
+               (SELECT e.verdict FROM editor_decisions e
+                 WHERE e.item_id = items.id ORDER BY e.id DESC LIMIT 1)
+                                                      AS editor_verdict,
+               (SELECT e.reason FROM editor_decisions e
+                 WHERE e.item_id = items.id ORDER BY e.id DESC LIMIT 1)
+                                                      AS editor_reason,
+               (SELECT e.confidence FROM editor_decisions e
+                 WHERE e.item_id = items.id ORDER BY e.id DESC LIMIT 1)
+                                                      AS editor_confidence,
+               (SELECT e.attempt FROM editor_decisions e
+                 WHERE e.item_id = items.id ORDER BY e.id DESC LIMIT 1)
+                                                      AS editor_attempt
         FROM items
         {where}
         ORDER BY id DESC
@@ -103,6 +123,15 @@ def get_posts(
         (*params, limit, offset),
         channel=name,
     )
+
+    # Built here rather than in the browser: only this side knows the channel's
+    # @name, and a channel without one (ai_news has no id yet) must simply get no
+    # link instead of a broken one.
+    username = paths.channel_username(name)
+    for row in rows:
+        message_id = row.get("telegram_message_id")
+        row["telegram_url"] = (f"https://t.me/{username}/{message_id}"
+                               if username and message_id else None)
 
     return {
         "channel": name,

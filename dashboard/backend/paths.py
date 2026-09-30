@@ -46,6 +46,31 @@ def database_path(channel: str | None = None) -> Path:
     return ROOT_DIR / "data" / (match.group(1) if match else "markets.db")
 
 
+def channel_username(channel: str | None = None) -> str:
+    """A channel's Telegram @name, or "" when it is a numeric id.
+
+    Read from .env the same way config.py does: the profile names the key, and a
+    channel-specific value wins over the shared one. Only an @name can be turned
+    into a t.me link a non-member can open.
+    """
+    name = channel or active_channel()
+    profile = channel_dir(name) / "profile.py"
+    try:
+        match = re.search(r'^CHANNEL_ID_KEY\s*=\s*["\'](.+?)["\']',
+                          profile.read_text(), re.M)
+    except OSError:
+        return ""
+    if not match:
+        return ""
+    key = match.group(1)
+    env = dotenv_values(ENV_PATH) if ENV_PATH.exists() else {}
+    for candidate in (f"{name.upper()}_{key}", key):
+        value = (env.get(candidate) or os.environ.get(candidate) or "").strip()
+        if value.startswith("@"):
+            return value[1:]
+    return ""
+
+
 def list_channel_names() -> list[str]:
     """Every channel this project defines: a directory under channels/ with
     its own profile.py. Sorted for a stable, predictable switcher order."""

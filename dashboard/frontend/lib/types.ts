@@ -16,6 +16,17 @@ export interface PostItem {
   importance: number;
   market: string;
   topic: string;
+  // Set only once a post exists and was sent. The link is built by the backend,
+  // which is the only side that knows the channel's @name.
+  telegram_message_id: number | null;
+  telegram_url: string | null;
+  // The editor's own verdict on the finished post. For a published item this is
+  // the only place that says WHY it was allowed out — status_reason just says
+  // "sent as message N".
+  editor_verdict: "approve" | "decline" | null;
+  editor_reason: string | null;
+  editor_confidence: number | null;
+  editor_attempt: number | null;
 }
 
 export interface PostsResponse {
@@ -43,6 +54,10 @@ export interface StoryPost {
   body: string;
   status: "published" | "merged" | "rejected" | "held";
   status_reason: string;
+  telegram_url: string | null;
+  editor_verdict: "approve" | "decline" | null;
+  editor_reason: string | null;
+  editor_confidence: number | null;
 }
 
 export interface Story {

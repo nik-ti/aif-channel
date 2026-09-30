@@ -7,7 +7,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { StatusReason } from "@/components/StatusReason";
@@ -118,11 +118,35 @@ function StoryPostRow({ post }: { post: StoryPost }) {
       {post.body && post.body !== post.title && (
         <p className="whitespace-pre-wrap break-words text-sm text-ink-muted">{post.body}</p>
       )}
+      {post.editor_verdict && post.editor_reason && (
+        <p className="text-xs text-ink-muted">
+          <span className="font-medium text-ink-primary">
+            {post.editor_verdict === "approve" ? "Why it was approved" : "Why it was rejected"}
+            {post.editor_confidence != null && (
+              <span className="font-normal text-ink-muted">
+                {" "}· {Math.round(post.editor_confidence * 100)}% sure
+              </span>
+            )}
+            <span className="font-medium text-ink-primary">: </span>
+          </span>
+          {post.editor_reason}
+        </p>
+      )}
       {post.status_reason && (
         <p className="text-xs text-ink-muted">
           <span className="font-medium text-ink-primary">Why: </span>
           <StatusReason reason={post.status_reason} />
         </p>
+      )}
+      {post.telegram_url && (
+        <a
+          href={post.telegram_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-0.5 inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-sky-300 bg-sky-50 px-2.5 text-xs font-medium text-sky-800 hover:bg-sky-100"
+        >
+          View in Telegram <ExternalLink className="h-3.5 w-3.5" />
+        </a>
       )}
     </div>
   );
