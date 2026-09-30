@@ -16,6 +16,9 @@ export interface PostItem {
   importance: number;
   market: string;
   topic: string;
+  // Why the sorter scored it as it did — the answer to "why did we cover this
+  // at all", which status_reason only ever kept for items it REJECTED.
+  sorter_reason: string;
   // Set only once a post exists and was sent. The link is built by the backend,
   // which is the only side that knows the channel's @name.
   telegram_message_id: number | null;
@@ -54,6 +57,7 @@ export interface StoryPost {
   body: string;
   status: "published" | "merged" | "rejected" | "held";
   status_reason: string;
+  sorter_reason: string;
   telegram_url: string | null;
   editor_verdict: "approve" | "decline" | null;
   editor_reason: string | null;

@@ -162,7 +162,7 @@ async def sorter_node(state: dict) -> dict[str, Any]:
 
     if not dry:
         db.set_item_sorting(item_id, verdict["topic"], verdict["importance"],
-                            verdict["market"])
+                            verdict["market"], verdict.get("reason", ""))
 
     if not verdict["relevant"]:
         if not dry:

@@ -143,6 +143,13 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
         </div>
       </dl>
 
+      {item.sorter_reason && (
+        <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
+          <span className="font-medium text-ink-primary">Why it was covered: </span>
+          {item.sorter_reason}
+        </p>
+      )}
+
       {item.editor_verdict && item.editor_reason && (
         <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
           <span className="font-medium text-ink-primary">
@@ -161,7 +168,7 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
         </p>
       )}
 
-      {item.status_reason && (
+      {item.status_reason && !item.status_reason.startsWith("sent as message") && (
         <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
           <span className="font-medium text-ink-primary">Why: </span>
           <StatusReason reason={item.status_reason} />

@@ -78,6 +78,7 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             i.body AS item_body,
             i.status AS item_status,
             i.status_reason AS item_status_reason,
+            i.sorter_reason,
             p.post_html,
             p.status AS post_status,
             p.telegram_message_id,
@@ -108,6 +109,7 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             "body": body,
             "status": _display_status(row["item_status"]),
             "status_reason": row["item_status_reason"] or "",
+            "sorter_reason": row["sorter_reason"] or "",
             "telegram_url": (f"https://t.me/{username}/{message_id}"
                              if username and sent else None),
             "editor_verdict": row["editor_verdict"],

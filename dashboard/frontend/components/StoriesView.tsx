@@ -118,6 +118,12 @@ function StoryPostRow({ post }: { post: StoryPost }) {
       {post.body && post.body !== post.title && (
         <p className="whitespace-pre-wrap break-words text-sm text-ink-muted">{post.body}</p>
       )}
+      {post.sorter_reason && (
+        <p className="text-xs text-ink-muted">
+          <span className="font-medium text-ink-primary">Why it was covered: </span>
+          {post.sorter_reason}
+        </p>
+      )}
       {post.editor_verdict && post.editor_reason && (
         <p className="text-xs text-ink-muted">
           <span className="font-medium text-ink-primary">
@@ -132,7 +138,7 @@ function StoryPostRow({ post }: { post: StoryPost }) {
           {post.editor_reason}
         </p>
       )}
-      {post.status_reason && (
+      {post.status_reason && !post.status_reason.startsWith("sent as message") && (
         <p className="text-xs text-ink-muted">
           <span className="font-medium text-ink-primary">Why: </span>
           <StatusReason reason={post.status_reason} />

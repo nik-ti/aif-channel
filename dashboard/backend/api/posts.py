@@ -98,7 +98,7 @@ def get_posts(
     rows = query(
         f"""
         SELECT id, fetched_at AS time, source_name, title, body, url, story_id,
-               status, status_reason, importance, market, topic,
+               status, status_reason, importance, market, topic, sorter_reason,
                (SELECT p.telegram_message_id FROM posts p
                  WHERE p.item_id = items.id AND p.status = 'sent'
                    AND p.telegram_message_id IS NOT NULL

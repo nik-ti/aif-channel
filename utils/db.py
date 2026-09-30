@@ -63,6 +63,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("article_text", "ALTER TABLE items ADD COLUMN article_text TEXT DEFAULT ''"),  # Cached to avoid fetching URL twice—see nodes/article.py.
         ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),  # Human override from dashboard; graph skips gate stations.
         ("calendar_key", "ALTER TABLE items ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Stable name of the scheduled release—see calendar.key_for.
+        ("sorter_reason", "ALTER TABLE items ADD COLUMN sorter_reason TEXT DEFAULT ''"),  # Why the sorter scored it so. status_reason only keeps this for items it REJECTED.
     ],
     "stories": [
         ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),  # Short name for dashboard/list (not headline/summary).
@@ -412,14 +413,18 @@ def set_item_status(item_id: int, status: str, reason: str = "") -> None:
 
 
 def set_item_sorting(item_id: int, topic: str, importance: int,
-                     market: str = "") -> None:
-    """Record sorter decision; market stored for all items so tools/stats.py --dropped
-    shows why.
+                     market: str, reason: str = "") -> None:
+    """Store what the sorter decided, including WHY.
+
+    The reason used to be kept only for items the sorter rejected, written into
+    status_reason. An item that passed carried it in memory and lost it: by the
+    time the post went out, status_reason had been overwritten with "sent as
+    message 531", so nothing recorded why the channel judged it worth covering.
     """
     conn().execute(
-        "UPDATE items SET topic = ?, importance = ?, market = ?, updated_at = ? "
-        "WHERE id = ?",
-        (topic, importance, market, now_iso(), item_id),
+        "UPDATE items SET topic = ?, importance = ?, market = ?, sorter_reason = ?, "
+        "updated_at = ? WHERE id = ?",
+        (topic, importance, market, reason[:300], now_iso(), item_id),
     )
     conn().commit()
 
