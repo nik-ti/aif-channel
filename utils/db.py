@@ -743,31 +743,68 @@ def set_story_name(story_id: int, name: str) -> None:
     conn().commit()
 
 
-def record_story_post(story_id: int, published_item_id: int, summary: str,
+def record_story_post(story_id: int, published_item_id: int, post_text: str,
                       *, covers_others: bool = True) -> None:
-    """Log story post; by default mark held/queued items merged (covers_others=False for
-    forced posts). Call only after send succeeds; idempotent.
+    """Log a story's post and mark only the items it actually covered.
+
+    `post_text` is the published post as the reader sees it. Every item waiting on
+    the story fed the writer, but the writer does not have to use them all, so
+    nodes/coverage.py checks each one against the post: an item is marked merged
+    only when the post repeats a detail that item alone supplied. The rest go back
+    to held, where they stay as fuel for the story's next post instead of being
+    silently buried. covers_others=False for a forced post, which was written from
+    one item alone. Call only after the send succeeds; idempotent.
     """
     at = now_iso()
     conn().execute(
         "UPDATE stories SET last_post_at = ?, summary = ? WHERE id = ?",
-        (at, summary[:300], story_id),
+        (at, post_text[:300], story_id),
     )
     if not covers_others:
         conn().commit()
         return
-    conn().execute(
+
+    waiting = list(conn().execute(
         """
-        UPDATE items
-           SET status = 'merged',
-               status_reason = ?,
-               updated_at = ?
-         WHERE story_id = ? AND id != ? AND status IN ('queued', 'held')
+        SELECT id, title, body FROM items
+         WHERE story_id = ? AND status IN ('queued', 'held')
         """,
-        (f"covered by the story {story_id} post written from item {published_item_id}",
-         at, story_id, published_item_id),
-    )
+        (story_id,),
+    ))
+
+    # The trigger is the post's main source, so it must be part of the comparison
+    # even though it is never a candidate.
+    trigger = conn().execute(
+        "SELECT id, title, body FROM items WHERE id = ?", (published_item_id,)
+    ).fetchone()
+
+    from nodes import coverage
+    covered, still_waiting = coverage.split_by_coverage(post_text, waiting, trigger)
+
+    for item_id, why in covered:
+        conn().execute(
+            "UPDATE items SET status = 'merged', status_reason = ?, updated_at = ? "
+            " WHERE id = ?",
+            (f"covered by the story {story_id} post from item {published_item_id} — {why}",
+             at, item_id),
+        )
+    for item_id, why in still_waiting:
+        conn().execute(
+            "UPDATE items SET status = 'held', status_reason = ?, updated_at = ? "
+            " WHERE id = ?",
+            (f"story {story_id} posted from item {published_item_id} but {why}; "
+             f"still waiting for the next one",
+             at, item_id),
+        )
     conn().commit()
+
+    if covered:
+        bump_counter("story_item_covered", len(covered))
+    if still_waiting:
+        bump_counter("story_item_left_waiting", len(still_waiting))
+        logger.info("Story %s posted from item %s: %d item(s) covered, "
+                    "%d left waiting because the post did not carry their details",
+                    story_id, published_item_id, len(covered), len(still_waiting))
 
 
 def close_stale_stories(idle_hours: int, max_hours: int) -> list[sqlite3.Row]:
