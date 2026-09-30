@@ -45,6 +45,20 @@ most dangerous thing in the pool. Every real duplicate measured here arrived wit
 unchecked. A duplicate is a small embarrassment; a silent channel is worse. Every such
 failure is counted, and a run of them raises an alert.
 
+**A repeat is no longer destroyed.** The same *text* — link, headline, wording, or a
+near-identical vector — is still dropped, because nothing is lost. But when the judge
+rules "same event" on two items written **differently**, the later one is filed with
+that event's story as fuel and gets no post of its own. Different words carry
+different facts: on 30 September "U.S. CORE PCE FALLS BELOW EVERY ANALYST FORECAST —
+below the entire range of 51 Bloomberg forecasts" was thrown away as a repeat of a
+thinner item about the same print, and so were two further accounts of it.
+
+**And "duplicate of item X" only counts when X reached the reader.** If the matched
+item is in no live story, nothing has been published for this to repeat, so the item
+goes through untouched. That is the mistake that did the real damage: three accounts
+of one inflation print were suppressed against an item whose post turned out to be
+about a Fed governor's speech.
+
 ---
 
 ### Phase 2: SORTING & FILTERING (Sorter Node)
@@ -82,9 +96,19 @@ with a written reason you can read on the Posts tab.
 News doesn't post as isolated items. Instead, it joins a **story** — a grouping of related developments.
 
 **How placement works:**
-1. Look at all currently open stories
-2. Use an LLM to decide: "Does this item belong to story #82 (Treasury yields), or is it new?"
-3. Output: either attach to an existing story OR create a new one
+1. **If the item is about a scheduled release, no model is asked at all.** The
+   calendar named that release before it happened, so every item about it shares one
+   story, keyed by country, title and scheduled time. Asking a model instead put the
+   month's PCE inflation figure into a story about Fed officials giving speeches, and
+   the post that came out was about the speeches.
+2. Otherwise: look at all currently open stories
+3. Use an LLM to decide: "Does this item belong to story #82 (Treasury yields), or is it new?"
+4. Output: either attach to an existing story OR create a new one
+
+**When the model cannot be reached, the item stays queued** and is asked again in two
+minutes. It is *not* opened as a new story: a story with no posts always sends its
+first, so guessing here publishes duplicates — that is how one Treasury yield went out
+twice under two story numbers.
 
 **Story definition:**
 - A story is a single ongoing event or theme
@@ -99,7 +123,10 @@ News doesn't post as isolated items. Instead, it joins a **story** — a groupin
 ---
 
 ### Phase 4: STORY GATE (Should_Post Node)
-The gate asks: "Has the story state changed, or is this just noise within the same story?"
+The gate asks two questions: "Has the story state changed?" and, if not, "does a
+waiting item carry a fact the reader was never told?" The second one matters because
+dedup now files other accounts of the same event here, and a better-worded account is
+not a change of state — without the second question those would wait forever.
 
 **There is no single ladder.** Each kind of situation has its own short list of
 states, and only a move between them earns a post:
@@ -170,7 +197,34 @@ text, nothing is sent. A wrong post cannot be recalled.
 
 ---
 
-### Phase 7: PUBLISHING (Publish Node)
+### Phase 7: THE EXIT CHECK (Repeat_Check Node)
+The last question before anything is sent: **has the reader already been told this?**
+
+It stands at the exit, so nothing can route around it — not a new story, not a roundup,
+not a post you forced from this dashboard. And it compares the **finished post** against
+every post of the last 120 hours, which is the only comparison that matches what a
+reader actually sees. Every other guard compares wire items, and a reader never reads
+wire items.
+
+**It deliberately does not ask dedup's question.** A 30-year Treasury yield closing at
+5.59% and touching 5.587% intraday are different events — dedup ruled them different
+three times over and was right — but they are the same news to a reader, who got told
+twice in seven hours. This station asks whether the reader *learns* anything, and its
+prompt spells out that a date is not a threshold: "highest since 2002" after "highest
+since 2004" is one measurement still climbing. A round number crossed for the first
+time is a threshold; a year is not.
+
+Measured on 60 posts, real repeats scored 0.741–0.924 and legitimate posts 0.734–0.776,
+so the number only builds a shortlist and a model rules.
+
+*It fails open,* and the cost of that is worth knowing: a model that cannot answer in
+JSON is indistinguishable from one that says send, and the log reads the same either
+way. That is not hypothetical — one model answered 7 of 8 test pairs in prose and this
+check was dead for days while looking healthy.
+
+---
+
+### Phase 8: PUBLISHING (Publish Node)
 Approved post is sent to Telegram \`@market_one_news\`
 
 **Rules:**
@@ -183,7 +237,19 @@ Approved post is sent to Telegram \`@market_one_news\`
 - Video and GIFs from a tweet are sent as real media, not a link — except from
   \`crypto_banter\`, whose media is dropped on purpose.
 - An item that waits in the queue longer than **90 minutes expires**. Late breaking news
-  is worse than none.
+  is worse than none. Items *held* on a story are exempt — they are waiting on purpose.
+
+**After the send, only the items the post actually mentioned are marked covered.** This
+is checked in code with no model: an item counts as covered when the post repeats a
+detail that only *that* item supplied. A model shown six items reports all six as used
+simply because it saw them, so it is not asked.
+
+*Why this exists:* every waiting item used to be marked covered the moment the story
+posted. Replayed over the channel's history, **9 of 42 had never been in the post that
+claimed them** — including "US inflation remains at 3.4%", "Ethereum blasts to $2,800
+for the first time since January", and "the cost of hiring an oil tanker has soared to
+$1 million a day". Each carried a note saying the reader had been told. Anything the
+post did not carry now goes back to waiting, for that story's next post.
 
 ---
 
@@ -200,7 +266,11 @@ The dashboard shows you **this entire pipeline in real time:**
 | **Gate** | What posts vs. holds | 🟢 published, 🟡 held, 🔴 rejected |
 | **Writer** | Composed post text | Full text + metadata |
 | **Editor** | Validation results | ✓ approved, ✗ rejected (reason shown) |
-| **Publish** | Sent to Telegram | Timestamp + message ID |
+| **Exit check** | Posts held for repeating a recent one | 🟡 held |
+| **Publish** | Sent to Telegram | Timestamp + message ID + a link to the post |
+
+A published item's **Why** field shows the editor's own reason for approving it, not
+"sent as message 530", and every sent post carries a **View in Telegram** button.
 
 ---
 
@@ -214,9 +284,22 @@ The dashboard shows you **this entire pipeline in real time:**
 
 4. **Gate = second opinion.** If the sorter misplaces an item, the gate can eject it to its own story, preventing silent loss.
 
-5. **Fail-open design.** Sorter/gate errors → post anyway (safety). Only editor can reject (if text is broken).
+5. **Dedup files, it does not delete.** The same *text* is dropped. The same *event*
+told in different words is filed with that event's story, because different words carry
+different facts. And "duplicate of item X" only counts when X actually reached the
+reader — if it never became a post, there is nothing to repeat.
 
-6. **Everything is auditable.** Every item has a status + reason. If something didn't post, you can see why (held, expired, rejected, low_impact, etc.).
+6. **"Covered by this post" means the post says it.** Checked in code, with no model: an
+item is covered when the post repeats a detail only that item supplied. Anything else
+goes back to waiting. 9 of 42 items marked covered in this channel's history had never
+been in the post that claimed them.
+
+7. **Fail-open design.** Sorter/gate errors → post anyway (safety). Only the editor can
+reject, and it is the one station that fails closed. The cost of failing open is that a
+model which cannot answer looks exactly like one that approves — which is why schema
+failures are now counted per model and alert on a rate.
+
+8. **Everything is auditable.** Every item has a status + reason. If something didn't post, you can see why (held, expired, rejected, low_impact, etc.).
 
 ---
 
@@ -232,4 +315,12 @@ will tune a number the running channel never sees.
 - **\`MAX_POSTS_PER_HOUR\`** (**4** — overridden in \`.env\`; the default in \`config.py\` is 12).
 - **\`STORY_MIN_GAP_MINUTES\`** (6) and **\`STORY_MAX_POSTS\`** (12): per story, anti-double-post.
 - **\`STORY_IDLE_HOURS\`** (36) / **\`STORY_MAX_HOURS\`** (168): when a story goes quiet, and its hard end.
+- **\`STORY_DIGEST_MAX_QUIET_HOURS\`** (12): the roundup releases a pile by arithmetic
+  without asking the model, but only inside this much silence. Past it a story has
+  stopped rather than deadlocked — three items over 37 hours of silence is what sent a
+  second Treasury yields post.
+- **\`ECHO_WINDOW_HOURS\`** (120) and **\`ECHO_SHORTLIST\`** (0.72): how far back the exit
+  check looks, and how alike two posts must be to reach its model.
+- **\`ECHO_MODEL\`**: run \`tools/check_echo.py --labelled\` before changing it. This
+  station fails open, so a model that cannot answer looks like one that says send.
 `;

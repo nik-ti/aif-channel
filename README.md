@@ -36,37 +36,56 @@ Feeds are checked every 10 minutes; tweets arrive continuously.
     │   0.  drop anything that has gone stale (older than 90 min)        │
     │            │                                                       │
     │            ▼                                                       │
-    │   1.  dedup.py      CHECK 3: same wording?   (rapidfuzz, ~1ms)     │
+    │   1.  dedup.py      CHECK 3: same wording?   (rapidfuzz, ~1ms)      │
     │                     CHECK 4: same subject?   (embeddings — builds   │
     │                              a shortlist, decides nothing)          │
-    │                     CHECK 5: same event?     (judge.py, ~25×/day)   │
-    │            │                                                       │
-    │            ▼                                                       │
-    │   2.  sorter.py     AI · is it news? which market reprices?        │
-    │            │        market impact 1-5 · "none" is capped at 3      │
+    │                     CHECK 5: same event?     (judge.py, ~50×/day)   │
+    │            │                                                        │
+    │            │        same TEXT  ──────────────────────────► dropped  │
+    │            │        same EVENT ──► filed with that event's story    │
+    │            │                       as fuel, no post of its own      │
+    │            │        matched item in no live story ──► let through   │
+    │            ▼                                                        │
+    │   2.  sorter.py     AI · is it news? which market reprices?         │
+    │            │        market impact 1-5 · "none" is capped at 3       │
     │            │        drops anything below MIN_IMPORTANCE (4)         │
-    │            ▼                                                       │
-    │   3.  stories.py    AI · which running story is this?              │
-    │            │        join one, or open a new one                     │
-    │            ▼                                                       │
-    │   4.  stories.py    AI · has that story MOVED?                     │
-    │            │        post now / hold / this is not that story        │
+    │            ▼                                                        │
+    │   3.  article.py    read the linked page if the wire was thin       │
+    │            ▼                                                        │
+    │   4.  stories.py    which running story is this?                    │
+    │            │        a SCHEDULED RELEASE is keyed by the calendar —  │
+    │            │        no model, one release is one story              │
+    │            │        anything else: AI picks, or opens a new one     │
+    │            ▼                                                        │
+    │   5.  stories.py    AI · has that story MOVED, or does a waiting    │
+    │            │        item carry a fact the reader was never told?    │
+    │            │        post / hold / this is not that story            │
     │            │        a hold ends here — the item waits as fuel       │
-    │            ▼                                                       │
-    │   5.  writer.py     AI rewrite of the WHOLE story into the voice   │
+    │            ▼                                                        │
+    │   6.  writer.py     AI rewrite of the WHOLE story into the voice    │
     │            │        deepseek-v3.2 · several wires become one post   │
-    │            ▼                                                       │
-    │   6.  editor.py     AI · approve or reject, naming a rule          │
-    │            │        minimax-m2.7 · different lab from the writer   │
-    │            ▼                                                       │
-    │   7.  publisher.py  add the source link, then send                 │
-    │            │        max 2 per round, 12 per hour, 60 per day       │
-    │            ▼                                                       │
+    │            ▼                                                        │
+    │   7.  editor.py     AI · approve or reject, naming a rule           │
+    │            │        mistral-medium-3.1 · a different lab from the   │
+    │            │        writer, and the one station that fails CLOSED   │
+    │            ▼                                                        │
+    │   8.  echo.py       AI · does the FINISHED POST tell the reader     │
+    │            │        anything a post of the last 5 days did not?     │
+    │            │        the last gate; nothing routes around it         │
+    │            ▼                                                        │
+    │   9.  publisher.py  add the source link, then send                 │
+    │            │        max 2 per round, 4 per hour from .env          │
+    │            ▼                                                        │
     │      YOUR TELEGRAM CHANNEL                                         │
+    │            │                                                        │
+    │            └─► every item the post did NOT actually mention goes    │
+    │                back to waiting, checked in code by coverage.py      │
     └────────────────────────────────────────────────────────────────────┘
 ```
 
-Roughly **$3 a month** at 40 posts a day.
+Roughly **$7.40 a month** at 40 posts a day, measured from the real prompts
+and the real call volume. The sorter is 88% of it: a 4529-token rubric sent
+142 times a day.
 
 ---
 
@@ -177,8 +196,20 @@ after a day or two.
 
 ### `dedup.py`
 - **What:** decides whether we have already covered this story.
-- **In:** an item · **Out:** true/false
+- **In:** an item · **Out:** dropped, filed with an event, or let through
 - **The five checks,** cheapest first — see the table below.
+- **A repeat is no longer destroyed.** The same TEXT — link, headline, wording or
+  a near-identical vector — is still dropped, because nothing is lost. But when
+  the judge rules "same event" on two items written DIFFERENTLY, the later one is
+  filed with that event's story as fuel, with no post of its own. Different words
+  carry different facts: "U.S. CORE PCE FALLS BELOW EVERY ANALYST FORECAST — below
+  the entire range of 51 Bloomberg forecasts" was thrown away as a repeat of a
+  thinner item about the same print, and so were two more accounts of it.
+- **And "duplicate of item X" only counts when X was told to the reader.** If the
+  matched item is in no live story, nothing has been published for this to repeat,
+  so the item goes through untouched. That is the case that did the damage: three
+  accounts of one inflation print were suppressed against an item whose post
+  turned out to be about a Fed governor's speech instead.
 - **Fails open:** if the meaning check or the judge is unavailable, the item is
   treated as new. A duplicate is a small embarrassment; a silent channel is worse.
 - **It used to fail open in silence, which is a different thing.** A `dedup_hit`
@@ -249,13 +280,19 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
 - **What:** given two stories that look alike, are they the same event?
 - **In:** the new item + one candidate · **Out:** true/false + a written reason
 - **Runs ~25 times a day** — only on the shortlist, not on everything.
-- **Model:** `google/gemini-2.5-flash-lite`. Picked over deepseek-v3.2 because
-  it made **no wrong merges** on the test set (85% vs 80%) and is 7× faster.
-  A wrong merge silently deletes a real story; a missed duplicate just means one
-  extra post. Prefer the model that errs towards publishing.
-- **`minimax-m2.7` is disqualified** here despite being the editor: 13 of 20
-  concurrent calls failed on rate limits and unreadable JSON. The judge fires in
-  bursts by nature — breaking news arrives all at once.
+- **Model:** `google/gemini-2.5-flash`. Measured 2026-09-30 on 40 real pairs from
+  this channel's own `dedup_hits`: it agreed with the previous model on 39 of 40
+  and answered all 40 in the required shape. A wrong merge silently deletes a real
+  story; a missed duplicate just means one extra post. Prefer the model that errs
+  towards publishing.
+- **`deepseek-v3.2` was taken off this station.** Not for judgement — pinned to a
+  provider that honours schemas it answered 40 of 40 — but because OpenRouter
+  routes the same model id to thirteen providers and two of them return prose
+  instead of JSON. Unpinned it answered 2 of 14. The station fails open, so those
+  were silently treated as "not a duplicate".
+- **`minimax-m2.7` is disqualified** here: 13 of 20 concurrent calls failed on
+  rate limits and unreadable JSON. The judge fires in bursts by nature — breaking
+  news arrives all at once.
 - **Every verdict is logged** to `dedup_hits` with the reason in plain English,
   so you can see *why* a post vanished instead of guessing.
 
@@ -288,8 +325,14 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   than being mixed in with sport and opinion, and `tools/stats.py --dropped`
   prints them with the market and the reason. Same principle as the editor's
   audit log: a filter you cannot inspect is a filter you cannot fix.
-- **Model:** `deepseek/deepseek-v3.2`, temperature 0.0. Chosen for judgement,
-  not price — this node only costs ~$1.50/month, and it decides what matters.
+- **Model:** `google/gemini-2.5-flash`, temperature 0.0. This is the one station
+  where the model choice costs real money: it is sent the whole 4529-token rubric
+  142 times a day, which is **88% of the channel's entire model bill** — $6.53 of
+  $7.40 a month here, against $20 of $23 on claude-haiku-4.5. Prompt caching was
+  measured and rejected: a cache read costs $0.000812 against $0.005091 uncached,
+  but the cache expired after five minutes even when an hour was asked for, and
+  the median gap between sorting rounds is 6.5 minutes. A miss costs $0.009909, so
+  caching came out 21% dearer.
 - **Why:** the main cost control. Rejecting a story here saves the writer's
   cost, which is seventeen times higher.
 - **Fails soft:** if it breaks, we fall back to the source's own topic and carry
@@ -320,9 +363,66 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
 - **The gate can undo a bad placement** by answering `not_this_story`. Without
   it, one misfiling silenced real news — that is how "Fed rate hike odds above
   66%" and "Russia cuts oil output" were lost in an early replay.
-- **Fails open** both ways: placement into a new story, the gate into posting.
-  A run of ten failures alerts, because a dead model here reverts the channel to
-  one post per item and nothing looks broken.
+- **A scheduled release is not placed by a model at all.** The calendar named it
+  before it happened, so every item about one release shares one story, keyed by
+  country, title and scheduled time. Asking a model instead put the month's PCE
+  inflation figure into a story about Fed officials giving speeches, and the post
+  that came out was about the speeches.
+- **The gate asks a second question now:** not only "has the story moved?" but
+  "does a waiting item carry a fact the reader was never told?" Without it, an
+  item filed by dedup would wait forever, because a better-worded account of the
+  same event is not a change of state.
+- **Placement fails open by leaving the item QUEUED, not by opening a new story.**
+  A story with no posts always sends its first, so guessing here publishes
+  duplicates — that is how one Treasury yield went out twice under two story
+  numbers. The gate still fails open into posting. A run of ten failures alerts,
+  because a dead model here reverts the channel to one post per item and nothing
+  looks broken.
+
+### `coverage.py`
+- **What:** decides which of a story's waiting items a finished post actually
+  covered.
+- **In:** the post's text and the story's waiting items · **Out:** covered, or
+  still waiting
+- **No model is asked.** A model shown six items reports all six as used because
+  it saw them. So an item counts as covered when the post repeats a detail that
+  only THAT item supplied — distinctive measured against the story's other items,
+  because inside one story every item shares the subject and "Trump" appearing in
+  all of them proves nothing. An item that supplied nothing its siblings did not
+  is covered by definition: there is no fact left to miss.
+- **Why it exists:** every waiting item used to be marked covered the moment the
+  story posted. Replayed over the channel's history, 9 of 42 had never been in the
+  post that claimed them, including "US inflation remains at 3.4%", "Ethereum
+  blasts to $2,800 for the first time since January" and "the cost of hiring an
+  oil tanker has soared to $1 million a day".
+- **The trigger item is always part of the comparison** even though it is never a
+  candidate. Leaving it out buried an item about Trump rejecting a ceasefire,
+  because the post's own source had made the word "Trump" look like that item's
+  distinctive contribution.
+
+### `echo.py` (AI) — the exit check
+- **What:** the last question before a post is sent — has the reader already been
+  told this?
+- **In:** the finished post · **Out:** send, or hold
+- **It stands at the exit, so nothing routes around it** — not a new story, not a
+  roundup, not a forced post. And it compares the FINISHED POST against every post
+  of the last 120 hours, which is the only comparison that matches what a reader
+  sees.
+- **It does not ask dedup's question.** A 30-year Treasury yield closing at 5.59%
+  and touching 5.587% intraday are different events but the same news to a reader.
+  Dedup ruled them different three times over and was right; the reader still got
+  told twice in seven hours. This station asks whether the reader learns anything
+  new, and its prompt spells out that a date is not a threshold — "highest since
+  2002" after "highest since 2004" is one measurement still climbing.
+- **Measured on 60 posts,** real repeats scored 0.741 to 0.924 and legitimate posts
+  0.734 to 0.776, so the number only builds a shortlist and a model rules.
+  Replaying the last 60 published posts: 11 pairs reach the shortlist, 6 hold, 5
+  send.
+- **It fails open,** and the cost of that is worth knowing: a model that cannot
+  answer in JSON is indistinguishable from one that says send, and the log reads
+  the same either way. That is not hypothetical — deepseek-v3.2 answered 7 of 8
+  test pairs in prose and the check was dead for days while looking healthy. Run
+  `tools/check_echo.py --labelled` before ever changing `ECHO_MODEL`.
 
 ### `writer.py` (AI)
 - **What:** rewrites every story — articles and tweets alike — into one house
@@ -342,10 +442,18 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
 
 ### `editor.py` (AI)
 - **What:** the final check. Reads the finished post *against its source*.
-- **Model:** `minimax/minimax-m2.7`, temperature 0.0. Picked by testing 9 models
-  on 7 source/post pairs: 7/7 with nothing missed, at 2.5s per post — same
-  accuracy as gpt-5-mini, three times faster, half the output price.
-  (GLM-4.7 and Claude Haiku 4.5 are unusable here — both reject the strict schema.)
+- **Model:** `mistralai/mistral-medium-3.1`, temperature 0.0, with
+  `minimax/minimax-m2.7` as the fallback. Both scored 7/7 on the 7 source/post
+  pairs this station was calibrated on; they were swapped on 2026-09-30 for an
+  operational reason only — minimax failed 28 times in one week, 16 of them by
+  running out of room mid-answer, and the fallback finished every one of those
+  calls. The work was already being done by mistral.
+- **Do not move this station without a test set containing KNOWN FALSEHOODS.** It
+  fails closed and its job is catching lies, and the 7 pairs behind it were never
+  saved. Testing on already-published posts only measures over-rejection:
+  claude-haiku-4.5 approved 4 of 4 such posts where three other models declined
+  one, which proves nothing either way. (It does now accept the strict schema —
+  the older note here claiming it cannot was out of date.)
 - **Deliberately a different model family from the writer** — a model judges its
   own writing badly, approving prose that sounds like its own habits.
 - **Four safeguards against it becoming a black box:**
@@ -461,7 +569,8 @@ restarting the service.
 | `COSINE_CERTAIN` | 0.95 | Above this, merge without paying for a judgement. Rarely fires (0 times in a 188-item day) — it only catches near-verbatim reposts. |
 | `DUPLICATE_MAX_GAP_HOURS` | 12 | Two items further apart than this are never compared. **The cheapest accuracy setting in the project** — it is what stops yesterday's daily report absorbing today's. |
 | `DEDUP_TOP_K` | 3 | How many shortlisted candidates get considered. Was effectively 1, which meant a rejected front-runner ended the search. |
-| `JUDGE_MODEL` | `google/gemini-2.5-flash-lite` | Decides "same event or not". Prefer a model that errs towards publishing. |
+| `JUDGE_MODEL` | `google/gemini-2.5-flash` | Decides "same event or not". Prefer a model that errs towards publishing. |
+| `ECHO_MODEL` | `mistralai/mistral-medium-3.1` | The exit check. Run `tools/check_echo.py --labelled` before changing it — this station fails open, so a model that cannot answer looks exactly like one that says send. |
 
 ## The four numbers worth watching
 
@@ -502,6 +611,8 @@ config.py          machinery settings, and it loads the active channel's profile
 schema.sql         the database tables, the same for every channel
 brain/             the graph: state, stations, routing
 nodes/             one file per step of the pipeline (the diagram above)
+                   coverage.py has no model: it checks in code which waiting
+                   items a finished post actually mentioned
 utils/             shared helpers: database, Telegram, OpenRouter, text cleaning
 tools/             things you run by hand — none of them post anything
 deploy/            the systemd units and log rotation

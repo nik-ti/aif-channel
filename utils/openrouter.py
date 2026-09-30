@@ -328,15 +328,23 @@ def parse_json(raw: str) -> dict:
         text = "\n".join(lines).strip()
 
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
     except json.JSONDecodeError:
         pass
 
-    # Fall back to whatever sits between the first { and the last }.
+    # Fall back to whatever sits between the first { and the last }. This also
+    # rescues the case above: a model answering the story gate with a bare "3"
+    # produces valid JSON that is an int, and every caller here expects an
+    # object. Returning it crashed placement outright instead of letting the
+    # caller fail open — item 19393 died that way on 29 September.
     start, end = text.find("{"), text.rfind("}")
     if start != -1 and end != -1 and end > start:
         try:
-            return json.loads(text[start:end + 1])
+            parsed = json.loads(text[start:end + 1])
+            if isinstance(parsed, dict):
+                return parsed
         except json.JSONDecodeError:
             pass
 
