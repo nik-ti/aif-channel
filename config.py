@@ -270,10 +270,18 @@ EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 # so choose it for JUDGEMENT rather than for being cheap — it decides what
 # matters.
 # This station is 88% of the channel's model bill — not because it is dear, but
-# because it is sent the whole 4320-token rubric 142 times a day. On haiku that
-# is $20 of the $23 monthly total; gemini-2.5-flash does the same work for $6.53
-# and 4x faster, so this is the one line worth revisiting if the bill matters.
-SORTER_MODEL = _get("SORTER_MODEL", "anthropic/claude-haiku-4.5")
+# because it is sent the whole 4529-token rubric 142 times a day. That is why the
+# model here is chosen on price as much as on judgement: haiku-4.5 would be $20
+# of a $23 monthly total, gemini-2.5-flash is $6.53 of $7.40.
+#
+# Prompt caching was measured and REJECTED, so nobody has to try it again: the
+# rubric is identical on every call, and a cache read costs $0.000812 against
+# $0.005091 uncached — but the cache expired after 5 minutes even when asked for
+# an hour, and the median gap between two sorting rounds here is 6.5 minutes with
+# only 41% under five. A miss costs $0.009909, so at this channel's pace caching
+# would be 21% DEARER than not caching. It only becomes worth doing if the gaps
+# get shorter.
+SORTER_MODEL = _get("SORTER_MODEL", "google/gemini-2.5-flash")
 
 # 2. Writes the post in the house style. DeepSeek's output is $0.40/M against
 # Gemini Flash's $2.50/M, and the writer is output-heavy, so this roughly halves
@@ -358,7 +366,7 @@ MAX_REWRITES = _get_int("MAX_REWRITES", 1)
 # second post gets written about a decision already reported. deepseek is off
 # this station because unpinned it answers in prose: 12 failures of 327 live
 # calls, and 2/14 in a bench run that happened to route to DeepInfra.
-JUDGE_MODEL = _get("JUDGE_MODEL", "anthropic/claude-haiku-4.5")
+JUDGE_MODEL = _get("JUDGE_MODEL", "google/gemini-2.5-flash")
 
 # Past this we treat the item as new and post it. 25s was enough for a normal
 # day but one call hit it when 20 fired at once, and a timeout means a duplicate
@@ -390,7 +398,7 @@ PERSONA_RECENT_POSTS = _get_int("PERSONA_RECENT_POSTS", 15)
 # 30-year Treasury yield got two story numbers and went out twice. deepseek
 # failed placement 7 times in one week — 4 of them by spending a 200-token
 # answer budget on thinking and returning nothing.
-STORY_MODEL = _get("STORY_MODEL", "anthropic/claude-haiku-4.5")
+STORY_MODEL = _get("STORY_MODEL", "google/gemini-2.5-flash")
 # Raised from 30 after measuring: with require_parameters narrowing routing to
 # providers that honour the schema, the slowest of 20 calls took 22.2s. A
 # placement that times out used to open a duplicate story, so the cost of being
