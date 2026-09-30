@@ -448,6 +448,12 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   operational reason only — minimax failed 28 times in one week, 16 of them by
   running out of room mid-answer, and the fallback finished every one of those
   calls. The work was already being done by mistral.
+- **It must be shown the SAME source slice as the writer.** It read 1500 characters
+  while the writer read 5000, and a story post's source is the story's items folded
+  together — up to 4000. Anything the writer took past the cut looked invented. Of 74
+  FACTUAL_DRIFT rejections on story posts, 29 had a source longer than 1500, and
+  re-judging five of them with the whole source flipped two from rejected to approved.
+  Both now read `config.MAX_BODY_CHARS`, so they cannot drift apart again.
 - **Do not move this station without a test set containing KNOWN FALSEHOODS.** It
   fails closed and its job is catching lies, and the 7 pairs behind it were never
   saved. Testing on already-published posts only measures over-rejection:
