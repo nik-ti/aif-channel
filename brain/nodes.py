@@ -89,17 +89,47 @@ async def dedup_node(state: dict) -> dict[str, Any]:
     if verdict != "duplicate":
         return {}
 
-    if not state.get("dry_run", False):
-        # Naming the item it repeats is what makes a silent drop auditable later.
-        reason = (f"duplicate of item {matched_id} (same event as a recent story)"
-                  if matched_id else "same event as a recent story")
-        db.set_item_status(item["id"], "duplicate", reason)
-        db.bump_counter(
-            "deduped_fuzzy" if score >= 100
-            else "deduped_meaning" if score >= config.COSINE_CERTAIN
-            else "deduped_judge"
-        )
-    return {"outcome": "duplicate"}
+    dry = state.get("dry_run", False)
+
+    # The same TEXT, by link, headline, wording or a near-identical vector.
+    # Nothing is lost by dropping it, so it is still dropped.
+    if score >= config.COSINE_CERTAIN or not matched_id:
+        if not dry:
+            reason = (f"duplicate of item {matched_id} (same wording as a recent story)"
+                      if matched_id else "same event as a recent story")
+            db.set_item_status(item["id"], "duplicate", reason)
+            db.bump_counter("deduped_fuzzy" if score >= 100 else "deduped_meaning")
+        return {"outcome": "duplicate"}
+
+    # The judge ruled "same event" on two items written differently. Different
+    # words carry different facts, and dropping the later one destroyed them: on
+    # 30 September "U.S. CORE PCE FALLS BELOW EVERY ANALYST FORECAST — below the
+    # entire range of 51 Bloomberg forecasts" was thrown away as a repeat of a
+    # thinner item about the same print. It is filed with that event instead, as
+    # fuel for the story's next post, and gets no post of its own.
+    home = None if dry else db.story_of_item(matched_id)
+
+    if home is not None and home["status"] == "live":
+        if not dry:
+            db.attach_item_to_story(item["id"], int(home["id"]))
+            db.set_item_status(
+                item["id"], "held",
+                f"same event as item {matched_id}; filed in story {home['id']} "
+                f"so its details reach that story's next post")
+            db.bump_counter("deduped_filed")
+        log.info("Item %s repeats item %s — filed in story %s instead of dropped",
+                 item["id"], matched_id, home["id"])
+        return {"outcome": "held"}
+
+    # The item it supposedly repeats never reached a live story, so the reader was
+    # never told any of it and there is nothing to be a repeat of. This is the
+    # mistake that suppressed three accounts of one inflation print against an
+    # item whose post turned out to be about something else entirely.
+    log.info("Item %s matches item %s, but that one is in no live story — "
+             "letting it through", item["id"], matched_id)
+    if not dry:
+        db.bump_counter("deduped_let_through")
+    return {}
 
 
 async def sorter_node(state: dict) -> dict[str, Any]:

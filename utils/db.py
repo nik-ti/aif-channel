@@ -669,6 +669,14 @@ def seconds_since_last_post() -> float:
 # STORIES: unit of work; items join stories, stories post when moved. All state rebuilt
 # from queries.
 
+def story_of_item(item_id: int) -> sqlite3.Row | None:
+    """The story an item belongs to, or None when it was never placed."""
+    return conn().execute(
+        "SELECT s.* FROM stories s JOIN items i ON i.story_id = s.id WHERE i.id = ?",
+        (item_id,),
+    ).fetchone()
+
+
 def story_for_calendar_key(key: str) -> sqlite3.Row | None:
     """The live story that IS this scheduled release, if one is already open.
 

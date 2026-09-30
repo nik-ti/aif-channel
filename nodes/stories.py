@@ -172,19 +172,24 @@ PLACE_SCHEMA = {
 
 
 async def place(item: dict, stories: list["Story"], now: datetime
-                ) -> tuple["Story | None", str]:
+                ) -> tuple["Story | None", str, bool]:
     """Ask which open story an item joins, showing all of them at once.
 
     ONE call per item, not one per candidate. The model is shown every live
     story and picks; that is the question we actually want answered, and it is
     the question a distance between two short headlines cannot answer.
 
-    Fails open into a NEW story: a wrongly separated item is one extra post,
-    which is what the channel does today anyway.
+    When the model cannot be reached the item is left queued to be asked again,
+    NOT opened as a new story: a story with no posts always sends its first, so
+    guessing here publishes duplicates. That is how one Treasury yield went out
+    twice under two story numbers.
     """
     live = [s for s in stories if s.is_live(now)]
     if not live:
-        return None, "no open stories"
+        # Three values, like every other path: the caller unpacks a triple and
+        # this branch used to hand back a pair, which crashed the item whenever
+        # no story happened to be open.
+        return None, "no open stories", True
 
     listed = []
     for n, story in enumerate(live, 1):
@@ -314,6 +319,14 @@ is on learns nothing from the next explosion.
 Being newsworthy in general is not the question. Everything here is newsworthy
 or it would not have reached you. The question is whether it is new TO THIS
 READER, who has already read the posts above.
+
+A FACT THE READER HAS NOT BEEN TOLD IS ENOUGH ON ITS OWN. The situation does not
+have to have moved. Some of the waiting items are other accounts of something
+already posted, kept because they carry a detail the published version left out:
+a figure against its forecast, a scale, a named source, a revision. If one of
+them says something the posts above do not, that is a reason to post, and your
+angle must name that missing fact and nothing else. Read the waiting items for
+what they ADD, not only for what happened next. If they add only wording, hold.
 
 ## Your three answers
 "post"            — the story moved, tell the reader.
