@@ -196,7 +196,13 @@ async def execute(item, post_html: str, post_id: int, record: bool = True,
     `parent_post` is the published post this one replies to, when there is one:
     without it a reply reads as inventing the facts it is pointing back at.
     """
-    source_text = (item["body"] or "")[:1500]
+    # The SAME slice the writer was given, deliberately, because anything the
+    # writer could read and the editor could not looks invented to the editor.
+    # This was 1500 while the writer had 5000, and a story post's source is the
+    # story's items folded together — up to 4000 characters. Measured: of 74
+    # FACTUAL_DRIFT rejections on story posts, 29 had a source longer than 1500,
+    # some of them showing the editor 38% of what the post was written from.
+    source_text = (item["body"] or "")[: config.MAX_BODY_CHARS]
     started = time.monotonic()
 
     system_prompt = PROMPT.format(today=_today())
