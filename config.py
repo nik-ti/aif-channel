@@ -269,7 +269,11 @@ EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 # 1. Scores importance and topic. Runs on everything for about $1.50 a month,
 # so choose it for JUDGEMENT rather than for being cheap — it decides what
 # matters.
-SORTER_MODEL = _get("SORTER_MODEL", "deepseek/deepseek-v3.2")
+# This station is 88% of the channel's model bill — not because it is dear, but
+# because it is sent the whole 4320-token rubric 142 times a day. On haiku that
+# is $20 of the $23 monthly total; gemini-2.5-flash does the same work for $6.53
+# and 4x faster, so this is the one line worth revisiting if the bill matters.
+SORTER_MODEL = _get("SORTER_MODEL", "anthropic/claude-haiku-4.5")
 
 # 2. Writes the post in the house style. DeepSeek's output is $0.40/M against
 # Gemini Flash's $2.50/M, and the writer is output-heavy, so this roughly halves
@@ -279,12 +283,25 @@ WRITER_MODEL = _get("WRITER_MODEL", "deepseek/deepseek-v3.2")
 # 3. Checks the finished post against its source. Keep it a DIFFERENT lab from
 # the writer — a model judges its own prose badly.
 #
-# Chosen by testing 9 models on 7 source/post pairs. MiniMax M2.7: 7/7, 2.5s.
-# mistral-medium-3.1 also 7/7 but dearer; deepseek-v3.2 missed a falsehood;
-# qwen3.5-plus missed three and took 32s; glm-4.7 and claude-haiku-4.5 REJECT
-# the strict schema, which is what stops the editor inventing its own rejection
-# reasons — so they are disqualified however good they are.
-EDITOR_MODEL = _get("EDITOR_MODEL", "minimax/minimax-m2.7")
+# Chosen by testing 9 models on 7 source/post pairs: MiniMax M2.7 7/7 at 2.5s,
+# mistral-medium-3.1 also 7/7, deepseek-v3.2 missed a falsehood, qwen3.5-plus
+# missed three and took 32s.
+#
+# SWAPPED 2026-09-30, on operational grounds only. MiniMax failed 28 times in
+# one week — 16 of them "ran out of room", the rest 429/502/522 — and every one
+# of those calls was finished by the fallback below, which passed the same 7/7.
+# So the work was already being done by mistral; this stops paying for a first
+# attempt that mostly does not arrive.
+#
+# claude-haiku-4.5 is NOT here although it now accepts the strict schema (tested
+# 4/4 on this exact schema; the old note claiming it rejects it was out of date).
+# The reason is that this node's job is catching falsehoods, it fails CLOSED, and
+# the 7 pairs it was calibrated on were never saved — so there is no way to check
+# that a new model still CATCHES rather than merely not over-rejecting. On four
+# already-published posts haiku approved all four where three other models
+# declined one, which measures nothing either way. Do not move this station
+# without a set of source/post pairs containing known falsehoods.
+EDITOR_MODEL = _get("EDITOR_MODEL", "mistralai/mistral-medium-3.1")
 
 # Used when EDITOR_MODEL cannot be reached at all. This node fails closed, so an
 # unreachable editor means the post is not published — and minimax is rate-limited
@@ -300,7 +317,7 @@ EDITOR_MODEL = _get("EDITOR_MODEL", "minimax/minimax-m2.7")
 # approves", which is the exact failure this node exists to prevent.
 #
 # Set to "" to switch the fallback off.
-EDITOR_FALLBACK_MODEL = _get("EDITOR_FALLBACK_MODEL", "mistralai/mistral-medium-3.1")
+EDITOR_FALLBACK_MODEL = _get("EDITOR_FALLBACK_MODEL", "minimax/minimax-m2.7")
 
 # A ceiling on the whole editor call, retries and fallback included. Without it
 # the worst case is three retries against each of two models — 368 seconds on one
@@ -332,7 +349,16 @@ MAX_REWRITES = _get_int("MAX_REWRITES", 1)
 #
 # minimax is disqualified despite being the editor: the judge fires in bursts by
 # nature, so a model that falls over under concurrency is the wrong tool.
-JUDGE_MODEL = _get("JUDGE_MODEL", "deepseek/deepseek-v3.2")
+# Measured 2026-09-30 on 40 real pairs from dedup_hits, with deepseek pinned to
+# SiliconFlow so the baseline was deepseek WORKING rather than deepseek failing:
+# haiku agreed 38/40, gemini-2.5-flash 39/40, and all three answered 40/40 in
+# the required shape. Of the two disagreements, haiku was right that "Kalshi to
+# end liquidity incentive program" and "Kalshi ends trader volume rewards a year
+# early" are ONE event — deepseek called that a continuation, which is how a
+# second post gets written about a decision already reported. deepseek is off
+# this station because unpinned it answers in prose: 12 failures of 327 live
+# calls, and 2/14 in a bench run that happened to route to DeepInfra.
+JUDGE_MODEL = _get("JUDGE_MODEL", "anthropic/claude-haiku-4.5")
 
 # Past this we treat the item as new and post it. 25s was enough for a normal
 # day but one call hit it when 20 fired at once, and a timeout means a duplicate
@@ -359,7 +385,12 @@ PERSONA_RECENT_POSTS = _get_int("PERSONA_RECENT_POSTS", 15)
 
 # Same model as the sorter and the judge. Both questions here are reading
 # comprehension over short text, which is what this model is cheapest at.
-STORY_MODEL = _get("STORY_MODEL", "deepseek/deepseek-v3.2")
+# Placement and the gate. Both fail open toward posting, so a model that cannot
+# answer is the worst kind here: placement opening a duplicate story is how the
+# 30-year Treasury yield got two story numbers and went out twice. deepseek
+# failed placement 7 times in one week — 4 of them by spending a 200-token
+# answer budget on thinking and returning nothing.
+STORY_MODEL = _get("STORY_MODEL", "anthropic/claude-haiku-4.5")
 # Raised from 30 after measuring: with require_parameters narrowing routing to
 # providers that honour the schema, the slowest of 20 calls took 22.2s. A
 # placement that times out used to open a duplicate story, so the cost of being
