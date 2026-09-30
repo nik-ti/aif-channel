@@ -1,7 +1,5 @@
-"""Reads a channel's PIPELINE list out of its profile.py as text — same
-reasoning as nodes.py's prompt extraction: this read-only dashboard has no
-business importing the pipeline (module-level code that needs API keys and
-config this process has no reason to depend on) just to learn station names.
+"""Read a channel's PIPELINE list from profile.py as text, not by importing (avoids
+module-level code needing API keys).
 """
 
 from __future__ import annotations
@@ -10,8 +8,7 @@ import re
 
 import paths
 
-# What every channel declares today, and the fallback if a profile.py can't
-# be parsed for some reason — never crash the dashboard over this.
+# Default fallback if profile.py parsing fails; never crash the dashboard over this.
 DEFAULT_PIPELINE = [
     "dedup", "sorter", "fetch_article", "story_organizer",
     "gatekeeper", "writer", "editor", "publish",

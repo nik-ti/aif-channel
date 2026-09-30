@@ -1,15 +1,10 @@
-"""One function per station of the editorial graph.
+"""One function per station in the editorial graph, each a thin wrapper around the
+node in nodes/ that does the real work.
 
-Thin wrappers: each calls a module in nodes/ and records the result into the
-graph state. The intelligence lives there; this file is the assembly line.
-
-DRY RUN takes an item through the same decisions but publishes nothing, writes
-no posts and changes no statuses — that is how tools/test_brain.py rehearses the
-live pipeline. Duplicate checks DO still mark items: a confirmed duplicate is a
-fact, not a rehearsal side effect.
-
-A model that cannot be reached bumps the item's attempt counter and leaves it
-queued. After config.MAX_ATTEMPTS it is marked failed.
+A dry run reaches exactly the same decisions but publishes nothing and changes no
+statuses, except that dedup still records what it matched. When a model cannot be
+reached the item's attempt count goes up, and after MAX_ATTEMPTS it is marked
+failed.
 """
 
 from __future__ import annotations
@@ -24,24 +19,19 @@ from utils import db, logger as log_setup
 
 log = log_setup.get("brain")
 
-# Problems of EXECUTION, which one more draft can fix. The other five rules
-# (NO_NEWS, WRONG_TOPIC, HYPE, INJECTION, UNSAFE) are problems of CONTENT — no
-# rewrite of the same source fixes those, so they are dropped on the spot.
+# EXECUTION problems fixable by one more draft; CONTENT problems (NO_NEWS, WRONG_TOPIC,
+# HYPE, INJECTION, UNSAFE) not fixable, dropped.
 FIXABLE_RULES = frozenset({
     "FACTUAL_DRIFT", "OVERCLAIM", "INCOMPLETE", "BROKEN_HTML", "TOO_LONG",
     "EMPTY_BODY",
 })
 
-# The editor's two rules that answer "is this worth posting" rather than "is
-# this post any good". A forced item has already been answered on that by a
-# human, so these stop blocking — every other rule still does, because
-# overriding an editorial call is not a reason to publish a broken or
-# untrue post.
+# Two rules: "worth posting" not "post any good". Forced items skip these; others still
+# enforced (override ≠ publish broken/untrue).
 EDITORIAL_RULES = frozenset({"NO_NEWS", "WRONG_TOPIC"})
 
 
-# Conditional edges in brain/graph.py call these. A node sets state["outcome"]
-# when the item's journey is over; an empty outcome means "carry on".
+# Routing: outcome set means journey over (empty = continue).
 
 def route_after_dedup(state: dict) -> str:
     return "drop" if state.get("outcome") else "sort"
@@ -52,11 +42,8 @@ def route_after_sorter(state: dict) -> str:
 
 
 async def fetch_article_node(state: dict) -> dict[str, Any]:
-    """Read the article this item links to, so the writer has more than a headline.
-
-    Runs only on items the sorter kept — there is nothing to gain from reading
-    articles for the ~85% that never get past it. Fails open: no article just
-    means the post is written from the headline, as it was before this node.
+    """Read article (writer needs more than headline). Runs on sorter-kept items only.
+    Fails open: no article = headline post.
     """
     if state.get("dry_run") or state.get("sweep"):
         return {}
@@ -90,11 +77,8 @@ def route_after_editor(state: dict) -> str:
 
 
 async def dedup_node(state: dict) -> dict[str, Any]:
-    """Drop an item the channel has already covered.
-
-    Only two answers now. "This continues something" used to be a third, handled
-    by a parallel branch of the graph; the story layer answers that question
-    better, because it sees every open story rather than one candidate pair.
+    """Drop already-covered items. "Continues something" answer moved to story layer (sees
+    all stories).
     """
     item = state["item"]
     if state.get("sweep"):

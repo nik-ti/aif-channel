@@ -1,30 +1,14 @@
-"""Decides whether a story is one we have already covered.
+"""Five checks for "have we already covered this", cheapest first: the same link or
+tweet, a fingerprint of the headline, the wording, the subject by embeddings, and
+finally the event itself by asking a model.
 
-Five checks, cheapest first; an item only reaches one if the checks above let it
-through.
+Before the last two, a time gate drops any candidate older than
+DUPLICATE_MAX_GAP_HOURS. Real duplicates arrived 10.1 hours apart on average and
+false merges 24 hours apart, and that gap is what keeps today's ETF flows apart
+from yesterday's identical-looking figure.
 
-  1. same link or tweet       free      enforced by the database
-  2. same headline            free      a fingerprint of the headline text
-  3. nearly the same wording  ~1ms      "Fed holds rates" vs "Fed leaves rates"
-  4. the same subject         ~1 call   embeddings — a SHORTLIST, not a verdict
-  5. the same event           ~1 call   reads both stories and rules. judge.py
-
-Step 4 is only a shortlist because with a headline to go on it tracks what a
-story is ABOUT, not what happened, and most of what this channel reads is short.
-
-THE TIME GATE discards candidates more than DUPLICATE_MAX_GAP_HOURS away before
-4-5 run: daily ETF flows are near-identical edition to edition, so yesterday's
-is the most dangerous thing in the pool. Every real duplicate measured here
-arrived within 10.1 hours; the worst false merges were 24 hours apart.
-
-A CONTINUATION IS NOT A DUPLICATE and is not dropped here. Where it belongs is
-the story layer's question, and it has more to go on than this check does.
-
-IT FAILS OPEN — a duplicate is a small embarrassment, a silent channel is worse.
-The editor does the opposite, deliberately. But a dedup_hit row is only written
-on a MATCH, so "found nothing" and "the API was down" once left identical
-evidence and three tweets about one Fed decision went out within four minutes.
-Every failure is now counted and alerted on.
+It fails open, because silence is worse than a repeat. A continuation is not a
+duplicate; where it belongs is the story layer's question, not this one's.
 """
 
 from __future__ import annotations

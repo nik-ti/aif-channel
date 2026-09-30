@@ -1,15 +1,6 @@
-"""Turns text into numbers so we can compare MEANING rather than words.
-
-Two texts about the same thing come back as similar lists of numbers even when
-they share no words — which is the only way to tell that "BREAKING: SEC approves
-spot ETH ETF" and "Regulator green-lights ether exchange-traded funds" are one
-story. Each is an arrow in space; we measure the angle between them, where 1.0
-is identical and 0.0 unrelated.
-
-THE ONE RULE HERE: nothing may ever raise. Every failure returns None, and
-callers read that as "the meaning check is unavailable" and let the item
-through. Cost is about $0.000002 an item, so a busy day is a fraction of a cent.
-"""
+"""Convert text to vectors so we compare meaning, not words.
+Two texts about the same story return similar vectors even with no shared words (e.g., "SEC approves spot ETH ETF" vs "Regulator green-lights ether exchange-traded funds").
+RULE: never raise. All failures return None, and callers let the item through (cost: $0.000002 per item)."""
 
 from __future__ import annotations
 
@@ -23,8 +14,7 @@ log = log_setup.get("embeddings")
 
 _TIMEOUT = httpx.Timeout(connect=10.0, read=30.0, write=15.0, pool=5.0)
 
-# Half the size of the default 64-bit, with no meaningful loss here, and these
-# are stored on every single item.
+# 32-bit floats: half the 64-bit size with no loss, and stored on every item.
 _DTYPE = np.float32
 
 # The model allows much more, but a news story's meaning is in its opening.

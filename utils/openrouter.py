@@ -1,14 +1,9 @@
-"""One place that sends text to a model and gets an answer back.
+"""Every model call goes through here, so timeouts, retries and error handling are
+written once.
 
-Every AI step goes through here, so timeouts, retries and error handling are
-written once. OpenRouter is a middleman: one key pays for every provider, and
-switching models is a one-line change in config.py.
-
-THE TRUNCATION TRAP is the most important thing in this file. A model that hits
-its length limit mid-sentence does NOT report an error — it returns the
-half-finished text as though it were complete. Without the finish_reason check
-the channel would occasionally publish a post that stops in the middle of a
-...exactly like that.
+One trap worth knowing: a model that hits its length limit stops mid-sentence and
+returns the half-finished text as though it were complete, with no error. The
+finish_reason check is what catches that.
 """
 
 from __future__ import annotations
@@ -23,39 +18,26 @@ from utils import logger as log_setup
 
 log = log_setup.get("llm")
 
-# Generous read timeout (a model writing paragraphs takes a while), short
-# connect timeout (failing to connect at all should be noticed immediately).
+# Generous read (paragraphs take time), short connect (fail-fast).
 _TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=15.0, pool=5.0)
 
-# The reasons a model gives for stopping that mean "I ran out of room", as
-# opposed to "I finished". Different providers word it differently.
+# Truncation indicators (different providers, same meaning).
 _TRUNCATED = {"length", "max_tokens", "max_output_tokens"}
 
-# HTTP replies that mean "try again shortly" rather than "this will never work".
-# 429 is the one that actually costs us news: OpenRouter routes to a provider
-# that is rate-limited upstream, and without a retry the item burns all three of
-# its attempts inside the same few-minute window and is marked failed. Four real
-# stories were lost that way in two weeks, including a BLS payrolls print.
-#
-# 400/401/404 are deliberately absent — a bad model id or a wrong key is not
-# going to fix itself, and retrying only wastes the caller's timeout.
+# Retryable HTTP codes: 429 costs news (OpenRouter upstream rate-limit → burned 4
+# stories in 2wks). 400/401/404 never fix, don't retry.
 _RETRYABLE = {408, 409, 429, 500, 502, 503, 504}
 
-# Short on purpose. The judge wraps this in a 40-second timeout, so the whole
-# retry budget has to fit inside that with room for the model to think.
+# Short: fits inside judge's 40s timeout with room to think.
 _BACKOFF_SECONDS = (1.0, 3.0)
 
 
 class LLMError(RuntimeError):
-    """A model call failed. Callers usually leave the item for the next cycle."""
+    """Model call failed; item retries next cycle."""
 
 
 async def _post(payload: dict) -> dict:
-    """Send one request to OpenRouter, retrying the failures worth retrying.
-
-    Raises LLMError once the retries are used up, or immediately for a reply
-    that retrying cannot fix. See _RETRYABLE.
-    """
+    """Send request with retries (see _RETRYABLE); raise LLMError when exhausted."""
     if not config.OPENROUTER_API_KEY:
         raise LLMError("OPENROUTER_API_KEY is not set in .env")
 

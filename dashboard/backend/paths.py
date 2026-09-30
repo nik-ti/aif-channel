@@ -1,9 +1,5 @@
-"""Where the channel project lives, found rather than counted.
-
-Both halves of this API used to locate the project by walking a fixed number
-of parent directories, which broke the moment the dashboard moved one level
-deeper. This looks for the markers instead.
-"""
+"""Locate the channel project by looking for markers instead of counting parent directories.
+Old approach broke when the dashboard moved deeper; this approach is robust."""
 
 from __future__ import annotations
 

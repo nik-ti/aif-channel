@@ -1,39 +1,13 @@
-"""Groups incoming wire items into running stories, and decides when one earns a post.
+"""Groups incoming items into running stories, so the channel posts when a story
+moves rather than once per wire item.
 
-THE PROBLEM THIS REPLACES. Every station before this one judges a single item and
-lets exactly one post out per item that survives. On 1 September that produced
-fifteen posts in four and a half hours about one war, and seven about bond yields
-in a day. Each post was correct. The sequence read like a machine, because the
-thing that makes a channel read like a person — deciding NOT to post — has no
-station to happen in.
+Two questions live here. place() asks which story an item joins, and
+should_post() asks whether that story has moved enough to speak again. Both are
+model calls, because the numbers cannot answer them: measured on 1 September,
+items inside one story scored 0.43 to 0.72 against each other while unrelated
+items reached 0.79, so the ranges overlap.
 
-So the unit of work changes. Items no longer become posts; they join a STORY, and
-a story posts when it has moved. Six wires about the same strikes become one post,
-and the seventh yield print becomes silence.
-
-TWO QUESTIONS, KEPT SEPARATE:
-
-  which story does this belong to?   ->  place()
-  has that story moved enough?       ->  should_post()
-
-The first is a broader question than dedup asks. dedup.py rules on "the same
-EVENT" and is right to be strict — two different events must not be merged into
-one post. A story is wider: the strikes, Iran's answer, and oil spiking on it are
-three events and one story. That is why this asks its own question rather than
-reusing the dedup verdict.
-
-A story remembers itself as a SUMMARY IN WORDS, rewritten from each post as it
-goes out, not as an averaged vector. Measured on the 1 September wire, items
-inside one story scored 0.43-0.72 against each other while unrelated ones
-reached 0.79 — the ranges overlap, so no arithmetic can separate them and a
-centroid was only ever dead weight. A sentence can also be read by a person.
-
-COST. Placing costs one call per item — the same as the node this replaces —
-and shows the model every open story at once rather than asking about each in
-turn. should_post() then runs at most once per story per gap window rather than
-once per item, so a busy story gets CHEAPER as it gets busier. That is the
-opposite of today, where the fifteenth wire about one war costs the same as the
-first.
+A story remembers itself as a written summary, not as a vector.
 """
 
 from __future__ import annotations
@@ -48,16 +22,14 @@ from utils import db, logger as log_setup, openrouter, textclean
 
 log = log_setup.get("stories")
 
-# Both model calls here fail OPEN — placement into a new story, the gate into
-# posting. That is the right default, and it is also why a dead STORY_MODEL is
-# invisible: the channel quietly reverts to one post per item and nothing looks
-# broken. Same reasoning, and same alert, as dedup's meaning check.
+# Both calls fail OPEN (placement, gate); right default; dead STORY_MODEL invisible
+# (reverts to 1 post/item).
 _consecutive_failures = 0
 FAILURE_ALERT_AFTER = 10
 
 
 def _record_failure(what: str, story_or_item: str) -> None:
-    """Count a fail-open, and shout once they start piling up."""
+    """Count fail-open; shout when piling up."""
     global _consecutive_failures
     _consecutive_failures += 1
     db.bump_counter(f"story_{what}_failed")
@@ -76,7 +48,7 @@ def _record_failure(what: str, story_or_item: str) -> None:
 
 
 def _record_success() -> None:
-    """Reset the run after a call that worked."""
+    """Reset after successful call."""
     global _consecutive_failures
     if _consecutive_failures:
         log.info("The story layer is working again after %d failure(s)",
@@ -85,7 +57,7 @@ def _record_success() -> None:
 
 
 def _span(then: datetime | None, now: datetime) -> str:
-    """A duration in words. Ages are shown to the model, so they read like prose."""
+    """Duration in words (ages shown to model, read as prose)."""
     if then is None:
         return "unknown"
     minutes = int((now - then).total_seconds() // 60)

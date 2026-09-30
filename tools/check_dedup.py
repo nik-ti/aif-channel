@@ -1,14 +1,6 @@
-"""Is the MEANING check working, and is its shortlist floor set right?
-
-    python3 tools/check_dedup.py                     health report
-    python3 tools/check_dedup.py --pairs 30          score recent posts
-    python3 tools/check_dedup.py --compare "a" "b"   score two pieces of text
-
-Check 4 fails open, and a dedup_hit row is only written on a MATCH — so "found
-nothing close enough" and "the API was down and everything sailed through" left
-identical evidence: none. This distinguishes them in about a second, for a
-fraction of a cent, and changes nothing.
-"""
+"""Debug the meaning check: score recent pairs, or compare two texts.
+Check 4 fails open and only logs on matches, so "nothing found" and "API down" leave identical evidence.
+This tool distinguishes them in one second for a fraction of a cent, changing nothing."""
 
 from __future__ import annotations
 

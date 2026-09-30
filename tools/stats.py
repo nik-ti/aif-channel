@@ -1,20 +1,6 @@
-"""What the channel has been doing, and what its filters threw away.
-
-    python main.py stats [--days 7]
-    python tools/stats.py --declines   the editor's rejections, in full
-    python tools/stats.py --dropped    real news the importance gate binned
-    python tools/stats.py --held       news the story gate decided not to post
-
-FOUR NUMBERS TO WATCH
-  1. Rejection rate. Over about a third means the editor is more likely too
-     strict than the news that bad — and nothing human sits between it and your
-     readers.
-  2. Duplicates by check. A "meaning" check that never fires means the threshold
-     is too high; one that fires constantly may be merging different stories.
-  3. Expired vs published. More expiring than publishing means you gather far
-     more than you allow yourself to post.
-  4. Posts per day. Does the pace feel right as a reader?
-"""
+"""Report what the channel has posted and what its filters rejected.
+Use: python main.py stats [--days 7] or python tools/stats.py --declines/--dropped/--held.
+Watch rejection rate (over one third suggests editor too strict), duplicates per check (high = merging different stories), expiry vs published rate, and posts per day."""
 
 from __future__ import annotations
 
@@ -37,7 +23,7 @@ def _section(title: str) -> None:
 
 
 def report(days: int = 3) -> None:
-    """Print the full summary."""
+    """Print the full statistics summary."""
     print(f"\n{'=' * 74}")
     print(f"  NEWS CHANNEL — the last {days} day(s)")
     print(f"{'=' * 74}")

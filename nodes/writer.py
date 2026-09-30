@@ -1,17 +1,11 @@
-"""Rewrites a story into one house style, so the channel sounds like one writer.
+"""Rewrites a story into the channel's single house style, because every source
+writes differently.
 
-Every source writes differently — CoinDesk is dry, a WatcherGuru tweet is ALL
-CAPS WITH SIRENS — and posting those side by side reads like a scrapbook.
+Most sections of PROMPT are there because of a specific failure: models inventing
+facts, models treating a quoted tweet as an instruction, models turning
+"proposed" into "launched". Removing a section brings its failure back.
 
-Most of the odd-looking sections of PROMPT are scar tissue from real failures:
-"Core Rule" because models otherwise reply with commentary about why they can't
-write the post; "Untrusted input" because half our input is arbitrary tweets
-anyone can write anything into; "Factual Accuracy" because models quietly
-upgrade "proposed" to "launched"; "Plain Language" because they mirror the
-inflated prose of the source instead of translating it.
-
-It returns HTML rather than JSON because escaping quotes inside tags inside a
-string goes wrong often enough to matter and gains nothing.
+It returns HTML, not JSON.
 """
 
 from __future__ import annotations
@@ -25,25 +19,22 @@ from utils import logger as log_setup, openrouter
 
 log = log_setup.get("writer")
 
-# --- AI configuration: the block to edit when tuning the writing style ---
+# AI config: edit for writing style tuning.
 MODEL = config.WRITER_MODEL
-
-# Low on purpose: the house style should sound the same every time.
-TEMPERATURE = 0.2
+TEMPERATURE = 0.2  # Low: house style should stay consistent.
 MAX_TOKENS = 900
 
-# We ASK for the right length rather than writing long and cutting, because
-# cutting produces posts that stop mid-sentence.
+# Ask for length, not write-long-then-cut (cuts mid-sentence).
 LENGTH_RULE_TEXT = "70-100 words. Three short paragraphs at most."
 
-# Telegram caps captions at 1024 against 4096 for plain text.
+# Telegram caps image captions at 1024 (vs 4096 for text).
 LENGTH_RULE_IMAGE = (
     "45-65 words. This one is going out as a caption under a picture, and "
     "Telegram cuts captions off at 1024 characters, so it MUST be short. "
     "Two short paragraphs at most."
 )
 
-# A short X post has no material to pad with, and padding means inventing.
+# Short X posts have no padding material; padding = inventing.
 LENGTH_RULE_BRIEF = (
     "As short as the news. Often that is ONE line — the bold headline alone, "
     "and nothing under it. Never more than 45 words.\n"
@@ -66,13 +57,10 @@ LENGTH_RULE_BRIEF = (
     "single invented detail is a failure that gets the whole post thrown away."
 )
 
-# Two earlier versions failed in opposite directions: a free choice put a 🔥 on
-# a drone strike, and banning emoji entirely put the same 🪙 on an ETF approval
-# and an exchange hack. config.POST_MARKS is the middle path — every mark on it
-# is informational rather than emotional, so a bad pick is merely unhelpful.
-# enforce_mark() deletes anything else, so this does not rely on compliance.
+# Free choice put 🔥 on drone strike; no emoji put 🪙 on both ETF approval and hack.
+# POST_MARKS middle path (informational, not emotional).
 def _build_emoji_rule() -> str:
-    """Compose the emoji instruction from the whitelist in config."""
+    """Compose emoji instruction from config.POST_MARKS whitelist."""
     marks = "\n".join(f"  {mark} — {meaning}"
                       for mark, meaning in config.POST_MARKS.items())
     return (
@@ -114,12 +102,8 @@ EMOJI_RULE = _build_emoji_rule()
 
 
 def _today() -> str:
-    """Today's date, for the prompt.
-
-    The model's own knowledge is frozen well before today and it has no way to
-    know by how much. Telling it the date is what makes "this year" and "last
-    month" resolvable, and it is half of the guard against a stale title — the
-    other half is the rule forbidding it to add one at all.
+    """Today's date for prompt; makes "this year" resolvable and guards against stale
+    titles.
     """
     return datetime.now(timezone.utc).strftime("%d %B %Y")
 
@@ -324,10 +308,7 @@ def _clean(text: str) -> str:
 
 
 def _looks_incomplete(text: str) -> bool:
-    """True if the post appears to have been cut off mid-sentence.
-
-    The model's reply gives no sign this happened, so we check the text.
-    """
+    """True if post cut off mid-sentence (models don't signal this; check text)."""
     stripped = text.rstrip()
     if not stripped:
         return True
@@ -351,8 +332,7 @@ def _has_forbidden_tags(text: str) -> list[str]:
     return sorted({tag.lower() for tag in found if tag.lower() not in _ALLOWED_TAGS})
 
 
-# Deliberately narrow: it must not touch accented letters, currency symbols,
-# dashes or quotation marks.
+# Narrow: preserve accented letters, currency, dashes, quotes.
 _EMOJI = re.compile(
     "[\U0001F000-\U0001FAFF"     # pictographs, symbols, flags, transport
     "☀-➿"              # miscellaneous symbols and dingbats
@@ -364,15 +344,9 @@ _EMOJI = re.compile(
 
 
 def strip_emojis(text: str) -> str:
-    """Remove every emoji and tidy up the gaps.
-
-    Fiddlier than it looks: "attack ⚡." must become "attack." not "attack .",
-    but the ordinary space in "</b> costs" has to survive — an earlier version
-    ate it and ran the words together.
-    """
-    # The bullet is an emoji by encoding and a piece of layout by intent. Hide
-    # it, strip, put it back — otherwise every list loses its bullets and 🔹
-    # lists never reached the channel at all.
+    """Remove every emoji and tidy gaps; "attack ⚡." → "attack." not "attack ."."""
+    # Bullet is emoji by encoding but layout by intent; hide/strip/restore else lists
+    # break.
     text = text.replace(config.BULLET, "\x00")
     cleaned = _EMOJI.sub("", text or "")
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)            # "a  b"   -> "a b"
@@ -383,23 +357,16 @@ def strip_emojis(text: str) -> str:
     return cleaned.strip().replace("\x00", config.BULLET)
 
 
-# Models write ⚖️ and ⚖ interchangeably, so accept either and store the
-# canonical form from config.
+# Models write ⚖️ and ⚖ interchangeably; accept both, store canonical.
 _VARIATION_SELECTOR = "️"
 _FLAG = re.compile("[\U0001F1E6-\U0001F1FF]{2}")
 
 
 def enforce_mark(text: str) -> tuple[str, str]:
-    """Keep one approved leading mark; remove every other emoji.
-
-    Returns (text, mark); an empty mark is the normal case. This is the part
-    that does not depend on the model complying — a second mark, a 🔥, a flag
-    mid-sentence, anything off the list, all stripped.
-    """
+    """Keep one approved leading mark; remove all other emoji. Return (text, mark)."""
     text = (text or "").lstrip()
 
-    # The model is told to put the mark BEFORE <b>, and about half the time
-    # puts it just inside instead. Both are the same intent; read either.
+    # Model told to put mark BEFORE <b>, half the time puts it inside; read both.
     leading_tag = ""
     if text.startswith("<b>"):
         leading_tag, text = "<b>", text[3:].lstrip()
@@ -430,9 +397,8 @@ def enforce_mark(text: str) -> tuple[str, str]:
     return (f"{mark} {cleaned}" if mark else cleaned), mark
 
 
-# A one-line source cannot honestly support more than a one-line post. Below
-# this many distinct words in the source, any body is either the headline again
-# or invented, and both models have been caught letting each through.
+# One-line source can't support one-line post. Below 32 words: body is headline again or
+# invented (models caught on both).
 ONE_LINE_SOURCE_WORDS = 32
 
 
@@ -450,10 +416,8 @@ def headline_only(post: str) -> str:
 
 
 def has_thin_source(item) -> bool:
-    """True if there is barely any source material.
-
-    Decides HOW LONG the post may be, for any source: you cannot honestly write
-    90 words from a 150-character summary wherever it came from.
+    """True if barely any source material; decides post length (can't write 90w from 150c
+    summary).
     """
     return len((item["body"] or "").strip()) < config.BRIEF_SOURCE_CHARS
 
@@ -466,14 +430,8 @@ def is_brief(item) -> bool:
 async def execute(item, has_image: bool = False, editor_feedback: str = "",
                   recent_posts: list[str] | None = None, persona: str = "",
                   brief: str = "") -> str:
-    """Write the post for one item.
-
-    Returns the Telegram HTML, or an EMPTY STRING meaning "leave this item and
-    try again next cycle" — never "publish nothing".
-
-    `editor_feedback` carries the rejection reason from the rewrite loop.
-    `recent_posts` are the channel's last posts. `brief` is the editor's
-    instruction for this post: what is new and what the reader already has. `persona` is
+    """Write post; return Telegram HTML or "" (never "publish nothing"). editor_feedback:
+    rewrite reason; recent_posts: channel history; brief: what's new/known; persona:
     channels/<name>/persona.md.
     """
 
@@ -481,8 +439,8 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     body = (item["body"] or "")[: config.MAX_BODY_CHARS]
     origin = "a post on X" if item["origin"] == "x" else "a news article"
 
-    # The calendar line is part of the SOURCE: its numbers may be used and the
-    # editor checks against them. Without it "forecast 3.4%" would be drift.
+    # Calendar line is source: numbers used, editor checks against. Without it "forecast
+    # 3.4%" drifts.
     scheduled = calendar.describe(item)
     user_message = (
         f"Source: {item['source_name']} ({origin})\n"
@@ -501,10 +459,8 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
             f"anything else about how you follow the rules above."
         )
 
-    # LENGTH follows how much source material exists, not where it came from.
-    # Conflating the two sent a 150-character summary down the 90-word path and
-    # the model padded it with an invented sentence about "organized crime
-    # rings" that was nowhere in the source.
+    # LENGTH by source material, not origin. Conflating sent 150c down 90w path →
+    # invented "organized crime rings".
     thin = has_thin_source(item)
 
     if thin:
@@ -517,16 +473,12 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     system_prompt = PROMPT.format(length_rule=length_rule, emoji_rule=EMOJI_RULE,
                                   today=_today())
 
-    # The persona describes voice only; the factual-accuracy rules above still
-    # override anything in it.
+    # Persona = voice only; factual-accuracy rules above override it.
     if persona.strip():
         system_prompt = f"{persona}\n\n---\n\n{system_prompt}"
 
-    # One heading over two different things: how the channel sounds, and what
-    # the reader has already read. The old wording said only the first ("voice
-    # examples only — DO NOT repeat their facts"), so the model matched the
-    # shape of the previous post and changed the number — four bond yields in a
-    # day, each rebuilt from the same skeleton.
+    # One heading over two: voice examples + what reader read. Old wording (voice only)
+    # caused model to match shape and change number (4 yields, same skeleton).
     if recent_posts:
         examples = "\n\n".join(
             f"Example {i + 1}:\n{p}" for i, p in enumerate(recent_posts[:10])
@@ -559,15 +511,14 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
         log.warning("Writer returned nothing for item %s", item["id"])
         return ""
 
-    # Asking in the prompt is not enough; this is what guarantees it.
+    # Prompt not enough; guarantee it.
     before = post
     post, mark = enforce_mark(post)
     if post != before:
         log.info("Tidied the marks on item %s — kept %s", item["id"], mark or "none")
 
-    # The prompt says a one-fact source is a one-line post. The model agrees and
-    # writes a body anyway, and the editor — told to judge facts, not style —
-    # waves it through. So, like the mark: guaranteed here, not requested.
+    # One-fact source = one-line post (prompt says so, model adds body anyway, editor
+    # waves it). Guaranteed, not requested.
     if is_one_line_source(item) and "\n" in post.strip():
         post = headline_only(post)
         log.info("Item %s has a one-line source — kept the headline only", item["id"])
@@ -579,8 +530,7 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
 
     forbidden = _has_forbidden_tags(post)
     if forbidden:
-        # Not fatal — telegram_html neutralises them — but logged so a
-        # persistently misbehaving model shows up.
+        # Not fatal (telegram_html strips them), but logged to spot misbehaving models.
         log.info("Writer used tags Telegram doesn't allow %s on item %s — "
                  "they will be stripped before sending", forbidden, item["id"])
 

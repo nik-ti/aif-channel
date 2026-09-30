@@ -1,13 +1,5 @@
-"""Fetches every feed in config.SOURCES once and reports which ones work.
-
-    python tools/check_sources.py
-
-Prints whether each feed worked, how many articles came back, and three sample
-headlines. Writes nothing and sends nothing, so it is safe on a live system.
-
-Run it twice in a row: the second run should show several feeds "unchanged",
-which proves the free-polling trick is working.
-"""
+"""Fetch every feed once and report which ones work: status, article count, sample headlines.
+Safe on live system (writes and sends nothing). Run twice; second run shows "unchanged" feeds if free-polling (ETag/Last-Modified) works."""
 
 from __future__ import annotations
 

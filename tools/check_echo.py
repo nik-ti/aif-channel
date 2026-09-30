@@ -1,17 +1,7 @@
-"""Is the exit check holding repeats without killing real news?
-
-    python3 tools/check_echo.py                 replay the last 60 posts
-    python3 tools/check_echo.py --labelled      the 8 hand-labelled pairs
-    python3 tools/check_echo.py --model X       try another model on both
-
-The exit check FAILS OPEN, so a model that cannot answer looks exactly like a
-model that says "send". deepseek-v3.2 answered 7 of these 8 pairs in prose
-instead of JSON, which meant the check was not running at all while every log
-line said it was. Run --labelled before changing ECHO_MODEL.
-
-The replay judges each post against only the posts published BEFORE it, so what
-it prints is what the reader would actually have seen.
-"""
+"""Test the exit check: does it hold repeats without killing real news?
+Exit check fails open; model that cannot answer looks like one saying "send". Run --labelled before changing ECHO_MODEL.
+Deepseek-v3.2 answered 7 of 8 pairs as prose not JSON, meaning the check was silent-broken.
+Replay judges each post against only prior posts, showing what readers actually saw."""
 
 from __future__ import annotations
 

@@ -1,44 +1,15 @@
-"""The last question before a post is sent: have we already told the reader this?
+"""The last check before a post is sent: has the reader already been told this?
 
-Every other guard in the pipeline asks a narrower version of it. Dedup compares
-the INCOMING WIRE ITEMS, so it never sees the post that gets written from them.
-The gatekeeper compares against ONE STORY's posts, and only on the path where
-it reasons — a story's first post and a roundup both skip that reasoning by
-design. Three real repeats walked through those gaps in four days: Apple's $5
-trillion cap came back as a brand-new story after the old one had closed, the
-Treasury roundup fired twice on a count and a timer, and a Japanese yield was
-reported twice from different stories without anyone noticing.
+It stands at the very end, so nothing can route around it, and it compares the
+FINISHED POST against the channel's recent posts — the only comparison that
+matches what a reader actually sees. It deliberately does not ask dedup's
+question. A 30-year Treasury yield closing at 5.59% and touching 5.587% intraday
+are different events but the same news to a reader, so this station asks whether
+the reader learns anything new instead.
 
-This one stands at the exit, so nothing routes around it — not a new story, not
-a roundup, not a forced post. And it compares THE FINISHED POST against every
-post the channel recently published, which is the only comparison that matches
-what the reader actually experiences.
-
-WHY IT ASKS ITS OWN QUESTION AND NOT DEDUP'S. It used to call
-`judge.execute_three_way`, which asks "is this the same event?". That question
-has a correct answer and it is the wrong one to ask here. On 29 September the
-30-year Treasury yield closed at 5.59% after touching 5.587% intraday; the judge
-ruled them different events three times over, and it was right — a close is not
-an intraday tick. The reader still got told the same thing twice in seven hours.
-Dedup's prompt even lists "different figures for a recurring measurement" as
-grounds for NOT merging, which exists to keep "$49.75M outflows" apart from
-"$32.11M inflows" and must stay. So the exit asks the reader's question instead:
-does this post tell someone who saw the earlier one anything they do not already
-know? Dedup's calibration, tuned on 20 hand-labelled pairs, is left alone.
-
-WHY IT CANNOT BE A THRESHOLD. Measured on 60 consecutive posts: real repeats
-scored 0.741 to 0.924 and legitimate posts scored 0.734 and 0.776, interleaved.
-"US House passes crypto tax bill" reads 0.776 against "US House unveils new
-crypto tax legislation" and is a genuine step forward; Apple's repeat reads
-0.741 and is not. No cutoff separates them, so the number only draws up a
-shortlist and the model rules.
-
-IT FAILS OPEN. No embeddings, no verdict, no answer — the post goes out. A
-duplicate is an embarrassment; a channel that stops publishing is worse. The
-cost of that choice is that a model which cannot answer in JSON is
-indistinguishable from one that says "send", and the log says the check ran
-either way. That is not hypothetical: see ECHO_MODEL in config.py, and run
-tools/check_echo.py --labelled before changing it.
+Measured on 60 posts, real repeats scored 0.741 to 0.924 and legitimate posts
+0.734 to 0.776, so the number only builds a shortlist and a model rules. It fails
+open: no answer means the post goes out.
 """
 
 from __future__ import annotations

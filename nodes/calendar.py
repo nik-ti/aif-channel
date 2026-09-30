@@ -1,22 +1,12 @@
-"""Knows what data releases are scheduled this week, and matches news to them.
+"""Matches a news item to a scheduled release from ForexFactory, which supplies the
+forecast and the previous reading.
 
-The free ForexFactory feed gives every scheduled release for the week with its
-consensus forecast and previous value — but never the actual; that arrives on
-the wire. So when "U.S. CPI: +3.4% Y/Y" comes in at 12:31, this finds the
-12:30 USD "CPI y/y" entry and pins its forecast and previous onto the item.
+That lets the sorter know the item is official, the writer add the numbers, and
+the editor check them against the source. Matching is deliberately dumb —
+country, a keyword in the title, and a time window — because fuzzy matching tied
+every mention of the Fed to a scheduled Fed speech.
 
-Three stations then see two numbers they never had. The sorter learns this is
-an official scheduled print, not chatter, and which economy it belongs to. The
-writer can say "3.4% (forecast 3.4%, previous 3.4%)" from the feed rather than
-from memory. The editor sees the calendar line as part of the source, so those
-numbers are not drift.
-
-Matching is deliberately dumb: right country, a title keyword in the item text,
-and the item arriving inside a short window around the release. Fuzzier than
-that and a Fed governor's speech starts matching every mention of the Fed.
-
-IT FAILS OPEN. No feed, no match, no fields — the item is exactly what it was
-before this existed.
+It fails open: no feed means the item passes through unchanged.
 """
 
 from __future__ import annotations

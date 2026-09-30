@@ -1,16 +1,10 @@
-"""Reads new posts from the shared tweet relay and hands them on as items.
+"""Reads tweets from the shared relay rather than from X directly: a Redis stream
+fed by one X connection that the trading bot owns.
 
-We do NOT connect to X ourselves — X allows one connection and the trading bot's
-relay holds it, copying every tweet into a Redis stream. Each program watching
-that stream has its own bookmark (a consumer group), so both see every tweet and
-neither can take one from the other.
-
-UNLIKE THE TRADING BOT, we keep our place across a restart instead of jumping to
-the end. Acting on a ten-minute-old "breaking" tweet is a bug when trading; for
-a news channel, skipping what arrived during a restart leaves a hole. Three
-guards stop a long outage dumping hundreds of old tweets at once: X_MAX_AGE_
-MINUTES bins anything stale unread, X_MAX_BURST caps one batch, and the
-publisher's hourly limit is the backstop.
+It keeps its place across a restart, unlike the trading bot, which jumps to the
+live end. Three guards keep a backlog from becoming a flood: X_MAX_AGE_MINUTES
+discards stale tweets, X_MAX_BURST caps one batch, and the hourly post limit is
+the backstop.
 """
 
 from __future__ import annotations

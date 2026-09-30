@@ -1,12 +1,7 @@
-"""Reads every enabled feed and returns the articles we have not seen before.
+"""Reads the enabled feeds and returns the articles not seen before.
 
-WHAT MAKES THIS FREE: each read hands us an ETag and a Last-Modified date, and
-handing them back next time gets "304 Not Modified" with no content when nothing
-has been published. That is why polling every 10 minutes costs essentially
-nothing, for us and for the sites.
-
-The XML is parsed by hand rather than with feedparser, which is not installed
-here and would be a new dependency for about forty lines of work.
+ETag and Last-Modified headers mean an unchanged feed answers "304 Not Modified"
+and costs nothing. The XML is parsed by hand to avoid a dependency on feedparser.
 """
 
 from __future__ import annotations

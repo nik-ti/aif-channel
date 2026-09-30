@@ -1,14 +1,6 @@
-"""GET /api/v1/stories — every story, with item/post counts computed live
-from the items and posts tables (nothing is duplicated/cached on the story
-row itself, matching how nodes/stories.py treats the story as derived data),
-plus the full list of posts (one entry per item attached to the story) so
-the dashboard can show exactly what happened to each piece of news without
-a second round-trip.
-
-Takes an optional ?channel=, resolved by channel_resolver (defaults to
-markets, never .env). A channel with no database yet returns an
-empty-but-valid response with "ready": false instead of an error.
-"""
+"""GET /api/v1/stories lists every story with item/post counts computed live from the database (not cached on the story row, matching nodes/stories.py).
+Includes the full list of posts so the dashboard can show what happened to each piece of news without a second request.
+Takes optional ?channel= (defaults to markets). A channel with no database yet returns a valid response with "ready": false."""
 
 from __future__ import annotations
 
@@ -22,17 +14,15 @@ from db_connector import query
 
 router = APIRouter()
 
-# The only statuses the dashboard distinguishes with their own color. Every
-# other items.status value (irrelevant, low_impact, duplicate, failed,
-# expired, ...) reads as "rejected" from a reader's point of view: it did
-# not become a post.
+# Only these statuses get their own color. All others (irrelevant, low_impact,
+# duplicate, failed, expired) read as "rejected" to readers.
 _DISPLAY_STATUSES = {"published", "merged", "held"}
 
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
 def _strip_html(text: str) -> str:
-    """post_html only ever uses <b> for Telegram formatting — drop tags so
+    """Remove HTML tags (post_html only uses <b> for Telegram formatting).
     the dashboard shows plain text, matching how it shows item bodies."""
     return _TAG_RE.sub("", text).strip()
 

@@ -1,23 +1,12 @@
-"""Reads the article a wire item links to, so the writer has more than a headline.
+"""Reads the article behind a link, because the writer needs more than a headline —
+59% of items arrive with a body under 120 characters.
 
-Most of what this channel ingests is one line. Measured on its own database:
-59% of items have a body under 120 characters, and every one of them carries a
-link nobody followed. That is why a post's second line so often just restates
-its first — there was nothing else in the source to write from.
+There are two ways in: a plain request with trafilatura, which takes about a
+second and works for 7 of 8 sources, and crawl4ai in stealth mode for the ones
+that answer 403, such as The Block. Only one crawl runs at a time and the browser
+is closed on exit.
 
-Two ways in, cheapest first:
-
-  1. a plain request + trafilatura   ~1s, no browser   7 of 8 live sources
-  2. crawl4ai with stealth           slow, a browser   the ones that answer 403
-
-Step 2 exists for sites like The Block that refuse a plain request. It is
-deliberately the exception: a browser per article would be minutes of CPU and
-hundreds of megabytes for a channel that publishes four posts an hour, and a
-leak in exactly that path is what made an earlier attempt at this unusable.
-Only one crawl runs at a time, and the browser is closed on every exit.
-
-IT FAILS OPEN. No article, no problem — the item keeps the headline it arrived
-with and the post is written from that, exactly as before this existed.
+It fails open: no article means the item keeps its headline.
 """
 
 from __future__ import annotations

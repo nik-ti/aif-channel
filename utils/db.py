@@ -1,9 +1,7 @@
-"""Every SQL query in the project. No other file writes SQL.
+"""Every SQL statement in the project lives here.
 
-This file is deliberately NOT async, unlike the rest of the project. The
-database is a local file and every query finishes well under a millisecond, so
-there is nothing to wait on and async would add complexity for nothing. A
-choice, not an oversight — please do not "fix" it.
+Deliberately synchronous: the database is a local file and these queries finish
+in under a millisecond, so do not make them async.
 """
 
 from __future__ import annotations
@@ -18,27 +16,21 @@ import config
 
 logger = logging.getLogger("market-one-channel.db")
 
-# The one shared connection. Opened on first use and kept for the life of the
-# program, because opening a database file is slower than any query we run.
+# Shared connection, created on first use (opening files costs more than queries).
 _conn: sqlite3.Connection | None = None
 
 
 def conn() -> sqlite3.Connection:
-    """Return the open database connection, creating it on first call.
-
-    The settings applied here (WAL, busy_timeout) must be set on the connection
-    itself, not just in schema.sql, which is why they are repeated.
+    """Return open connection, creating on first call; WAL/busy_timeout must be set here,
+    not schema.sql.
     """
     global _conn
     if _conn is None:
         config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         _conn = sqlite3.connect(config.DB_PATH, timeout=10.0)
 
-        # Return rows that behave like dictionaries (row["title"]) instead of
-        # bare tuples (row[3]) — far easier to read and impossible to misorder.
+        # Rows as dicts (row["title"]) not tuples.
         _conn.row_factory = sqlite3.Row
-
-        # Let readers and the writer work at the same time without blocking.
         _conn.execute("PRAGMA journal_mode = WAL")
         _conn.execute("PRAGMA busy_timeout = 5000")
         _conn.execute("PRAGMA foreign_keys = ON")
@@ -46,10 +38,8 @@ def conn() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """Create any missing tables and indexes by running schema.sql.
-
-    Every statement in that file uses "IF NOT EXISTS", so running this against a
-    database full of data is harmless and changes nothing.
+    """Create missing tables/indexes from schema.sql; all use IF NOT EXISTS so it's safe
+    to rerun.
     """
     schema = config.SCHEMA_PATH.read_text()
     conn().executescript(schema)
@@ -58,56 +48,27 @@ def init_db() -> None:
     logger.info("Database ready at %s", config.DB_PATH)
 
 
-# --- Add columns invented after the database was first created ---
-# When a new feature needs a new column, add it to this dictionary rather than
-# editing schema.sql alone. Existing databases then gain the column on next
-# start, so you never have to delete data to pick up a change.
-#
-# Format:  "table name": [("column name", "the ALTER TABLE statement"), ...]
+# Add columns here instead of schema.sql; existing DBs gain them on next start.
 _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
-    # Which market the sorter said has to reprice because of this item — see
-    # nodes/sorter.py. Added after the "market impact" score turned out to be
-    # unreviewable without it: a bare 4 tells you nothing about WHY the model
-    # thought a trader would care.
     "items": [
+        # Which market the sorter said has to reprice—see nodes/sorter.py.
         ("market", "ALTER TABLE items ADD COLUMN market TEXT DEFAULT ''"),
-        # Dead since stories took over: a follow-up is now just the next post
-        # of the same story. Kept so a fresh database matches every existing one.
-        ("continuation_of", "ALTER TABLE items ADD COLUMN continuation_of INTEGER DEFAULT NULL"),
-        # Which running story this item belongs to. Not a REFERENCES column on
-        # purpose: SQLite cannot add a foreign key by ALTER without rebuilding
-        # the table, and a cascade from stories would take real items with it.
-        ("story_id", "ALTER TABLE items ADD COLUMN story_id INTEGER DEFAULT NULL"),
-        # The MP4 behind a video or GIF on X. image_url keeps the thumbnail, so
-        # a clip that cannot be sent still has a picture to fall back to.
-        ("video_url", "ALTER TABLE items ADD COLUMN video_url TEXT DEFAULT ''"),
+        ("continuation_of", "ALTER TABLE items ADD COLUMN continuation_of INTEGER DEFAULT NULL"),  # Dead since stories replaced it.
+        ("story_id", "ALTER TABLE items ADD COLUMN story_id INTEGER DEFAULT NULL"),  # Not REFERENCES: no CASCADE with ALTER.
+        ("video_url", "ALTER TABLE items ADD COLUMN video_url TEXT DEFAULT ''"),  # MP4 URL; image_url holds fallback thumbnail.
         ("video_kind", "ALTER TABLE items ADD COLUMN video_kind TEXT DEFAULT ''"),
-        # The scheduled release this item is about, if any, with the consensus
-        # forecast and previous value pinned on at ingestion — see nodes/calendar.py.
-        ("calendar_title", "ALTER TABLE items ADD COLUMN calendar_title TEXT DEFAULT ''"),
+        ("calendar_title", "ALTER TABLE items ADD COLUMN calendar_title TEXT DEFAULT ''"),  # Scheduled release data—see nodes/calendar.py.
         ("calendar_forecast", "ALTER TABLE items ADD COLUMN calendar_forecast TEXT DEFAULT ''"),
         ("calendar_previous", "ALTER TABLE items ADD COLUMN calendar_previous TEXT DEFAULT ''"),
-        # The text of the article this item links to, read once and kept, so a
-        # URL is never fetched twice — see nodes/article.py.
-        ("article_text", "ALTER TABLE items ADD COLUMN article_text TEXT DEFAULT ''"),
-        # Set when a human overrules a rejection from the dashboard. Read by
-        # the publish loop, which then tells the graph to skip the two stations
-        # that judge whether an item is worth posting.
-        ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),
+        ("article_text", "ALTER TABLE items ADD COLUMN article_text TEXT DEFAULT ''"),  # Cached to avoid fetching URL twice—see nodes/article.py.
+        ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),  # Human override from dashboard; graph skips gate stations.
     ],
-    # A short name for the whole thread, not a copy of one of its posts.
-    # headline is the first wire item's raw title, frozen; summary is the last
-    # post. Neither reads as the name of a running situation, which is what the
-    # dashboard needs to show and what a person scanning a list of stories
-    # actually wants.
     "stories": [
-        ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),
+        ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),  # Short name for dashboard/list (not headline/summary).
     ],
 }
 
-# Indexes over migrated columns. They cannot live in schema.sql, which runs
-# BEFORE the migrations and would hit a column that does not exist yet — on an
-# existing database that is a crash on startup, not a warning.
+# Indexes over migrated columns (cannot be in schema.sql: runs before migrations exist).
 _MIGRATION_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_items_story ON items(story_id, status)",
 ]
@@ -128,11 +89,7 @@ def _apply_migrations() -> None:
 
 
 def now_iso() -> str:
-    """Current UTC time as 'YYYY-MM-DD HH:MM:SS'.
-
-    Everything in this database is UTC. Mixing time zones in stored data is a
-    reliable way to produce bugs that only appear twice a year.
-    """
+    """Current UTC time as 'YYYY-MM-DD HH:MM:SS'; everything in DB is UTC."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -141,20 +98,11 @@ def today_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
-# =============================================================================
 # SOURCES
-# =============================================================================
 
 def sync_sources(sources: Iterable[dict]) -> None:
-    """Copy the feed list from config.SOURCES into the database.
-
-    config.py is the list you edit; this table is only where each feed's runtime
-    state lives (caching tokens, failure counts). So on every startup we push the
-    config list in: new feeds get a row, existing ones get their url/topic
-    refreshed, and their accumulated state is left untouched.
-
-    Feeds you DELETE from config are disabled rather than removed, so their
-    history and the items they produced stay intact.
+    """Sync config.SOURCES into DB: add/refresh current feeds, disable removed ones, drop
+    unpublished items from unconfigured feeds.
     """
     wanted = {s["name"] for s in sources}
 
@@ -177,15 +125,9 @@ def sync_sources(sources: Iterable[dict]) -> None:
             logger.info("Source '%s' removed from config — disabling", row["name"])
             conn().execute("UPDATE sources SET enabled = 0 WHERE name = ?", (row["name"],))
 
-    # Then throw away any unpublished item from a source that is not in the
-    # current config — regardless of when it was disabled.
-    #
-    # This sweep is deliberately unconditional rather than tied to the moment a
-    # source is switched off. That distinction is not academic: the first version
-    # only fired on the enabled→disabled transition, so a source disabled in an
-    # EARLIER run kept its queued articles, and they carried on publishing. That
-    # is exactly how a BBC article reached the channel hours after the feed had
-    # been deleted. Written as a sweep, it is idempotent and self-correcting.
+    # Sweep (idempotent): drop unpublished items from sources no longer in config.
+    # Unconditional sweep prevents BBC-article bug: disabled-earlier feeds kept
+    # articles.
     if wanted:
         placeholders = ",".join("?" for _ in wanted)
         dropped = conn().execute(
@@ -208,11 +150,7 @@ def sync_sources(sources: Iterable[dict]) -> None:
 
 
 def drop_unfollowed_x_items(handles: Iterable[str]) -> int:
-    """Throw away queued tweets from X accounts we no longer follow.
-
-    Removing a handle stops new tweets being stored, but anything already queued
-    would carry on posting hours later.
-    """
+    """Delete queued tweets from unfollowed X accounts to prevent delayed posts."""
     followed = set(handles)
     rows = conn().execute(
         "SELECT DISTINCT source_name FROM items "
@@ -277,9 +215,7 @@ def record_source_failure(name: str, error: str) -> int:
     return row["fail_count"] if row else 0
 
 
-# =============================================================================
 # ITEMS
-# =============================================================================
 
 def insert_item(
     *,
@@ -300,11 +236,7 @@ def insert_item(
     status: str = "queued",
     status_reason: str = "",
 ) -> int | None:
-    """Store a new item. Returns its id, or None if we already had it.
-
-    None is duplicate check 1 and by far the most common outcome — re-reading a
-    feed hands back the same articles. Normal, not an error.
-    """
+    """Store item; return its id or None if already exists (duplicate check 1)."""
     try:
         cursor = conn().execute(
             """
@@ -329,22 +261,14 @@ def insert_item(
         conn().commit()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
-        # The UNIQUE(origin, external_id) rule fired: we have seen this before.
-        # The rollback is the point. A failed statement leaves the implicit
-        # transaction OPEN, and this is the most common outcome in the whole
-        # system — re-reading a feed hands back the same articles. Without it
-        # the write lock is held until something else happens to commit, which
-        # is why forcing a post from the dashboard would fail with "database is
-        # locked" for no visible reason.
+        # UNIQUE rule hit: duplicate. Rollback critical: failed writes hold lock causing
+        # "database is locked"—especially dashboard force-post.
         conn().rollback()
         return None
 
 
 def title_hash_seen(title_hash: str, hours: int) -> sqlite3.Row | None:
-    """Check 2: an earlier item with the same headline fingerprint.
-
-    Catches one story arriving at two addresses — syndication, a changed link.
-    """
+    """Check 2: return earlier item with same headline fingerprint (catches syndication)."""
     if not title_hash:
         return None
     return conn().execute(
@@ -379,13 +303,8 @@ def recent_embeddings(
     near_time: str | None = None,
     max_gap_hours: int | None = None,
 ) -> list[tuple[int, bytes]]:
-    """Return (id, meaning-vector) for items already made sense of. Feeds check 4.
-
-    THE TIME GATE (near_time + max_gap_hours) is an accuracy fix, not a
-    performance trick. Recurring reports — daily ETF flows, weekly roundups —
-    are near-identical day to day and score extremely highly, so yesterday's
-    edition is the most dangerous thing in the pool. The cheapest answer is to
-    refuse to look at it.
+    """Check 4: return (id, embedding) for recently understood items. TIME GATE blocks
+    recurring reports (daily flows, weekly roundups).
     """
     where = [
         "embedding IS NOT NULL",
@@ -414,13 +333,7 @@ def set_item_embedding(item_id: int, blob: bytes) -> None:
 
 
 def force_item(item_id: int, *, was_status: str, was_reason: str, note: str = "") -> None:
-    """Put a rejected item back in the queue because a human disagreed.
-
-    Both halves matter. The item returns to 'queued' with forced set, which is
-    what makes it move again. And the disagreement is written down, because a
-    row saying "the model said no here and a human said yes" is the only
-    honest test case for whether a later change to the prompt actually helped.
-    """
+    """Restore rejected item to queue; log override for testing prompt changes."""
     connection = conn()
     with connection:
         connection.execute(
@@ -437,11 +350,7 @@ def force_item(item_id: int, *, was_status: str, was_reason: str, note: str = ""
 
 
 def unpublish_note(item_id: int, *, note: str = "") -> None:
-    """Record that a published post should not have gone out.
-
-    The other half of the same dataset. Nothing is deleted from Telegram — this
-    is a label, not an action.
-    """
+    """Log that published post should not have gone out (label only, not deletion)."""
     row = get_item(item_id)
     connection = conn()
     with connection:
@@ -481,10 +390,8 @@ def set_article_text(item_id: int, text: str) -> None:
 
 
 def set_item_status(item_id: int, status: str, reason: str = "") -> None:
-    """Move an item to a new stage, always recording why.
-
-    An item that vanished with no explanation is the failure this project is
-    built to avoid, so the reason is not optional in spirit.
+    """Move item to new stage and record why; unexplained vanished items are design
+    failures.
     """
     conn().execute(
         "UPDATE items SET status = ?, status_reason = ?, updated_at = ? WHERE id = ?",
@@ -495,8 +402,8 @@ def set_item_status(item_id: int, status: str, reason: str = "") -> None:
 
 def set_item_sorting(item_id: int, topic: str, importance: int,
                      market: str = "") -> None:
-    """Record what the sorter decided. `market` is stored even for dropped items,
-    which is what lets tools/stats.py --dropped show why the gate binned them.
+    """Record sorter decision; market stored for all items so tools/stats.py --dropped
+    shows why.
     """
     conn().execute(
         "UPDATE items SET topic = ?, importance = ?, market = ?, updated_at = ? "
@@ -523,10 +430,8 @@ def get_item(item_id: int) -> sqlite3.Row | None:
 
 
 def next_queued_items(limit: int) -> list[sqlite3.Row]:
-    """The items most deserving of being posted next: importance, then newest.
-
-    When more news arrives than we can post, the best and freshest wins and the
-    rest go stale. An old "breaking" story is worse than no story.
+    """Return queued items ordered by importance then recency (old "breaking" stories go
+    stale).
     """
     return list(conn().execute(
         """
@@ -540,13 +445,8 @@ def next_queued_items(limit: int) -> list[sqlite3.Row]:
 
 
 def expire_stale_items(ttl_minutes: int) -> int:
-    """Bin queued items that have waited too long. Returns how many were binned.
-
-    A forced item is exempt. The clock runs from when the news arrived, not from
-    when it was queued, so anything a human rescued from the dashboard was
-    already older than the limit the moment they clicked — which killed it
-    before the pipeline had a chance to publish it. Someone noticing a bad
-    rejection an hour later is the normal case, not the exception.
+    """Bin queued items older than ttl_minutes (forced items exempt); clock runs from
+    arrival, not queueing.
     """
     cursor = conn().execute(
         f"""
@@ -565,10 +465,8 @@ def expire_stale_items(ttl_minutes: int) -> int:
 
 
 def trim_queue(max_size: int) -> int:
-    """If the queue is over its size limit, bin the least important, oldest items.
-
-    A second safety net beyond the time limit above: if news suddenly floods in,
-    the queue stops growing rather than building a backlog nobody will ever read.
+    """Bin oldest/least-important items if queue exceeds max_size (second safety net after
+    TTL).
     """
     total = conn().execute(
         "SELECT COUNT(*) AS n FROM items WHERE status = 'queued'"
@@ -594,16 +492,8 @@ def trim_queue(max_size: int) -> int:
 
 
 def recent_low_impact(limit: int, market: str = "") -> list[sqlite3.Row]:
-    """Return real news the importance gate refused to publish, newest first.
-
-    The counterpart to recent editor rejections. The editor has been auditable
-    since day one; the importance gate was not, even though it throws away far
-    more — and unlike the editor it drops items BEFORE any post exists, so
-    nothing else records that they were ever considered.
-
-    Pass a market name to see only what was dropped in one category. Asking for
-    'none' is the useful one: it shows every story the model said had no
-    consequence for any market, which is the judgement most worth checking.
+    """Return items importance gate dropped (status=low_impact). Pass market name to
+    filter; 'none' shows stories with no market impact.
     """
     sql = """
         SELECT id, source_name, title, topic, market, importance,
@@ -621,12 +511,7 @@ def recent_low_impact(limit: int, market: str = "") -> list[sqlite3.Row]:
 
 
 def market_breakdown(days: int) -> list[sqlite3.Row]:
-    """Count scored items by market and outcome, for the stats report.
-
-    Shows where the gate is spending its 'none' verdicts. If a market you care
-    about never appears, either no source covers it or the prompt's definition
-    of it is too narrow.
-    """
+    """Count published vs. seen items by market (shows where gate spends 'none' verdicts)."""
     return list(conn().execute(
         f"""
         SELECT market,
@@ -641,23 +526,14 @@ def market_breakdown(days: int) -> list[sqlite3.Row]:
     ))
 
 
-# =============================================================================
 # DUPLICATE AUDIT TRAIL
-# =============================================================================
 
 def log_dedup_hit(
     *, item_id: int, matched_item_id: int | None, rung: str,
     score: float, kept: bool, detail: str,
 ) -> None:
-    """Record that two items looked like the same story, and what we did about it.
-
-    Called for drops AND for near-misses that a guard rescued, so the filter can
-    be reviewed later with tools/stats.py.
-
-    Never raises. This is evidence, not the decision — the decision has already
-    been made by the time it is written. Losing a row of it to a database that
-    is briefly busy is a real cost, which is why it is logged loudly, but it is
-    a smaller one than losing the news item this was recorded about.
+    """Log similarity hits; called for drops and near-misses; never raises (this is
+    evidence, not decision).
     """
     try:
         _log_dedup_hit(item_id, matched_item_id, rung, score, kept, detail)
@@ -676,18 +552,14 @@ def _log_dedup_hit(item_id, matched_item_id, rung, score, kept, detail) -> None:
     conn().commit()
 
 
-# =============================================================================
 # POSTS
-# =============================================================================
 
 def create_post(
     *, item_id: int, topic: str, post_html: str, image_url: str,
     writer_model: str,
 ) -> int | None:
-    """Store a finished post. Returns its id, or None if this item already has one.
-
-    The "already has one" guard is what stops a crash mid-send turning into two
-    identical messages in the channel.
+    """Store post, return its id or None if already exists (prevents duplicate sends on
+    crash).
     """
     try:
         cursor = conn().execute(
@@ -721,13 +593,8 @@ def set_post_status(post_id: int, status: str) -> None:
 
 
 def update_post_text(post_id: int, post_html: str) -> None:
-    """Replace the text of an existing post. Used by the brain's rewrite loop.
-
-    The rewrite loop sends a rejected draft back to the writer and gets a fixed
-    version. The post row already exists (one per item, enforced by the
-    database), so the new text REPLACES the old — the rejected draft is not
-    lost, though: the editor's decision log keeps a frozen copy of exactly what
-    it judged, which is where rejected text is meant to live.
+    """Replace post text (rewrite loop). Rejected drafts kept in editor_decisions, not
+    here.
     """
     conn().execute(
         "UPDATE posts SET post_html = ?, char_count = ?, status = 'draft' WHERE id = ?",
@@ -750,11 +617,7 @@ def mark_post_sent(post_id: int, message_id: int, post_url: str) -> None:
 
 
 def get_recent_sent_posts(limit: int) -> list[sqlite3.Row]:
-    """Return the most recently published posts, newest first.
-
-    Used by the brain's persona memory (step 5): the writer can see the last few
-    posts so its tone stays consistent. Only visible text is returned.
-    """
+    """Return recent sent posts (newest first) for persona memory; only visible text."""
     return list(conn().execute(
         "SELECT id, post_html, sent_at FROM posts "
         "WHERE status = 'sent' AND post_html != '' "
@@ -792,20 +655,12 @@ def seconds_since_last_post() -> float:
     return (datetime.now(timezone.utc) - last).total_seconds()
 
 
-# =============================================================================
-# STORIES
-# =============================================================================
-# A story is the unit of work: items join one, and it posts when it has moved.
-# Nothing about a story is held in memory between items — every field of a
-# Story object is rebuilt from these queries, which is why a restart in the
-# middle of a developing story costs nothing.
+# STORIES: unit of work; items join stories, stories post when moved. All state rebuilt
+# from queries.
 
 def create_story(*, headline: str, summary: str, item_id: int, at: str) -> int:
-    """Open a story and put its first item in it. Returns the new story id.
-
-    Both writes share ONE transaction. Done as two commits, a crash in between
-    leaves a story with no items in it, which then shows up in the placement
-    prompt as an empty candidate for the rest of the day.
+    """Create story and attach first item (single transaction); crash between risks empty
+    story.
     """
     cursor = conn().execute(
         "INSERT INTO stories (headline, summary, first_at, last_item_at) "
@@ -890,20 +745,8 @@ def set_story_name(story_id: int, name: str) -> None:
 
 def record_story_post(story_id: int, published_item_id: int, summary: str,
                       *, covers_others: bool = True) -> None:
-    """Book a story post that has actually gone out.
-
-    One post covers several items, so every other item still waiting on this
-    story is now covered too and must stop being a candidate for anything.
-
-    covers_others=False for a forced post: the writer was shown that one item
-    on its own, so the rest of the story's held items were NOT covered by it
-    and must stay waiting. Sweeping them into 'merged' here would bury their
-    content behind a post that never mentioned them.
-
-    ONLY call this after the send succeeded — it marks items as covered, and
-    doing that for a message that never arrived silently buries their content.
-    Idempotent, because it only touches items still queued or held, and two
-    call sites reach it (the graph, and publish_loop's resend fast path).
+    """Log story post; by default mark held/queued items merged (covers_others=False for
+    forced posts). Call only after send succeeds; idempotent.
     """
     at = now_iso()
     conn().execute(
@@ -928,11 +771,8 @@ def record_story_post(story_id: int, published_item_id: int, summary: str,
 
 
 def close_stale_stories(idle_hours: int, max_hours: int) -> list[sqlite3.Row]:
-    """End stories nothing has added to, and stories that have run too long.
-
-    Returns the rows that were closed WITH how many items they still had
-    waiting, because a story closing on unposted content is the one way this
-    design can quietly drop something, and it should be visible in the log.
+    """Close idle/aged stories; return closed rows with waiting counts (unposted content
+    is a design failure point).
     """
     doomed = list(conn().execute(
         f"""
@@ -955,12 +795,7 @@ def close_stale_stories(idle_hours: int, max_hours: int) -> list[sqlite3.Row]:
 
 
 def stories_due_for_roundup(min_items: int, min_minutes: int) -> list[sqlite3.Row]:
-    """Live stories with enough held items waiting long enough to go out together.
-
-    Only `held` counts, not `queued`: a queued item with a story is one that was
-    filed on a round the pacing limits closed, and it will reach the gate on its
-    own next round.
-    """
+    """Return live stories ready for roundup (held items only, not queued)."""
     return list(conn().execute(
         f"""
         SELECT s.id,
@@ -1014,11 +849,8 @@ def calendar_age_minutes() -> float | None:
 
 
 def recent_held(limit: int) -> list[sqlite3.Row]:
-    """Items the story gate decided not to post, newest first.
-
-    The counterpart to recent_low_impact(). This is the new pile where a real
-    story can go quiet — the gate saying "the reader already has this" when it
-    was actually something else — so it has to be readable. See stats.py --held.
+    """Return held items (newest first); counterpart to recent_low_impact(); see
+    tools/stats.py --held.
     """
     return list(conn().execute(
         """
@@ -1032,20 +864,14 @@ def recent_held(limit: int) -> list[sqlite3.Row]:
     ))
 
 
-# =============================================================================
 # EDITOR AUDIT TRAIL
-# =============================================================================
 
 def log_editor_decision(
     *, post_id: int, item_id: int, verdict: str, rules_broken: list[str],
     reason: str, confidence: float, post_html: str, model: str,
     latency_ms: int, attempt: int = 1,
 ) -> None:
-    """Record an editor verdict — approvals as well as rejections.
-
-    Approvals are logged too, not just rejections, because a decline rate is only
-    meaningful if you also counted the approvals.
-    """
+    """Log editor verdicts (approvals and rejections) for decline-rate calculation."""
     conn().execute(
         """
         INSERT INTO editor_decisions (
@@ -1062,10 +888,8 @@ def log_editor_decision(
 
 
 def recent_decline_rate(window: int) -> tuple[float, int]:
-    """Return (share declined, how many decisions we looked at) for recent verdicts.
-
-    Used to raise the alarm if the editor starts rejecting nearly everything —
-    which usually means the editor is broken, not the posts.
+    """Return (share_declined, count) for recent verdicts; alarm if editor rejects most
+    posts.
     """
     rows = list(conn().execute(
         "SELECT verdict FROM editor_decisions ORDER BY id DESC LIMIT ?", (window,)
@@ -1076,16 +900,11 @@ def recent_decline_rate(window: int) -> tuple[float, int]:
     return declines / len(rows), len(rows)
 
 
-# =============================================================================
 # COUNTERS AND NOTES
-# =============================================================================
 
 def counters_today(prefix: str) -> dict[str, int]:
-    """Today's tallies whose kind starts with `prefix`. Never raises.
-
-    Used to turn scattered failures into a rate. A streak counter cannot see
-    them: twelve failures spread through three hundred calls never makes ten
-    in a row, so nothing ever fires.
+    """Return today's tallies matching prefix (never raises); turns scattered failures
+    into rates.
     """
     try:
         rows = conn().execute(
@@ -1098,12 +917,7 @@ def counters_today(prefix: str) -> dict[str, int]:
 
 
 def bump_counter(kind: str, n: int = 1) -> None:
-    """Add to today's tally for one kind of event (ingested, published, ...).
-
-    Never raises. A tally is a statistic, and the database can be briefly busy
-    — another channel's process, a rehearsal, a backup. Losing one count is
-    always better than losing the news item whose pipeline was writing it.
-    """
+    """Add to today's tally (never raises; losing count is better than losing news)."""
     try:
         _bump_counter(kind, n)
     except sqlite3.OperationalError as error:

@@ -1,24 +1,16 @@
-"""Given two stories that LOOK alike, decides whether they are the same event.
+"""Decides whether two items report the same event, and it is a model rather than a
+number because embeddings are unreliable on short text. Measured on 19
+hand-labelled pairs, real duplicates scored 0.738 to 0.993 and different stories
+0.785 to 0.900, so no cutoff separates them; lowering the threshold to 0.72
+caught every duplicate but doubled the false merges.
 
-WHY A MODEL AND NOT A NUMBER. Embeddings work well on long articles and badly on
-short ones, and most of what this channel reads is short. A 40-word tweet gives
-the measurement little but its SUBJECT: "Fed" plus "rates" plus a percentage
-lands in the same place whether the Fed raised, cut or held. Measured on 19
-hand-labelled pairs from this channel, real duplicates scored 0.738-0.993 and
-genuinely different ones 0.785-0.900 — overlapping ranges, so no cutoff anywhere
-can separate them. Lowering it from 0.80 to 0.72 caught every real duplicate and
-DOUBLED the wrong merges. It is the wrong instrument, not a tuning problem.
+Two failures it fixed: three separate posts about one Fed decision (0.738, 0.745
+and 0.797 against a 0.80 cutoff), and "$49.75M outflows" being merged into
+"$32.11M inflows" at 0.900.
 
-Two live failures it fixes: three posts about one Fed decision published minutes
-apart (0.738, 0.745, 0.797 against a 0.80 cutoff), and "$49.75M ETF OUTflows"
-merged into "$32.11M ETF INflows" at 0.900.
-
-It is fed by check 4 rather than replacing it — the numbers find a few plausible
-candidates, this rules on them. Roughly 16 calls a day.
-
-IT FAILS OPEN: unreachable or nonsense means "not a duplicate" and the story
-posts, matching dedup.py and opposite to editor.py. Every fallback is counted as
-`judge_error` so it shows up in tools/stats.py.
+It is fed by check 4 rather than replacing it, and runs about 16 times a day. It
+fails open, so an unreachable judge means "not a duplicate", and every fallback
+is counted as judge_error.
 """
 
 from __future__ import annotations
@@ -31,9 +23,8 @@ from utils import db, logger as log_setup, openrouter
 log = log_setup.get("judge")
 
 
-# --- The binary prompt (kept for tools/check_dedup.py) ---
-# Every line of the "NOT the same event" list is a real pair this channel got
-# wrong or nearly got wrong. Removing one brings that failure back.
+# Binary prompt (kept for tools/check_dedup.py); each "NOT same" line is real
+# failure—removing it brings bug back.
 
 SYSTEM = """You decide whether two news items report THE SAME SPECIFIC EVENT.
 
@@ -69,11 +60,8 @@ SCHEMA = {
 }
 
 
-# --- The three-way prompt (used by the brain to detect continuations) ---
-# Same judge, but now it also distinguishes "this is a new development of a
-# story we are already covering" from "this is a completely different story".
-# That distinction is what lets the channel thread developing events instead of
-# dropping every related item as a duplicate.
+# Three-way prompt (brain detects continuations): also distinguishes new developments
+# from different stories (thread events, not drop all).
 
 SYSTEM_THREE_WAY = """You classify the relationship between two news items.
 

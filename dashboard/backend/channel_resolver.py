@@ -1,11 +1,5 @@
-"""Turns a dashboard request's ?channel= into one of this project's real
-channels, and lists them for the switcher.
-
-The dashboard used to read whichever channel .env named CHANNEL. Now every
-endpoint can be asked for any channel, so "the active one" is gone — the
-fallback below is a fixed default (markets), never .env, matching the spec's
-"defaulting to markets" rather than "defaulting to whatever .env says".
-"""
+"""Resolve a dashboard request's ?channel= parameter to a real channel and list channels for the switcher.
+Fallback is fixed (markets), never .env, so the API matches spec "defaulting to markets"."""
 
 from __future__ import annotations
 

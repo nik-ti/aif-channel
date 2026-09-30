@@ -7,8 +7,8 @@ import sys
 
 import config
 
-# These log a line per HTTP request. Left alone, that grows the log file to
-# hundreds of megabytes — there is a 180 MB example of it on this machine.
+# Loggers that log per-request and bloat logs to hundreds of MB (180 MB example exists
+# on this machine).
 _NOISY = ("httpx", "httpcore", "asyncio", "telegram", "telegram.ext", "redis")
 
 _configured = False

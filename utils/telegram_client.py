@@ -1,23 +1,7 @@
-# --- Sending messages to the Telegram channel ---
-#
-# WHAT THIS FILE DOES
-#   Wraps the Telegram bot library so the rest of the project can just say
-#   "send this post" without worrying about formatting rules, rate limits, or
-#   what to do when Telegram says no.
-#
-# WHERE IT FITS
-#   Used only by nodes/publisher.py. Error alerts go through a different file
-#   (utils/telegram_error.py) so that a broken channel can still tell you it is
-#   broken.
-#
-# THE RULE THAT SHAPES THIS FILE
-#   A post is never lost to a formatting problem. If Telegram rejects our
-#   carefully formatted message, we strip the formatting and send it as plain
-#   text. A plain post is worth far more than no post.
-#
-# DEPENDENCIES
-#   python-telegram-bot (the workspace rule: always this library, no exceptions).
-#   Uses TELEGRAM_BOT_TOKEN and CHANNEL_ID from config.
+"""Sends messages to the Telegram channel via the python-telegram-bot library.
+Used only by nodes/publisher.py. If Telegram rejects formatting, retry without it: a plain post is better than no post.
+Error alerts use a separate file (utils/telegram_error.py) so a broken channel can still notify you.
+"""
 
 from __future__ import annotations
 
@@ -31,12 +15,11 @@ from utils import logger as log_setup, telegram_html
 
 log = log_setup.get("telegram")
 
-# One bot connection, created the first time it's needed and kept afterwards.
+# Single bot connection, created on first use.
 _bot: Bot | None = None
 
-# The phrases Telegram uses when it dislikes our formatting. When we see one of
-# these, retrying identically is pointless — but retrying WITHOUT formatting
-# will work.
+# Phrases Telegram uses for formatting errors. If we see these, retry without formatting
+# (not pointless like a plain retry would be).
 _FORMATTING_COMPLAINTS = (
     "can't parse entities",
     "unsupported start tag",

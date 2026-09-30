@@ -1,18 +1,13 @@
-"""Make text safe for Telegram to display.
-
-Telegram rejects a WHOLE message for one tag it does not recognise or one tag
-left unclosed, and the post is lost. Two things cause that: stray angle
-brackets in ordinary text ("yields above <6%"), and cutting a long message
-mid-tag. This is the last stop before anything is sent.
-"""
+"""Make text safe for Telegram by escaping stray angle brackets and closing unclosed tags.
+Telegram rejects an entire message if one tag is unrecognized or unclosed, and the post is lost.
+This is the last safeguard before sending."""
 
 from __future__ import annotations
 
 import re
 
-# Every tag Telegram accepts in HTML mode. Longer names come first so "strike"
-# is not matched as "s". <br> is NOT accepted — one of them means a rejected
-# message, so we turn it into a real line break instead.
+# Telegram's accepted HTML tags (longer first: "strike" before "s"). <br> rejected;
+# convert to real newlines.
 _ALLOWED_TAG = re.compile(
     r"</?(?:tg-spoiler|blockquote|strike|strong|code|pre|del|ins|em|b|i|u|s|a)"
     r"(?:\s[^<>]*)?>",
@@ -21,7 +16,7 @@ _ALLOWED_TAG = re.compile(
 
 _BR = re.compile(r"<br\s*/?>", re.IGNORECASE)
 
-# Outermost-first, so closing them in this order produces valid nesting.
+# Order outermost-first for valid nesting.
 _CLOSEABLE = ("a", "code", "pre", "i", "b")
 
 # Telegram's own limits.

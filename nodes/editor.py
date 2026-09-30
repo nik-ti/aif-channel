@@ -1,24 +1,13 @@
-"""Reads the finished post against its source and decides: publish, or bin it.
+"""Checks a finished post against the source it was written from. It runs on a
+different model from the writer, because a model judges its own prose badly.
 
-EDITOR_MODEL is deliberately a different family from WRITER_MODEL. A model is a
-poor judge of its own writing — keep them apart if you change either.
+Four safeguards exist because a sister channel destroyed 110 of 712 posts before
+anyone noticed: rejections must name a rule from a fixed list enforced by a
+strict schema, every decision is logged, a rejection rate above 50% raises an
+alert, and tools/stats.py groups the reasons.
 
-READ THIS BEFORE CHANGING ANYTHING. A node like this one in nmd_consulting
-quietly destroyed 110 of 712 finished posts because its rejection list included
-the ordinary Russian word for "however", and nobody noticed for months because
-nothing recorded WHY a post was rejected. Four safeguards stop that here:
-
-  1. It can only reject by naming a rule from RULES below, enforced by the
-     provider's strict mode. A rejection naming no rule is treated as an
-     APPROVAL and logged. It cannot kill a post because it feels off.
-  2. EVERY decision is recorded, approvals included — a rejection rate is
-     meaningless unless you also counted the approvals.
-  3. Rejecting more than half of the last 20 posts sends you a Telegram alert.
-  4. tools/stats.py prints rejections grouped by rule.
-
-IT FAILS CLOSED: unreachable means nothing is published and the post retries.
-The duplicate checker does the opposite, deliberately — an accidental duplicate
-is a small embarrassment, unreviewed text on a public channel is not.
+It fails closed. An unreachable editor means the post is not published and is
+retried.
 """
 
 from __future__ import annotations
@@ -33,30 +22,26 @@ from utils import db, logger as log_setup, openrouter
 
 log = log_setup.get("editor")
 
-# --- AI configuration: the block to edit when tuning the editor ---
+# AI config: edit to tune editor.
 def _today() -> str:
-    """Today's date, so the editor does not trust its own memory over the source."""
+    """Today's date (editor doesn't trust own memory over source)."""
     return datetime.now(timezone.utc).strftime("%d %B %Y")
 
 
 MODEL = config.EDITOR_MODEL
 
-# Tried when MODEL cannot be reached. See EDITOR_FALLBACK_MODEL in config.py for
-# why the second opinion has to be as strict as the first.
+# Fallback when MODEL unreachable; must be as strict (see config.EDITOR_FALLBACK_MODEL).
 FALLBACKS = [m for m in (config.EDITOR_FALLBACK_MODEL,) if m]
-TEMPERATURE = 0.0          # judgements should be consistent, never creative
+TEMPERATURE = 0.0  # Judgements consistent, never creative.
 
-# WATCH THIS IF YOU CHANGE THE MODEL. A reasoning model thinks privately before
-# answering and that counts against this budget. gpt-5-mini at 400 tokens spent
-# the whole allowance thinking and never reached its answer — HALF of all editor
-# calls failed that way, invisibly, and because this node fails closed those
-# posts were never published. Put it back to 2000 for a reasoning model.
-# Raised from 800 on 28 Aug 2026: the Reason field now has to name EVERY fault
-# rather than one, and two calls hit the ceiling at the old budget.
+# WATCH: reasoning models think privately (counts against budget). gpt-5-mini 400t → all
+# thinking, 0 answers (50% failed, silent).
+# Raised 800→1200 on 2026-08-28: Reason field now names EVERY fault, two calls hit
+# ceiling.
 MAX_TOKENS = 1200
 
-# The complete list of reasons a post may be rejected. The model is FORCED to
-# pick from it; adding a new reason has to be deliberate.
+# Complete rejection rule list (model FORCED to pick one from RULES; adding new rules is
+# deliberate).
 RULES = {
     "FACTUAL_DRIFT": "states something the source text does not say — added "
                      "background, an added or altered title, or a claim whose "

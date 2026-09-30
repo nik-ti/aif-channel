@@ -1,19 +1,12 @@
-"""Decides whether a story is worth covering, what it is, and how much it matters.
+"""The only station that asks whether a story is worth covering at all. The editor
+later checks a post against its source, which is a different question.
 
-THIS IS THE ONLY NODE THAT ASKS "SHOULD WE COVER THIS?" It is easy to assume the
-editor shares the job; it does not — the editor only checks a finished post
-against its source. So if something dull reaches the channel, this prompt is
-what has to change. (An editor allowed to reject on judgement is the editor that
-ate 110 posts in nmd_consulting.)
+The rubric makes the model name which market has to reprice before it scores
+anything. Without that, "a Russian retailer evacuates its stores" scores 4 out of
+5 as an event and is useless to a markets channel.
 
-It fails OPEN: if the model cannot be reached we fall back to the source's own
-topic guess and a middling importance rather than dropping real news.
-
-The rubric asks which MARKET must be repriced before it scores anything. An
-event test alone let through "Russian retailer evacuates warehouses after drone
-attacks" at a 4 — real, settled, and of no use to anyone holding a position.
-Naming a transmission channel is a claim that can be wrong and reviewed later;
-"feels important" is not.
+It fails open: with no model the item keeps its source's topic and a middling
+score.
 """
 
 from __future__ import annotations

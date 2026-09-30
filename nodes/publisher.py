@@ -1,16 +1,8 @@
-"""Finishes an approved post and sends it to the channel.
+"""Sends an approved post to the channel without changing a character of it.
 
-Adds nothing to the text. The mark at the front belongs to the writer
-(config.POST_MARKS); a source credit used to go at the end and no longer does.
-
-The pacing limits are set for readers, not for Telegram — a channel that posts
-eleven times in five minutes gets muted.
-
-A post with media goes out as ONE message, the clip or photo captioned, never
-a picture followed by a wall of text. Telegram caps captions at 1024 characters
-against 4096, so if shortening would leave the text trailing off we drop the
-media and send the full text instead. A video that Telegram will not fetch
-falls back to its own thumbnail before it falls back to text.
+A post with media goes out as ONE captioned message, which caps the text at 1024
+characters instead of 4096. If the text will not fit, the media is dropped rather
+than the words. If a video cannot be fetched, its thumbnail is used.
 """
 
 from __future__ import annotations

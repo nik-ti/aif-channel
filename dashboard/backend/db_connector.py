@@ -1,17 +1,6 @@
-"""Read-only SQLite connector for the dashboard.
-
-Opens a channel's database in read-only mode (via the sqlite
-"file:...?mode=ro" URI) so the dashboard can never write to it, and every
-connection gets a busy_timeout so a query never hangs while news-channel's own
-processes are writing to the same file — it raises sqlite3.OperationalError
-instead, which the API layer turns into a 503.
-
-Every function here takes an explicit `channel` now — the dashboard serves
-more than one, and there is no longer a single "the database" to default to.
-Callers are expected to check paths.database_ready(channel) first (see
-api/posts.py etc.); calling get_connection() for a channel with no database
-file yet still raises DatabaseUnavailableError, same as before.
-"""
+"""Read-only SQLite connector for the dashboard using "file:...?mode=ro" URI.
+Every connection has busy_timeout so queries don't hang when news-channel writes; raises OperationalError instead (API turns it into 503).
+All functions take explicit `channel` parameter; check paths.database_ready(channel) first."""
 
 from __future__ import annotations
 

@@ -1,9 +1,5 @@
-"""Text cleaning for the duplicate detector.
-
-Publishers write the same headline slightly differently every time — a curly
-quote, a trailing slash — and to a computer those are different strings. These
-helpers strip the cosmetic differences so only real ones remain.
-"""
+"""Strip cosmetic text differences for dedup: curly quotes, dashes, trailing slashes.
+Publishers write the same headline differently each time; these helpers keep only real differences."""
 
 from __future__ import annotations
 
@@ -21,7 +17,7 @@ _PUNCT_FOLD = str.maketrans({
 
 _KEEP_CHARS = re.compile(r"[^a-z0-9 ]+")
 
-# Used to answer "do these two headlines differ ONLY by a number?"
+# Match digit sequences to answer "do headlines differ only by a number?"
 _DIGIT_RUN = re.compile(r"[0-9]+")
 
 # Sirens, flags and other pictographs. See for_embedding() for why they come off.

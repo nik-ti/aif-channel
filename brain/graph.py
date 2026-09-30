@@ -1,42 +1,17 @@
-"""The editorial workflow as an explicit state machine.
-
-Each station is a node in brain/nodes.py; this file wires them together and
-says where an item can go next.
-
-THE SHAPE
-
-    START → dedup
-              ├─ duplicate ───────────────────────────────────────► END
-              └─ new ──► sorter
-                           ├─ irrelevant / low_impact / retry ────► END
-                           └─ passes ──► fetch_article
-                                              │
-                                              ▼
-                                       story_organizer ──► gatekeeper
-                                                             ├─ hold ─► END
-                                                             └─ post ─► writer
-                                                                          │
-    ┌─── rewrite (once) ────────────────────────────────────────────┐     ▼
-    └───────────────────────────────────────────────────────────► editor
-                                                    ├─ declined ──────► END
-                                                    └─ approved ─► publish ─► END
+"""Wires the editorial stations from brain/nodes.py into one state machine and says
+where an item can go next.
 
 The order is the channel's, not this file's: it comes from PIPELINE in
-channels/<name>/profile.py, so a channel can add a station of its own without
-the shared machinery growing a flag for it.
+channels/<name>/profile.py, so a channel can add a station without the shared
+machinery growing a flag for it.
 
-Placement runs on every round, even when the pacing limits forbid posting: an
-item that expires before it is filed takes its content out of its story with it.
-Those rounds stop at story_organizer and leave the item queued, and the next round
-resumes its story without paying for the placement again.
+The unit of work is the story, not the item. An item the gate holds does not
+become a post; it stays attached to its story as fuel for that story's next one.
+Placement runs every round even when the pacing limits forbid posting, because an
+item that expires before it is filed takes its content out of the story with it.
 
-The unit of work is the story, not the item. An item that reaches the gate and
-is held does not become a post; it stays attached to its story as fuel for that
-story's next one. Because the gate always posts a story's FIRST post, a hold
-only ever means "the reader already has this", never "this went unreported".
-
-The item is kept as a plain dict rather than the sqlite row so the state stays
-serialisable, which keeps the door open to a checkpointer later.
+State is passed as a plain dict rather than a database row, so it stays
+serialisable and a checkpointer can be added later.
 """
 
 from __future__ import annotations

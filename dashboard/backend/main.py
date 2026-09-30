@@ -1,13 +1,5 @@
-"""Market One Dashboard backend — FastAPI app.
-
-Serves the active channel's database to the dashboard frontend under /api/v1/*.
-
-Every request must carry the shared token. nginx publishes this API on the
-open internet, so without it anyone who knows the address can read the
-channel's data — and, once the dashboard can push a rejected item back into
-the pipeline, do that too. The token is added by the dashboard's server, never
-by the browser, so it stays out of the page source.
-"""
+"""FastAPI backend for Market One Dashboard. Serves the channel's database to the frontend under /api/v1/*.
+Every request requires a shared token (added by the server, not the browser) because nginx publishes this API on the open internet."""
 
 from __future__ import annotations
 

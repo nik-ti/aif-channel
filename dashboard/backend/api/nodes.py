@@ -1,30 +1,7 @@
-"""GET /api/v1/nodes — for each LLM node in the pipeline: what it does, which
-model runs it, and its full system prompt (the embeddings step has a model
-but no prompt).
-
-Everything here is extracted by reading nodes/*.py, config.py and .env as
-TEXT with regexes, rather than by importing the pipeline. Importing would run
-module-level code that needs API keys and config this read-only dashboard has
-no business depending on — same reasoning as the old prompts-only endpoint
-this replaces.
-
-WHY .env IS READ TOO: config.py's MODEL constants are only DEFAULTS —
-`SORTER_MODEL = _get("SORTER_MODEL", "deepseek/deepseek-v3.2")` — and .env can
-override any of them at runtime, the same way it already overrides
-MAX_POSTS_PER_HOUR today. A dashboard that shows config.py's default while the
-running channel actually reads a `.env` override would be lying about what is
-live. So model resolution mirrors config.py's own `_get()`: an override in
-.env (or the real process environment) wins, otherwise fall back to the
-default written in config.py's source. Models are this shared machinery's
-config, not a channel's, so this part stays global regardless of ?channel=.
-
-Takes an optional ?channel=, resolved by channel_resolver (defaults to
-markets, never .env): the node LIST and the sorter's rubric now come from
-that channel's own PIPELINE and rubric.md (see pipeline.py), since two
-channels can wire up different stations. This does not depend on the
-channel's database — a channel with no DB yet (ai_news, today) still has a
-profile and a rubric, so its pipeline shows up; "ready" is included purely
-for the frontend to note that there's no data behind it yet.
+"""GET /api/v1/nodes lists each LLM node in the pipeline with its model and system prompt.
+The endpoint reads nodes/.py, config.py, and .env as text with regexes, not by importing (importing would run module-level code needing API keys).
+It reads .env to show what model is actually running: config.py constants are defaults, and .env overrides them at runtime, just like MAX_POSTS_PER_HOUR today.
+Accepts optional ?channel= to show that channel's PIPELINE and rubric from channels/<name>/profile.py and rubric.md.
 """
 
 from __future__ import annotations
@@ -48,10 +25,8 @@ NODES_DIR = ROOT_DIR / "nodes"
 CONFIG_PATH = ROOT_DIR / "config.py"
 ENV_PATH = paths.ENV_PATH
 
-# PIPELINE station name -> the LLM node id it shows up as here. Stations with
-# no entry (fetch_article, publish, or anything a channel adds of its own)
-# have no dedicated model/prompt in this dashboard and are left out of the
-# node list, same as before this became channel-aware.
+# Map PIPELINE station to LLM node id. Stations with no entry (fetch_article, publish,
+# channel-added) have no model/prompt and are omitted.
 STATION_TO_NODE: dict[str, str] = {
     "dedup": "dedup_judge",
     "sorter": "sorter",
@@ -62,10 +37,8 @@ STATION_TO_NODE: dict[str, str] = {
     "repeat_check": "repeat_check",
 }
 
-# node_name -> (source file, constant name) for nodes that have a prompt.
-# The judge's THREE-WAY prompt is the one actually used by dedup.py's check 5
-# (nodes/dedup.py calls judge.execute_three_way) — the binary SYSTEM prompt
-# is legacy, kept only for tools/check_dedup.py.
+# Mapping node to its (source file, prompt constant). Judge's SYSTEM_THREE_WAY is the
+# one used by dedup.py check 5; SYSTEM is legacy (tools/check_dedup.py only).
 PROMPT_SOURCES: dict[str, tuple[str, str]] = {
     "dedup_judge": ("judge.py", "SYSTEM_THREE_WAY"),
     "story_organizer": ("stories.py", "PLACE_SYSTEM"),
@@ -75,7 +48,7 @@ PROMPT_SOURCES: dict[str, tuple[str, str]] = {
     "repeat_check": ("echo.py", "SYSTEM"),
 }
 
-# node_name -> config.py variable name that holds the model it runs on.
+# Map node to its config.py model variable.
 MODEL_VARS: dict[str, str] = {
     "dedup_judge": "JUDGE_MODEL",
     "sorter": "SORTER_MODEL",

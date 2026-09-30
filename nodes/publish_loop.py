@@ -1,15 +1,11 @@
-"""Turns queued items into published posts, at a sensible pace.
+"""Turns queued items into posts at a sensible pace. Each tick expires stale items
+and runs the rest through brain.graph.
 
-Each tick expires stale items, then runs the rest through brain.graph.
+Expiry is not optional. Without it the queue grows without limit and the channel
+posts overnight news at breakfast.
 
-EXPIRY IS NOT OPTIONAL. The feeds supply far more than the hourly posting limit,
-so without it the queue grows forever and the channel ends up posting this
-morning's news at midnight. Another project on this machine has 2,540 items
-stuck in exactly that state. Anything older than QUEUE_TTL_MINUTES is dropped:
-when more news arrives than we can carry, the best and freshest wins.
-
-Every step is a recorded state change in the database, so a crash resumes where
-it left off and nothing is ever half-posted.
+Every step is written to the database, so a crash resumes where it stopped and
+nothing is left half-posted.
 """
 
 from __future__ import annotations

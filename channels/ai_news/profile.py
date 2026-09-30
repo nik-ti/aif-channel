@@ -1,17 +1,6 @@
-"""The AI news channel. A skeleton — nothing here is filled in yet.
-
-Copied from channels/markets/profile.py, which is the worked example. The
-machinery in nodes/, brain/ and utils/ is shared and needs no changes to run
-this channel; what belongs here is only what makes it a different channel.
-
-Still to decide, in roughly this order:
-  - what it covers, and what makes an item important enough to post (rubric.md)
-  - its voice (persona.md)
-  - its sources
-  - whether it wants stations the markets channel does not, such as one that
-    reads the images and clips a post carries. That station goes in a nodes.py
-    beside this file and is named in PIPELINE below; nothing shared changes.
-"""
+"""The AI news channel skeleton (not yet filled in). See channels/markets/profile.py for the worked example.
+Shared machinery (nodes/, brain/, utils/) needs no changes; what belongs here is only what makes this channel different.
+Still to decide: rubric.md (what it covers), persona.md (voice), sources, and any channel-specific stations in PIPELINE."""
 
 from __future__ import annotations
 

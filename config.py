@@ -1,9 +1,8 @@
-# --- Every setting for the news channel ---
+# Every setting for the channel. Secrets live in .env; everything else has a
+# sensible default here and can be overridden in .env.
 #
-# Secrets live in .env next door, not here. Everything below either reads from
-# .env with a sensible default, or is a list you edit directly.
-#
-# Full explanations of each setting are in .env.example and README.md.
+# Any name can be prefixed with the channel's own name to override it for that
+# channel alone, for example AI_NEWS_MAX_POSTS_PER_HOUR.
 
 from __future__ import annotations
 
@@ -18,18 +17,12 @@ SCHEMA_PATH = HERE / "schema.sql"
 _ENV = dotenv_values(HERE / ".env")
 
 
-# Set once the active channel is known, a few lines below. Until then lookups
-# are unprefixed, which is how CHANNEL itself gets read.
+# Set once CHANNEL is known; initially unprefixed so CHANNEL itself can be read.
 _PREFIX = ""
 
 
 def _get(name: str, default: str = "") -> str:
-    """Read a setting, preferring this channel's own value.
-
-    MAX_POSTS_PER_HOUR is shared by every channel; MARKETS_MAX_POSTS_PER_HOUR
-    belongs to one. Without that, a second channel silently inherits the first
-    one's pacing with no way to say otherwise.
-    """
+    """Read setting, preferring this channel's own value (shared vs. per-channel)."""
     for key in ((_PREFIX + name) if _PREFIX else "", name):
         if not key:
             continue
@@ -65,15 +58,8 @@ def _get_bool(name: str, default: bool) -> bool:
     return default
 
 
-# =============================================================================
-# WHICH CHANNEL THIS PROCESS IS
-# =============================================================================
-# Everything below this line is machinery, shared by every channel. What makes
-# a channel itself — its sources, its voice, what it considers important, its
-# pipeline — lives in channels/<name>/ and is loaded here.
-#
-# Two channels run as two services from this one codebase, told apart by
-# CHANNEL in their .env or unit file.
+# CHANNEL SELECTION: two channels run from same code, told apart by CHANNEL in .env/unit
+# file.
 
 CHANNEL = _get("CHANNEL", "markets")
 _PREFIX = CHANNEL.upper() + "_"
@@ -89,9 +75,7 @@ except ImportError as error:  # pragma: no cover - a typo here must be loud
 
 CHANNEL_NAME = _profile.NAME
 
-# Each channel keeps its own database. Sharing one would let a second channel's
-# items into this one's duplicate check and story layer, which both ask
-# "what else has been in here recently".
+# Each channel has separate DB (avoid cross-channel duplicate checks and story layer).
 DB_PATH = HERE / "data" / _profile.DB_FILENAME
 LOG_PATH = HERE / "logs" / _profile.LOG_FILENAME
 
@@ -107,12 +91,8 @@ PIPELINE = _profile.PIPELINE
 USE_ECONOMIC_CALENDAR = getattr(_profile, "USE_ECONOMIC_CALENDAR", False)
 
 
-# =============================================================================
-# SECRETS (from .env)
-# =============================================================================
+# SECRETS (from .env); key names are per-channel.
 
-# Which .env keys hold them is the channel's business: a second channel posts
-# somewhere else, under its own bot.
 TELEGRAM_BOT_TOKEN = _get(_profile.BOT_TOKEN_KEY)
 CHANNEL_ID = _get(_profile.CHANNEL_ID_KEY)   # "@name" or "-100..."
 ERROR_CHAT_ID = _get("ERROR_CHAT_ID")    # your DM, for error alerts
@@ -124,19 +104,10 @@ OPENROUTER_BASE_URL = _get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
 
 
 
-# =============================================================================
-# POST APPEARANCE
-# =============================================================================
-# At most one mark per post, at the very front, before the headline. The WRITER
-# picks it, from this list or a country's flag.
-#
-# WHY A LIST AND NOT A FREE CHOICE: a free choice once put a 🔥 on a drone
-# strike. Every mark below says WHAT KIND of news this is, never how to feel
-# about it, so a wrong pick is merely unhelpful. writer.enforce_mark() removes
-# anything else.
-#
-# No hashtags, on purpose: two tags covering the whole channel sorted posts the
-# way this desk thinks rather than the way a reader does.
+# POST APPEARANCE: one mark per post at front (WRITER picks from list or flag).
+# Fixed list prevents emoji misuse (🔥 on drone strike); marks signal what, not how to
+# feel.
+# No hashtags: two would sort posts by desk, not reader.
 
 POST_MARKS = {
     # a number moving — the short, specific posts
@@ -160,56 +131,36 @@ POST_MARKS = {
     "🔒": "safety, custody, a freeze or a lock-up of funds or assets",
 }
 
-# The bullet for lists inside a post. The one emoji allowed in the body:
-# writer.strip_emojis() protects it while removing everything else.
+# Bullet for lists (only emoji allowed in body; strip_emojis protects it).
 BULLET = "▪️"
 
-# A country's flag is also a valid mark, when that country IS the story —
-# "🇯🇵 Japan's 10-year yield tops 3%". Flags are not listed above because
-# there are 250 of them; writer.enforce_mark() accepts any flag as the mark.
+# Country flags are valid marks when country is the story (250 of them; accept any
+# flag).
 
-# "markets" was added 28 Aug 2026. Widening the topic is NOT lowering the bar:
-# the market-impact test in nodes/sorter.py is unchanged and still does the
-# filtering. Such a story is now allowed to be judged, not refused a hearing.
-
-# Short sources — typically an X post of a few sentences — become BRIEF posts:
-# kept much shorter, because there is nothing to pad a longer post with except
-# invention.
+# "markets" topic added 2026-08-28; bar unchanged in nodes/sorter.py.
+# Short sources (X posts) become BRIEF posts to avoid invention.
 BRIEF_SOURCE_CHARS = _get_int("BRIEF_SOURCE_CHARS", 400)
 
 
-# =============================================================================
-# WHAT GETS PUBLISHED
-# =============================================================================
-
-# The first AI node scores every story 1-5 for market impact. Only stories at or
-# above this number are published. This is the main control on volume and on
-# how trivial the channel feels.
-#   5 = only the biggest events        4 = market-moving news (recommended)
-#   3 = ordinary news too              1 = everything
-# The scale is defined in nodes/sorter.py — change both together.
+# WHAT GETS PUBLISHED: sorter scores 1-5 for impact; only >= MIN_IMPORTANCE published.
+# Scale: 5=biggest events, 4=market-moving (recommended), 3=ordinary news, 1=everything.
+# See nodes/sorter.py.
 MIN_IMPORTANCE = _get_int("MIN_IMPORTANCE", _profile.MIN_IMPORTANCE)
 
 
-# =============================================================================
 # TIMING AND LIMITS
-# =============================================================================
 
 POLL_MINUTES = _get_int("POLL_MINUTES", 10)
 
-# Reading tweets from the shared relay
+# Tweet relay: TWEET_STREAM_GROUP must stay fixed (new name skips/re-reads); different
+# from "sniper-ingest".
 REDIS_URL = _get("REDIS_URL", "redis://localhost:6379/0")
 TWEET_STREAM_KEY = _get("TWEET_STREAM_KEY", "tweets:stream")
-# Redis bookmark name. Must stay different from the trading bot ("sniper-ingest"),
-# and must not change on this live channel — a new name would start a new
-# bookmark and either skip tweets or re-read old ones.
 TWEET_STREAM_GROUP = _get("TWEET_STREAM_GROUP", "news-channel")
-# Guards that stop a restart flooding the channel with old tweets.
-X_MAX_AGE_MINUTES = _get_int("X_MAX_AGE_MINUTES", 45)
+X_MAX_AGE_MINUTES = _get_int("X_MAX_AGE_MINUTES", 45)  # Stop restart floods.
 X_MAX_BURST = _get_int("X_MAX_BURST", 25)
 
-# Guards against an abandoned feed still serving old contents, and a new feed
-# handing over its whole back catalogue on the first poll.
+# Stop old feeds replaying back catalogue on next poll.
 ARTICLE_MAX_AGE_HOURS = _get_int("ARTICLE_MAX_AGE_HOURS", 24)
 
 # Publishing pace
@@ -220,117 +171,64 @@ MIN_SECONDS_BETWEEN_POSTS = _get_int("MIN_SECONDS_BETWEEN_POSTS", 90)
 MAX_POSTS_PER_HOUR = _get_int("MAX_POSTS_PER_HOUR", 12)
 MAX_POSTS_PER_DAY = _get_int("MAX_POSTS_PER_DAY", 60)
 
-# Queue housekeeping. Items waiting longer than this are dropped unposted —
-# without it the queue grows forever and the channel posts stale news.
+# Queue housekeeping: drop stale items to prevent queue growth and stale posts.
 QUEUE_TTL_MINUTES = _get_int("QUEUE_TTL_MINUTES", 90)
 MAX_QUEUE_SIZE = _get_int("MAX_QUEUE_SIZE", 200)
 MAX_ATTEMPTS = _get_int("MAX_ATTEMPTS", 3)
 
 
-# =============================================================================
-# DUPLICATE DETECTION
-# =============================================================================
-# Five checks, cheapest first — see nodes/dedup.py.
+# DUPLICATE DETECTION: five checks, cheapest first (see nodes/dedup.py).
 
-# Check 3: how alike two headlines must be (0-100) to count as the same story.
+# Check 3: headline similarity (0-100).
 FUZZY_THRESHOLD = _get_int("FUZZY_THRESHOLD", 92)
 FUZZY_WINDOW_HOURS = _get_int("FUZZY_WINDOW_HOURS", 24)
 
-# Check 4: same MEANING rather than same words (0.0-1.0). The score is a
-# SHORTLIST, not a verdict — check 5 decides.
-#
-#   >= COSINE_CERTAIN    near-verbatim; merge without paying for a judgement
-#   >= COSINE_SHORTLIST  worth asking about -> check 5
-#   below                different story, no further checks
-#
-# Measured on 19 hand-labelled pairs from this channel: real duplicates scored
-# 0.738-0.993 and genuinely different ones 0.785-0.900. Overlapping ranges, so
-# no single cutoff works — which is why check 5 exists. 0.72 caught 100% of the
-# real duplicates in that sample and 0.75 already started missing them.
-COSINE_SHORTLIST = _get_float("COSINE_SHORTLIST", 0.72)
-COSINE_CERTAIN = _get_float("COSINE_CERTAIN", 0.95)
+# Check 4: semantic similarity (0.0-1.0). Measured on 19 pairs: duplicates 0.738-0.993,
+# different 0.785-0.900 (overlap).
+# 0.72 caught 100% of duplicates; 0.75 missed some.
+COSINE_SHORTLIST = _get_float("COSINE_SHORTLIST", 0.72)  # Check 5 decides between SHORTLIST and different stories.
+COSINE_CERTAIN = _get_float("COSINE_CERTAIN", 0.95)  # Near-verbatim; merge without check 5.
 COSINE_WINDOW_HOURS = _get_int("COSINE_WINDOW_HOURS", 48)
 
-# How many shortlisted candidates to consider. It was 1, which is why a burst of
-# three tweets about one event only ever got compared in pairs.
+# How many candidates to compare (was 1, lost burst dedup).
 DEDUP_TOP_K = _get_int("DEDUP_TOP_K", 3)
 
-# THE TIME GATE. Every real duplicate in that sample landed within 10.1 hours;
-# the worst false merges were 24 hours apart — two editions of the same
-# recurring report. This removes them for free, before any model runs.
+# TIME GATE: duplicates in sample landed within 10.1h; false merges 24h apart (recurring
+# reports). Removes for free, before model runs.
 DUPLICATE_MAX_GAP_HOURS = _get_int("DUPLICATE_MAX_GAP_HOURS", 12)
 
 EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
-# =============================================================================
-# AI MODELS
-# =============================================================================
-# Prompts live at the top of each node file, not here.
 
-# 1. Scores importance and topic. Runs on everything for about $1.50 a month,
-# so choose it for JUDGEMENT rather than for being cheap — it decides what
-# matters.
-# This station is 88% of the channel's model bill — not because it is dear, but
-# because it is sent the whole 4529-token rubric 142 times a day. That is why the
-# model here is chosen on price as much as on judgement: haiku-4.5 would be $20
-# of a $23 monthly total, gemini-2.5-flash is $6.53 of $7.40.
-#
-# Prompt caching was measured and REJECTED, so nobody has to try it again: the
-# rubric is identical on every call, and a cache read costs $0.000812 against
-# $0.005091 uncached — but the cache expired after 5 minutes even when asked for
-# an hour, and the median gap between two sorting rounds here is 6.5 minutes with
-# only 41% under five. A miss costs $0.009909, so at this channel's pace caching
-# would be 21% DEARER than not caching. It only becomes worth doing if the gaps
-# get shorter.
+# AI MODELS: prompts live in node files, not here.
+
+# 1. Sorter: scores importance/topic. ~$1.50/mo ($6.53 of $7.40 for gemini-2.5-flash, vs
+# haiku $20 of $23).
+# 88% of bill: 4529-token rubric, 142x/day. Prompt caching measured and REJECTED: cache
+# read $0.000812 vs uncached $0.005091,
+# but 5m expiry vs 6.5m median gap (only 41% <5m); miss costs $0.009909 → 21% DEARER.
 SORTER_MODEL = _get("SORTER_MODEL", "google/gemini-2.5-flash")
 
-# 2. Writes the post in the house style. DeepSeek's output is $0.40/M against
-# Gemini Flash's $2.50/M, and the writer is output-heavy, so this roughly halves
-# the biggest cost in the pipeline.
+# 2. Writer: deepseek-v3.2 $0.40/M vs Gemini $2.50/M; output-heavy, so halves pipeline
+# cost.
 WRITER_MODEL = _get("WRITER_MODEL", "deepseek/deepseek-v3.2")
 
-# 3. Checks the finished post against its source. Keep it a DIFFERENT lab from
-# the writer — a model judges its own prose badly.
-#
-# Chosen by testing 9 models on 7 source/post pairs: MiniMax M2.7 7/7 at 2.5s,
-# mistral-medium-3.1 also 7/7, deepseek-v3.2 missed a falsehood, qwen3.5-plus
-# missed three and took 32s.
-#
-# SWAPPED 2026-09-30, on operational grounds only. MiniMax failed 28 times in
-# one week — 16 of them "ran out of room", the rest 429/502/522 — and every one
-# of those calls was finished by the fallback below, which passed the same 7/7.
-# So the work was already being done by mistral; this stops paying for a first
-# attempt that mostly does not arrive.
-#
-# claude-haiku-4.5 is NOT here although it now accepts the strict schema (tested
-# 4/4 on this exact schema; the old note claiming it rejects it was out of date).
-# The reason is that this node's job is catching falsehoods, it fails CLOSED, and
-# the 7 pairs it was calibrated on were never saved — so there is no way to check
-# that a new model still CATCHES rather than merely not over-rejecting. On four
-# already-published posts haiku approved all four where three other models
-# declined one, which measures nothing either way. Do not move this station
-# without a set of source/post pairs containing known falsehoods.
+# 3. Editor: checks post against source. Tested 7 pairs: MiniMax 7/7 at 2.5s, mistral
+# 7/7, deepseek missed 1, qwen missed 3 at 32s.
+# SWAPPED 2026-09-30: MiniMax failed 28/week (16 "ran out of room", 429/502/522);
+# mistral fallback passed 7/7 instead.
+# Claude-haiku-4.5 not used: accepts schema (4/4), but this node fails CLOSED catching
+# falsehoods—need test pairs with known falsehoods.
 EDITOR_MODEL = _get("EDITOR_MODEL", "mistralai/mistral-medium-3.1")
 
-# Used when EDITOR_MODEL cannot be reached at all. This node fails closed, so an
-# unreachable editor means the post is not published — and minimax is rate-limited
-# upstream often enough to matter: 15 failures in two weeks, 10 of them HTTP 429,
-# which cost four real stories including a BLS payrolls print. The item burns all
-# three of its attempts inside one four-minute window and is marked failed.
-#
-# The fallback must clear the same bar as the primary, because a rubber-stamp
-# second opinion is WORSE than losing the story: it would publish unchecked
-# posts instead of none. Tested on the same three cases as the primary —
-# mistral-medium-3.1 caught all three at 1-2s, faster than minimax. Every qwen
-# tried waved through "SEC is reportedly considering" published as "SEC
-# approves", which is the exact failure this node exists to prevent.
-#
-# Set to "" to switch the fallback off.
+# Fallback when EDITOR unreachable (fails closed). MiniMax unreliable: 15 failures/2wks
+# (10×429), cost 4 stories including BLS payrolls.
+# Fallback must clear same bar: rubber-stamp worse than losing story. Tested 3 cases:
+# mistral 1-2s all 3; qwen waved through falsehoods.
+# Set "" to disable.
 EDITOR_FALLBACK_MODEL = _get("EDITOR_FALLBACK_MODEL", "minimax/minimax-m2.7")
 
-# A ceiling on the whole editor call, retries and fallback included. Without it
-# the worst case is three retries against each of two models — 368 seconds on one
-# post, three times the publish tick. A normal verdict takes 2-4 seconds, so this
-# is fifteen times the usual and only ever fires when something is badly wrong.
+# Ceiling on editor call (retries+fallback). Worst: 3 retries × 2 models = 368s (3×
+# publish tick). Normal: 2-4s.
 EDITOR_TIMEOUT_SECONDS = _get_int("EDITOR_TIMEOUT_SECONDS", 60)
 
 # Alerts you if the editor starts rejecting an unusual share of posts.
@@ -343,124 +241,71 @@ EDITOR_DECLINE_WINDOW = _get_int("EDITOR_DECLINE_WINDOW", 20)
 MAX_REWRITES = _get_int("MAX_REWRITES", 1)
 
 
-# 4. Duplicate check 5 — the only step that can tell "ETF inflows" from "ETF
-# outflows". Tested on 20 hand-labelled pairs from this channel:
-#
-#   deepseek-v3.2           80%, 0 wrong merges, order-STABLE on 6/6 pairs
-#   gemini-2.5-flash-lite   75%, 0 wrong merges, order-FLIPS on 3/6 pairs
-#   minimax-m2.7            13 of 20 calls failed under concurrency
-#
-# STABILITY BEATS RAW ACCURACY here. Swapping which story is shown first flipped
-# gemini's verdict on half the hard pairs, and this node deletes content nobody
-# sees again — an unstable verdict is an unreproducible bug. Before switching
-# models, ask for a verdict on (A,B) and (B,A) and check they match.
-#
-# minimax is disqualified despite being the editor: the judge fires in bursts by
-# nature, so a model that falls over under concurrency is the wrong tool.
-# Measured 2026-09-30 on 40 real pairs from dedup_hits, with deepseek pinned to
-# SiliconFlow so the baseline was deepseek WORKING rather than deepseek failing:
-# haiku agreed 38/40, gemini-2.5-flash 39/40, and all three answered 40/40 in
-# the required shape. Of the two disagreements, haiku was right that "Kalshi to
-# end liquidity incentive program" and "Kalshi ends trader volume rewards a year
-# early" are ONE event — deepseek called that a continuation, which is how a
-# second post gets written about a decision already reported. deepseek is off
-# this station because unpinned it answers in prose: 12 failures of 327 live
-# calls, and 2/14 in a bench run that happened to route to DeepInfra.
+# 4. Judge (dedup check 5): only step that tells "inflows" from "outflows". STABILITY >
+# ACCURACY.
+# Test 20 pairs: deepseek 80% (0 wrong merges, order-stable 6/6), gemini 75% (0 wrong,
+# order-flips 3/6), minimax 13/20 failed concurrency.
+# Measured 2026-09-30 on 40 real pairs: haiku 38/40, gemini 39/40, all 40/40 shape.
+# Disagreements: haiku right (Kalshi 2 posts = 1 event).
+# Deepseek off: unpinned answers prose (12/327 live failures, 2/14 bench to DeepInfra).
 JUDGE_MODEL = _get("JUDGE_MODEL", "google/gemini-2.5-flash")
 
-# Past this we treat the item as new and post it. 25s was enough for a normal
-# day but one call hit it when 20 fired at once, and a timeout means a duplicate
-# is published — cheap headroom inside a 120-second publish tick.
+# Timeout: treat as new item and post. 25s normal, but 20 at once hit it; timeout =
+# duplicate published. Headroom in 120s tick.
 JUDGE_TIMEOUT_SECONDS = _get_int("JUDGE_TIMEOUT_SECONDS", 40)
 
 
-# =============================================================================
-# BRAIN / PERSONA
-# =============================================================================
-
-# The channel's voice, prepended to the writer's system prompt. A missing file
-# just means the writer's built-in generic prompt.
-
-# Recent posts the writer sees as voice examples: enough to catch the rhythm
-# without bloating the prompt.
+# BRAIN / PERSONA: channel voice prepended to writer's prompt. Recent posts as voice
+# examples (enough rhythm, minimal bloat).
 PERSONA_RECENT_POSTS = _get_int("PERSONA_RECENT_POSTS", 15)
 
 
-# =============================================================================
-# STORIES
-# =============================================================================
-# The unit of work: items join a running story, and a story posts when it moves.
+# STORIES: unit of work; items join, story posts when it moves.
 
-# Same model as the sorter and the judge. Both questions here are reading
-# comprehension over short text, which is what this model is cheapest at.
-# Placement and the gate. Both fail open toward posting, so a model that cannot
-# answer is the worst kind here: placement opening a duplicate story is how the
-# 30-year Treasury yield got two story numbers and went out twice. deepseek
-# failed placement 7 times in one week — 4 of them by spending a 200-token
-# answer budget on thinking and returning nothing.
+# Story model: placement and gate (reading comprehension). Both fail open → duplicate
+# story if timeout.
+# Deepseek failed placement 7/week (4× spent 200-token thinking budget, returned
+# nothing).
+# Timeout raised 30→45 after measuring: 20 calls, slowest 22.2s. Placement timeout used
+# to open duplicate story.
 STORY_MODEL = _get("STORY_MODEL", "google/gemini-2.5-flash")
-# Raised from 30 after measuring: with require_parameters narrowing routing to
-# providers that honour the schema, the slowest of 20 calls took 22.2s. A
-# placement that times out used to open a duplicate story, so the cost of being
-# impatient here is higher than the cost of waiting.
 STORY_TIMEOUT_SECONDS = _get_int("STORY_TIMEOUT_SECONDS", 45)
 
-# How many open stories the placement step is shown. It answers with an index
-# into this list, so a long one makes the prompt long and the numbering easy to
-# get wrong; the oldest candidates are the least likely answers anyway.
-#
-# Raised with STORY_IDLE_HOURS below. A story that is open but not shown is
-# invisible to placement, which opens a second story for it — exactly how the
-# same Apple news was published twice. The cap must stay above the number of
-# stories the idle window actually leaves open, or the longer window buys
-# nothing for the half it hides.
+# How many open stories shown to placement (index numbering error risk). Raised with
+# STORY_IDLE_HOURS.
+# Must stay >= actual open stories or hidden ones open duplicates (Apple news published
+# twice).
 STORY_MAX_OPEN = _get_int("STORY_MAX_OPEN", 30)
 
-# How many unposted items the gate and the writer are shown from one story.
-# Keeps both prompts bounded no matter how much piles up; anything outside the
-# slice is still marked covered when the post goes out.
+# How many unposted items shown to gate/writer from one story (keeps prompts bounded;
+# all marked covered on post).
 STORY_MAX_PENDING = _get_int("STORY_MAX_PENDING", 12)
 
-# A story nobody has added to in this long is over. A new item that looks like
-# it cannot reopen it — it starts a fresh story, which is what a reader coming
-# back the next day would expect.
-# 12 hours split a war into eight stories in a six-day replay: it went quiet
-# overnight, and every morning was a "new" story whose first post always goes
-# out. A running situation stays one story across a quiet night.
-# 36 hours was still too short: Apple's $5 trillion cap was covered, its story
-# closed, the news came back three days later and was published again as a new
-# story. Five days is how long a reader remembers.
+# Story with no activity this long closes (new item cannot reopen). Measured: 12h split
+# war into 8 stories in 6-day replay;
+# 36h too short (Apple $5T cap: closed, returned 3 days later as new). 5 days = reader
+# memory.
 STORY_IDLE_HOURS = _get_int("STORY_IDLE_HOURS", 120)
 
-# A hard end, whatever the story is doing. Without it a broad situation stays
-# live indefinitely by absorbing one item every eleven hours, and slowly starts
-# swallowing everything else.
+# Hard end: stops broad situations staying live indefinitely (absorbing 1 item/11h).
 STORY_MAX_HOURS = _get_int("STORY_MAX_HOURS", 168)
 
-# A floor against two wires seconds apart becoming two posts — nothing more.
-# It was 25 minutes, and a timer silenced Iran announcing its retaliation on
-# 1 September. How loud a running story is allowed to be is now the gate's
-# judgement, which is told how long it has been and holds a higher bar when the
-# last post is recent.
-STORY_MIN_GAP_MINUTES = _get_int("STORY_MIN_GAP_MINUTES", 6)  # anti-double-post only
+# Anti-double-post floor (was 25m, silenced Iran retaliation 2026-09-01). Gate now
+# judges based on time elapsed.
+STORY_MIN_GAP_MINUTES = _get_int("STORY_MIN_GAP_MINUTES", 6)
 
-# A runaway stop, not an editorial rule — the gate is told the count and weighs
-# it. At 6 this was a rule, and it silenced the second half of a war.
+# Runaway stop (not editorial rule; gate weighs it). At 6 was a rule, silenced war's
+# second half.
 STORY_MAX_POSTS = _get_int("STORY_MAX_POSTS", 12)
 
-# THE ROUNDUP. Held items are fuel for a story's next post, but a story that
-# never moves again never burns it. Once this many are waiting and this long
-# has passed since the story last posted, they go out together as one roundup.
-# The one place a post is released by arithmetic rather than by the editor,
-# on purpose: it turns "lost" into "late".
+# ROUNDUP: when items waiting >= ITEMS and >= MINUTES passed, post together (arithmetic,
+# not editor).
 STORY_DIGEST_ITEMS = _get_int("STORY_DIGEST_ITEMS", 3)
 STORY_DIGEST_MINUTES = _get_int("STORY_DIGEST_MINUTES", 180)
 
-# The roundup breaks a DEADLOCK: material arriving while the editor keeps saying
-# no. Past this much silence there is no deadlock — the story has stopped, and
-# arithmetic has no business publishing on it. The 30-year Treasury yield went
-# out twice in seven hours on 29 September because three items had collected
-# over 37 hours of silence and the rule above fired without asking anyone.
+# Breaks DEADLOCK: material while editor says no. Past MAX_QUIET_HOURS, story stopped,
+# don't publish.
+# 30-year Treasury out twice 2026-09-29 in 7h: 3 items over 37h silence + rule fired.
 STORY_DIGEST_MAX_QUIET_HOURS = _get_int("STORY_DIGEST_MAX_QUIET_HOURS", 12)
 
 
@@ -473,7 +318,7 @@ MAX_BODY_CHARS = _get_int("MAX_BODY_CHARS", 5000)
 
 
 def check(require_telegram: bool = False, require_openrouter: bool = False) -> list[str]:
-    """Return a list of configuration problems — empty means all good."""
+    """Return configuration problems (empty = all good)."""
     problems: list[str] = []
 
     if require_telegram:
@@ -504,40 +349,27 @@ def check(require_telegram: bool = False, require_openrouter: bool = False) -> l
 
     return problems
 
-# =============================================================================
-# READING THE LINKED ARTICLE
-# =============================================================================
-# 59% of items arrive with a body under 120 characters and a link nobody
-# followed, which is why a post's second line so often just restates its first.
-# See nodes/article.py.
+# READING LINKED ARTICLES: 59% arrive with <120 chars body (reason posts restate first
+# line). See nodes/article.py.
 
-# One request, then extraction. Generous enough for a slow news site, short
-# enough that the publish round does not stall behind one of them.
+# Plain request then extraction (generous for slow sites, short enough not to stall).
 ARTICLE_TIMEOUT_SECONDS = _get_int("ARTICLE_TIMEOUT_SECONDS", 15)
 
-# The whole browser attempt, including launch. Only sites that refuse a plain
-# request get here, and a browser that hangs must not hold the round forever.
+# Browser attempt (launch included); only for sites refusing plain request; mustn't hang
+# round.
 ARTICLE_BROWSER_TIMEOUT_SECONDS = _get_int("ARTICLE_BROWSER_TIMEOUT_SECONDS", 60)
 
-# What is kept. The writer is shown the source in full; an entire long-read
-# would crowd out the wire items it is meant to be summarising.
+# What's kept (writer sees full source; long-read would crowd wire items).
 ARTICLE_MAX_CHARS = _get_int("ARTICLE_MAX_CHARS", 6000)
 
-# =============================================================================
-# THE LAST CHECK BEFORE SENDING
-# =============================================================================
-# See nodes/echo.py. The shortlist is deliberately wide because no cutoff
-# separates a repeat from a genuine step forward — measured, they interleave —
-# so the judge does the deciding and this number only decides who gets read.
+# THE LAST CHECK BEFORE SENDING (see nodes/echo.py). Shortlist wide (no cutoff between
+# repeat and step); judge decides.
 ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.72)
 
-# How far back a reader remembers. Apple's repeat came three days later.
-# Measured 2026-09-29 on 8 hand-labelled pairs of this channel's own posts,
-# asking the exit question below. deepseek-v3.2 answered in prose instead of
-# JSON on 7 of 8 — and the exit check fails open, so in practice it was not
-# running at all. mistral-medium-3.1 got 8/8 on the schema AND 8/8 on the
-# verdict; gemini-2.5-flash got the schema right but let the 30-year Treasury
-# repeat through. Do not move this to a model without re-running that set.
+# Reader memory window. Measured 2026-09-29 on 8 channel posts: deepseek 7/8 prose
+# (fails open), mistral 8/8 schema+verdict,
+# gemini schema ok but 30-year Treasury repeat through. Don't move without re-running
+# this set.
 ECHO_MODEL = _get("ECHO_MODEL", "mistralai/mistral-medium-3.1")
 ECHO_WINDOW_HOURS = _get_int("ECHO_WINDOW_HOURS", 120)
 ECHO_MAX_COMPARED = _get_int("ECHO_MAX_COMPARED", 40)

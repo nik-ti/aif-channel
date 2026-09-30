@@ -1,9 +1,5 @@
-"""Sends "something went wrong" to your private Telegram DM, never the channel.
-
-THE ONE RULE HERE: nothing may ever raise. An error while reporting an error
-must not become a second, worse problem, and must never take down the loop that
-was merely trying to tell you something.
-"""
+"""Send error alerts to your private Telegram DM, never the channel.
+RULE: never raise. An error while reporting an error must not cause a second problem or take down the reporting loop."""
 
 from __future__ import annotations
 

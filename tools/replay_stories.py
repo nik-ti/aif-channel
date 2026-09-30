@@ -1,17 +1,6 @@
-"""Replays real history through story clustering: what the channel WOULD have posted.
-
-Nothing here touches the live channel or the live tables. It reads items that
-were actually published, regroups them into stories, asks the gate whether each
-story had moved, and prints the difference.
-
-    python3 tools/replay_stories.py --days 14
-    python3 tools/replay_stories.py --day 2026-09-01 --write
-
---write also calls the writer, so you can read the posts that would have gone
-out instead of counting them. That costs real model calls; without it the replay
-uses each item's real published text as the stand-in for "what the reader was
-told", which is enough to count merges and silences.
-"""
+"""Simulate what the channel would have posted by re-clustering published items into stories and asking the gate if each moved.
+Reads live data but makes no changes. Without --write, uses real published text as the stand-in for posts.
+With --write, calls the writer (real model cost) to see actual proposed posts."""
 
 from __future__ import annotations
 

@@ -1,9 +1,6 @@
-"""What makes this the markets channel. The machinery in nodes/, brain/ and
-utils/ is shared and knows none of it.
-
-Beside this file: persona.md is the voice, rubric.md is what counts as
-important. To add a channel, copy this folder and change these values.
-"""
+"""Configuration that makes this the markets channel. Shared machinery (nodes/, brain/, utils/) knows none of this.
+Beside this file: persona.md holds the voice, rubric.md defines importance.
+To add a channel, copy this folder and change these values."""
 
 from __future__ import annotations
 

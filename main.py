@@ -1,17 +1,9 @@
-"""Runs the news channel. Decides WHAT happens WHEN; the work lives in nodes/.
+"""The channel's entry point. All the actual work lives in nodes/.
 
-    python main.py initdb     create the database (safe to re-run)
-    python main.py check      check settings without doing anything
-    python main.py collect    read the feeds and the tweet stream
-    python main.py publish    turn queued items into posts and send them
-    python main.py run        both, forever — this is what the service runs
-    python main.py stats      print a summary
-
-Flags: --once for a single cycle, --limit N to handle at most N items.
-
-collect and publish are separate loops at different speeds but share settings
-and a database, so they live in one program: one install, one log, one restart.
-They are already separate subcommands, so splitting them later needs no code.
+Commands are initdb, check, collect, publish, run (both loops forever) and stats,
+with --once and --limit N to run a single pass. Collecting and publishing are
+separate loops inside one program so they share the settings, the database, the
+log file and a single restart.
 """
 
 from __future__ import annotations
