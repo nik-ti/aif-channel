@@ -142,7 +142,10 @@ states, and only a move between them earns a post:
 the situation somewhere else than the last post described; a **new** party or front
 enters (a second country's ships are hit, a second regulator opens a case); or a price
 crosses a landmark the reader will remember — a record, a multi-year extreme, a major
-round number — for the **first** time in this story.
+round number — for the **first** time in this story. **For yields the only landmark is a
+whole percent** (5%, then 6%): 5.23% → 5.30% → 5.9% is the same climb, and so is the
+10-year doing what the 30-year already did. Only a sharp jump within one day, a central
+bank reacting or a failed auction makes a yield newsworthy in between.
 
 **It has NOT changed state when:** another incident happens inside the same state
 (another strike, another tanker, more casualties — the war was on before and is on
@@ -154,6 +157,18 @@ what the reader was already told, *including* a fuller write-up of it.
   "hold" always means "the reader already knows about this", never "this was never covered".
 - **Second post onward:** only on a state change, by the test above.
 - **Held items:** kept, and carried by the story's next post or by a roundup.
+- **The gate sees the whole channel, not only its story.** It is shown the channel's
+  recent posts that most resemble what came in, whichever story they were filed under.
+  Stories close after 7 days, and on 1 October a long yields run was judged by a gate
+  that had never seen the run's earlier posts.
+
+**Roundups.** When **3+ items** have been held on a story for **3+ hours** since its last
+post (and that post was under **12 hours** ago), the gate is asked **once** whether,
+taken together, they tell the reader something new. If yes, the writer gets only those
+new facts as an "update" with bullets; if no, nothing is asked again until another item
+joins the story. Until 1 October a roundup was released by arithmetic alone, with no
+model asking "is this new?" — that is how a diesel update went out repeating two earlier
+posts — and the sweep re-asked every round until a "hold" became a "post".
 
 *Note:* the **State** shown on the Stories tab is not one of these — it is the story's
 own lifecycle, \`live\` or \`closed\`. The states above live inside the gate's judgement,
@@ -212,7 +227,9 @@ three times over and was right — but they are the same news to a reader, who g
 twice in seven hours. This station asks whether the reader *learns* anything, and its
 prompt spells out that a date is not a threshold: "highest since 2002" after "highest
 since 2004" is one measurement still climbing. A round number crossed for the first
-time is a threshold; a year is not.
+time is a threshold; a year is not. For a yield only a **whole percent** counts — 5.3%
+is a new reading, not a threshold — and the 10-year repeating the 30-year's move is not
+a new actor.
 
 Measured on 60 posts, real repeats scored 0.741–0.924 and legitimate posts 0.734–0.776,
 so the number only builds a shortlist and a model rules.
@@ -234,6 +251,10 @@ Approved post is sent to Telegram \`@market_one_news\`
 - **Per story: a 6-minute minimum gap and 12 posts maximum.** Both are context for the
   gate rather than hard walls — a 25-minute gap once silenced a real escalation.
 - A later post in a story **replies to that story's first post**, so it reads as a thread.
+- **A post you delete in the channel leaves its story.** Telegram does not tell bots
+  about deletions, so the publisher finds out when a reply to that post is refused. It
+  marks the post \`deleted\` — out of the story, out of what the gate and the exit check
+  remember — and sends under the story's next surviving post, or as an ordinary post.
 - Video and GIFs from a tweet are sent as real media, not a link — except from
   \`crypto_banter\`, whose media is dropped on purpose.
 - An item that waits in the queue longer than **90 minutes expires**. Late breaking news
@@ -315,10 +336,10 @@ will tune a number the running channel never sees.
 - **\`MAX_POSTS_PER_HOUR\`** (**4** — overridden in \`.env\`; the default in \`config.py\` is 12).
 - **\`STORY_MIN_GAP_MINUTES\`** (6) and **\`STORY_MAX_POSTS\`** (12): per story, anti-double-post.
 - **\`STORY_IDLE_HOURS\`** (36) / **\`STORY_MAX_HOURS\`** (168): when a story goes quiet, and its hard end.
-- **\`STORY_DIGEST_MAX_QUIET_HOURS\`** (12): the roundup releases a pile by arithmetic
-  without asking the model, but only inside this much silence. Past it a story has
-  stopped rather than deadlocked — three items over 37 hours of silence is what sent a
-  second Treasury yields post.
+- **\`STORY_DIGEST_ITEMS\`** (3) and **\`STORY_DIGEST_MINUTES\`** (180): how many held
+  items, waiting how long, before the gate is asked about a roundup.
+- **\`STORY_DIGEST_MAX_QUIET_HOURS\`** (12): past this much silence a story has stopped,
+  and no roundup is asked about at all.
 - **\`ECHO_WINDOW_HOURS\`** (120) and **\`ECHO_SHORTLIST\`** (0.72): how far back the exit
   check looks, and how alike two posts must be to reach its model.
 - **\`ECHO_MODEL\`**: run \`tools/check_echo.py --labelled\` before changing it. This
