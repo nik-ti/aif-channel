@@ -145,15 +145,19 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
                 log.info("%s — continuing for %d forced item(s)", reason, len(remaining))
 
     # Roundups. Held items only ever reach the gate when a NEW item arrives on
-    # their story; a story that goes quiet would hold them forever. This is the
-    # sweep that releases them, once enough have waited long enough.
+    # their story; a story that goes quiet would hold them forever. This sweep
+    # asks the gate once more, after they have waited a while, whether together
+    # they add up to something the reader has not been told.
     if allowed and published < batch_size:
         for due in db.stories_due_for_roundup(config.STORY_DIGEST_ITEMS,
-                                              config.STORY_DIGEST_MINUTES):
+                                              config.STORY_DIGEST_MINUTES,
+                                              config.STORY_DIGEST_MAX_QUIET_HOURS):
             carrier = db.newest_held_item(due["id"])
             if carrier is None:
                 continue
-            log.info("Story %s has %d item(s) waiting — releasing a roundup",
+            # Before asking, so a crash mid-roundup cannot turn into asking again.
+            db.mark_roundup_asked(due["id"], carrier["id"])
+            log.info("Story %s has %d item(s) waiting — asking the gate about a roundup",
                      due["id"], due["waiting"])
             try:
                 outcome = await process_item(carrier, sweep=True)

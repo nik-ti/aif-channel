@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS posts (
     char_count          INTEGER NOT NULL DEFAULT 0,
     writer_model        TEXT    DEFAULT '',
     status              TEXT    NOT NULL DEFAULT 'draft',
-        -- draft | approved | declined | sent | send_failed
+        -- draft | approved | declined | sent | send_failed | deleted (by hand, in the channel)
     telegram_message_id INTEGER,
     post_url            TEXT    DEFAULT '',      -- public link to the message
     send_attempts       INTEGER NOT NULL DEFAULT 0,

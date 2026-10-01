@@ -267,7 +267,9 @@ It has changed state when:
     then never again for that run. A rise that is already under way sets a fresh
     record most days, so "a record" on its own does not qualify: if you have
     already told the reader this is the highest since 2004, the next highest
-    since 2004 is the same run, whatever the new figure says
+    since 2004 is the same run, whatever the new figure says. For a yield the
+    only landmark is a whole percent (5%, 6%); "highest since 2002" is not one,
+    and neither is the 10-year doing what the channel said the 30-year did
 
 It has NOT changed state when:
   - another incident happens inside the same state: another strike, another
@@ -286,7 +288,11 @@ It has NOT changed state when:
   - a number ticks further along a trend already reported ("highest in 112
     days" after we said it was rising; $104 after we said $100). When this and
     the landmark rule above both seem to apply, THIS ONE WINS — a new extreme
-    inside a run you have already described is the run continuing
+    inside a run you have already described is the run continuing.
+    For a yield or a rate, the next post on a climb is the next WHOLE percent
+    (5%, then 6%): 5.23% to 5.30%, or to 5.9%, is the run continuing. Only
+    something besides the level changes that — a sharp jump within one day,
+    a central bank reacting, a failed auction
   - the same move turns up on a related instrument. Rising US yields are one
     story across the 2-, 10- and 30-year: one curve, not three landmarks.
     Reporting that the 30-year did what you already said the 10-year did is one
@@ -344,12 +350,26 @@ FOR: what is new, and what the reader already has and must not be told again.
 Be specific — name the fact, not the category."""
 
 ROUNDUP_ANGLE = (
-    "This is a ROUNDUP: several smaller developments on a story the reader is "
-    "already following, none of which earned its own post. Title it plainly as "
-    "an update — name the story and say 'update' or 'latest', no drama. Then "
-    "a list: one ▪️ bullet per development, one line each, in the order they "
-    "happened. Do not inflate any of them, and do not add a conclusion; the "
-    "reader can draw one."
+    "This is a ROUNDUP: smaller developments on a story the reader is already "
+    "following, none of which earned its own post. Title it plainly as an update "
+    "— name the story and say 'update' or 'latest', no drama. Then one ▪️ bullet "
+    "per NEW development, one line each, in the order they happened. Leave out "
+    "anything the channel already published, and never let two bullets say the "
+    "same thing in different words: a Commission in talks and member states in "
+    "talks about the same release is one bullet. If only one thing is new, write "
+    "it as an ordinary post without bullets. Do not inflate any of them, and do "
+    "not add a conclusion; the reader can draw one."
+)
+
+# Appended to the gate's prompt on a roundup, because a held item was already
+# judged "nothing new" once; this is the second look, and the only one.
+ROUNDUP_QUESTION = (
+    "\n\n## This is a roundup check\n"
+    "These items were each held because, on its own, none told the reader enough. "
+    "They have waited a few hours and you will not be asked about them again. "
+    "Answer \"post\" only if, taken together, they give the reader a fact the posts "
+    "above do not already contain. Your angle must then list those facts and "
+    "nothing else. If they only restate the posts above, hold."
 )
 
 GATE_SCHEMA = {
@@ -422,47 +442,61 @@ ECHO_FLOOR = 0.79
 
 
 async def _closest_published(story: Story) -> str:
-    """The post this story already made that the incoming items most resemble.
+    """The channel's posts that the incoming items most resemble, from any story.
 
+    Not only this story's: yields news moved to story 108 after story 82 closed
+    on its 7-day limit, and the gate then never saw 82's posts on the same run.
     Returns a block for the gate's prompt, or "" when nothing is close or the
     embeddings are unavailable — in which case the gate judges as it did before.
     """
-    if not story.posts or not story.pending:
+    if not story.pending:
+        return ""
+    own = list(enumerate(story.posts))[-6:]
+    own_texts = {post for _, post in own}
+    elsewhere = [(row["sent_at"], text) for row in
+                 db.recent_published_posts(config.ECHO_WINDOW_HOURS, config.ECHO_MAX_COMPARED)
+                 if (text := persona_loader.visible_text(row["post_html"]).strip())
+                 and text not in own_texts]
+    # The gate already reads this story's posts in full, so they are only
+    # repeated here when very close. A post filed elsewhere is otherwise
+    # invisible to it, so it is shown on the exit check's wider shortlist.
+    labels = ([(f"[post {index + 1}] of this story", ECHO_FLOOR) for index, _ in own] +
+              [(f"a post of {when}, filed under another story", config.ECHO_SHORTLIST)
+               for when, _ in elsewhere])
+    texts = [post for _, post in own] + [text for _, text in elsewhere]
+    if not texts:
         return ""
     try:
         from utils import embeddings
         incoming = " ".join(f"{i['title'] or ''} {(i['body'] or '')[:300]}"
                             for i in story.pending[-3:])
-        vector = await embeddings.embed_one(textclean.for_embedding(incoming))
-        if vector is None:
+        vectors = await embeddings.embed([textclean.for_embedding(t)
+                                          for t in [incoming] + texts])
+        if not vectors:
             return ""
-        # Only the recent ones: a story can run to twelve posts, and echoing
-        # something said that long ago is both unlikely and cheap to forgive.
-        recent = list(enumerate(story.posts))[-6:]
-        scored = []
-        for index, post in recent:
-            other = await embeddings.embed_one(textclean.for_embedding(post))
-            if other is not None:
-                scored.append((embeddings.cosine(vector, other), index, post))
-        if not scored:
-            return ""
-        score, index, post = max(scored)
+        scored = sorted(((embeddings.cosine(vectors[0], v), label, text)
+                         for v, label, text in zip(vectors[1:], labels, texts)),
+                        reverse=True)
     except Exception as error:  # noqa: BLE001 - evidence, never the decision
         log.debug("Could not measure the echo for story %s: %s", story.id, error)
         return ""
 
-    if score < ECHO_FLOOR:
+    close = [(score, label, text) for score, (label, floor), text in scored
+             if score >= floor][:3]
+    if not close:
         return ""
-    return (f"\n\n## Careful — this sounds like something you already said\n"
-            f"What has just come in resembles [post {index + 1}] very closely "
-            f"({score:.2f} out of 1.00):\n\n{post}\n\n"
+    shown = "\n\n".join(f"{label} ({score:.2f} out of 1.00):\n{text}"
+                         for score, label, text in close)
+    return (f"\n\n## Careful — this sounds like something the channel already said\n"
+            f"What has just come in closely resembles:\n\n{shown}\n\n"
+            f"The reader saw these too, whichever story they were filed under. "
             f"That score cannot tell a repeat from a reversal, so read both. If "
-            f"the new item only restates that post with a different figure, hold "
-            f"it. If it turns the story around or adds a state that post did not "
+            f"the new item only restates them with a different figure, hold it. "
+            f"If it turns the story around or adds a state they did not "
             f"describe, post it and say which.")
 
 
-async def should_post(story: Story, now: datetime) -> dict:
+async def should_post(story: Story, now: datetime, *, roundup: bool = False) -> dict:
     """Decide whether a story's pending items are worth a post. Fails open to posting.
 
     The first post of a story never reaches the model — a story nobody has heard
@@ -499,19 +533,6 @@ async def should_post(story: Story, now: datetime) -> dict:
         return {"verdict": "hold", "angle": "",
                 "reason": f"runaway stop: {len(story.posts)} posts on one story"}
 
-    # The roundup: enough has piled up for long enough. Released without asking
-    # the model, deliberately — this exists for the case where the story never
-    # gives the model a reason to say yes again. Bounded above, because that
-    # case is a DEADLOCK and a story silent for half a day is not deadlocked,
-    # it is over; releasing on arithmetic there posts stale material nobody
-    # judged. Past the ceiling the model is asked like on any other path.
-    if (len(story.pending) >= config.STORY_DIGEST_ITEMS
-            and config.STORY_DIGEST_MINUTES <= quiet
-            <= config.STORY_DIGEST_MAX_QUIET_HOURS * 60):
-        return {"verdict": "post", "angle": ROUNDUP_ANGLE,
-                "reason": f"roundup: {len(story.pending)} items waiting, "
-                          f"{quiet:.0f} min since the last post"}
-
     known = "\n\n".join(f"[post {i + 1}]\n{p}" for i, p in enumerate(story.posts))
     echo = await _closest_published(story)
     pending = story.pending[-config.STORY_MAX_PENDING:]
@@ -527,7 +548,7 @@ async def should_post(story: Story, now: datetime) -> dict:
                       f"({len(story.posts)} posts on this story so far, the last "
                       f"one {quiet:.0f} minutes ago)\n\n{known}\n\n"
                       f"## What has come in since ({len(pending)} items)\n\n{fresh}"
-                      f"{echo}"),
+                      f"{echo}{ROUNDUP_QUESTION if roundup else ''}"),
                 schema=GATE_SCHEMA, schema_name="gate",
                 temperature=0.0, max_tokens=900,
             ),
@@ -545,11 +566,11 @@ async def should_post(story: Story, now: datetime) -> dict:
     if verdict not in {"post", "hold", "not_this_story"}:
         verdict = "post"
 
-    return {
-        "verdict": verdict,
-        "angle": str(answer.get("angle", ""))[:600],
-        "reason": str(answer.get("reason", ""))[:300],
-    }
+    angle = str(answer.get("angle", ""))[:600]
+    if roundup and verdict == "post":
+        angle = f"{ROUNDUP_ANGLE}\n\nWhat is new, and the only things to include: {angle}"
+    return {"verdict": verdict, "angle": angle,
+            "reason": str(answer.get("reason", ""))[:300]}
 
 
 def as_source(story: Story) -> dict:

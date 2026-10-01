@@ -68,6 +68,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
     "stories": [
         ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),  # Short name for dashboard/list (not headline/summary).
         ("calendar_key", "ALTER TABLE stories ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Set when the story IS one scheduled release; placement then needs no model.
+        ("roundup_asked_item_id", "ALTER TABLE stories ADD COLUMN roundup_asked_item_id INTEGER DEFAULT 0"),  # Newest held item the last roundup asked about; asked again only once a newer one joins.
     ],
 }
 
@@ -632,6 +633,54 @@ def mark_post_sent(post_id: int, message_id: int, post_url: str) -> None:
     conn().commit()
 
 
+def mark_message_deleted(message_id: int) -> int | None:
+    """Record that a channel message was deleted by hand. Returns its story id.
+
+    Every story query reads only 'sent' posts, so this takes the post out of
+    its story: later posts stop replying to it and the models stop seeing it as
+    something the channel said. The story's summary falls back to its newest
+    remaining post, or to its headline if none is left.
+    """
+    row = conn().execute(
+        """
+        SELECT p.id, p.item_id, i.story_id FROM posts p JOIN items i ON i.id = p.item_id
+         WHERE p.telegram_message_id = ? AND p.status = 'sent'
+        """,
+        (message_id,),
+    ).fetchone()
+    if row is None:
+        return None
+
+    conn().execute("UPDATE posts SET status = 'deleted' WHERE id = ?", (row["id"],))
+    conn().execute(
+        "UPDATE items SET status_reason = ?, updated_at = ? WHERE id = ?",
+        (f"message {message_id} was deleted from the channel", now_iso(), row["item_id"]),
+    )
+    if row["story_id"]:
+        newest = conn().execute(
+            """
+            SELECT p.post_html, p.sent_at FROM posts p JOIN items i ON i.id = p.item_id
+             WHERE i.story_id = ? AND p.status = 'sent'
+             ORDER BY p.sent_at DESC, p.id DESC LIMIT 1
+            """,
+            (row["story_id"],),
+        ).fetchone()
+        if newest:
+            from brain import persona_loader
+            conn().execute(
+                "UPDATE stories SET summary = ?, last_post_at = ? WHERE id = ?",
+                (persona_loader.visible_text(newest["post_html"])[:300],
+                 newest["sent_at"], row["story_id"]),
+            )
+        else:
+            conn().execute(
+                "UPDATE stories SET summary = headline, last_post_at = NULL WHERE id = ?",
+                (row["story_id"],),
+            )
+    conn().commit()
+    return row["story_id"]
+
+
 def get_recent_sent_posts(limit: int) -> list[sqlite3.Row]:
     """Return recent sent posts (newest first) for persona memory; only visible text."""
     return list(conn().execute(
@@ -872,22 +921,39 @@ def close_stale_stories(idle_hours: int, max_hours: int) -> list[sqlite3.Row]:
     return doomed
 
 
-def stories_due_for_roundup(min_items: int, min_minutes: int) -> list[sqlite3.Row]:
-    """Return live stories ready for roundup (held items only, not queued)."""
+def stories_due_for_roundup(min_items: int, min_minutes: int,
+                            max_quiet_hours: int) -> list[sqlite3.Row]:
+    """Live stories with enough held items to ask the gate about a roundup.
+
+    Each set of held items is asked about once. Without that, the sweep put the
+    same question to the gate every round until it said yes: story 108 was held
+    twice at 13:12 on 2026-10-01 and posted at 13:22 on the same three items.
+    """
     return list(conn().execute(
         f"""
         SELECT s.id,
                (SELECT COUNT(*) FROM items i
-                 WHERE i.story_id = s.id AND i.status = 'held') AS waiting
+                 WHERE i.story_id = s.id AND i.status = 'held') AS waiting,
+               (SELECT MAX(i.id) FROM items i
+                 WHERE i.story_id = s.id AND i.status = 'held') AS newest_held
           FROM stories s
          WHERE s.status = 'live'
            AND s.last_post_at IS NOT NULL
            AND s.last_post_at < datetime('now', '-{int(min_minutes)} minutes')
+           AND s.last_post_at > datetime('now', '-{int(max_quiet_hours)} hours')
            AND waiting >= ?
+           AND newest_held > COALESCE(s.roundup_asked_item_id, 0)
          ORDER BY s.last_post_at ASC
         """,
         (min_items,),
     ))
+
+
+def mark_roundup_asked(story_id: int, item_id: int) -> None:
+    """Remember that the gate has been asked about this story's held items up to item_id."""
+    conn().execute("UPDATE stories SET roundup_asked_item_id = ? WHERE id = ?",
+                   (item_id, story_id))
+    conn().commit()
 
 
 def newest_held_item(story_id: int) -> sqlite3.Row | None:

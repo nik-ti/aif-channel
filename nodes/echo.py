@@ -42,9 +42,14 @@ HOLD, even when the figures are not identical:
     "highest since 2004" is one measurement still climbing, and so is the same
     figure carried to another decimal place
   - an intraday level and the closing level of one day's move
+  - a yield "crossing" 5.3%, 5.5% or any other fraction: that is a new
+    reading, not a threshold. Only whole percents — 5%, 6%, 7% — are
+    thresholds for a yield
   - a level the published post already described, in different words
   - a consequence the published post already stated or plainly implied
   - another outlet confirming what the published post already reported
+  - the same move on a related instrument: the 10-year or 5-year yield doing
+    what the published post said the 30-year did. One curve is not a new actor
 
 SEND:
   - the direction reversed (rose then fell, inflows then outflows)
@@ -58,7 +63,13 @@ SEND:
   - a ROUND NUMBER threshold crossed for the first time — a yield passing 5%, a
     market cap passing $5 trillion, an index passing 50,000. The first crossing
     only, never a new reading beyond it, and never a year: "since 2002" is not
-    a threshold
+    a threshold. For a yield only whole percents count (5%, 6%); 5.3% is
+    NOT a round number, nor is $93 for oil
+
+YIELDS AND RATES. A climb the published post already reported is news again
+at the next whole percent, not before: 5.23% then 5.30%, or 5.9%, is hold.
+Only something besides the level changes that — a sharp jump within one day,
+a central bank reacting, a failed auction.
 
 The published post may be several days old. Age is not a reason to send: a
 reader told something last week still knows it.

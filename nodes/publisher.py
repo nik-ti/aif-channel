@@ -85,6 +85,64 @@ def check_limits(*, forced: bool = False) -> tuple[bool, str]:
     return True, ""
 
 
+def _reply_target_gone(error: Exception) -> bool:
+    """True if Telegram refused because the message we reply to no longer exists."""
+    return "message to be replied not found" in str(error).lower()
+
+
+async def _deliver(post_id: int, message: str, image_url: str, video_url: str,
+                   video_kind: str, reply_to_message_id: int | None) -> int:
+    """Send the post with the best media that works. Returns the message number."""
+    message_id = None
+
+    # Clip first, then its thumbnail, then plain text. Each step down is a
+    # smaller loss than losing the post, which is why none of them raises.
+    if (video_url or image_url) and telegram_html.would_cut_mid_sentence(
+            message, telegram_html.CAPTION_LIMIT):
+        # A complete post without a picture beats a truncated one with.
+        log.info("Post %s is too long to caption media — sending as text instead",
+                 post_id)
+        db.bump_counter("image_dropped_too_long")
+        video_url = image_url = ""
+
+    if video_url:
+        try:
+            message_id = await telegram_client.send_clip(
+                video_url, video_kind, message,
+                reply_to_message_id=reply_to_message_id,
+            )
+        except Exception as error:  # noqa: BLE001
+            if _reply_target_gone(error):
+                raise    # not the clip's fault; the caller re-threads
+            # Usually the file is over Telegram's 20 MB by-URL limit. The
+            # thumbnail is still a picture of the same thing.
+            log.warning("Could not send the %s for post %s (%s) — trying the "
+                        "thumbnail", video_kind or "clip", post_id, error)
+            db.bump_counter("video_dropped_failed")
+
+    if message_id is None and image_url:
+        try:
+            message_id = await telegram_client.send_photo(
+                image_url, message,
+                reply_to_message_id=reply_to_message_id,
+            )
+        except Exception as error:  # noqa: BLE001
+            if _reply_target_gone(error):
+                raise    # not the picture's fault; the caller re-threads
+            # Telegram fetches images itself and sometimes cannot.
+            # Never lose a post over a picture.
+            log.warning("Could not send the image for post %s (%s) — "
+                        "sending as text instead", post_id, error)
+            db.bump_counter("image_dropped_failed")
+
+    if message_id is None:
+        message_id = await telegram_client.send_text(
+            message,
+            reply_to_message_id=reply_to_message_id,
+        )
+    return message_id
+
+
 async def execute(item, post_html: str, post_id: int,
                   reply_to_message_id: int | None = None) -> bool:
     """Send one approved post. True if it arrived.
@@ -99,49 +157,23 @@ async def execute(item, post_html: str, post_id: int,
     video_kind = item["video_kind"] or ""
 
     try:
-        message_id = None
-
-        # Clip first, then its thumbnail, then plain text. Each step down is a
-        # smaller loss than losing the post, which is why none of them raises.
-        if (video_url or image_url) and telegram_html.would_cut_mid_sentence(
-                message, telegram_html.CAPTION_LIMIT):
-            # A complete post without a picture beats a truncated one with.
-            log.info("Post %s is too long to caption media — sending as text instead",
-                     post_id)
-            db.bump_counter("image_dropped_too_long")
-            video_url = image_url = ""
-
-        if video_url:
+        while True:
             try:
-                message_id = await telegram_client.send_clip(
-                    video_url, video_kind, message,
-                    reply_to_message_id=reply_to_message_id,
-                )
+                message_id = await _deliver(post_id, message, image_url, video_url,
+                                            video_kind, reply_to_message_id)
+                break
             except Exception as error:  # noqa: BLE001
-                # Usually the file is over Telegram's 20 MB by-URL limit. The
-                # thumbnail is still a picture of the same thing.
-                log.warning("Could not send the %s for post %s (%s) — trying the "
-                            "thumbnail", video_kind or "clip", post_id, error)
-                db.bump_counter("video_dropped_failed")
-
-        if message_id is None and image_url:
-            try:
-                message_id = await telegram_client.send_photo(
-                    image_url, message,
-                    reply_to_message_id=reply_to_message_id,
-                )
-            except Exception as error:  # noqa: BLE001
-                # Telegram fetches images itself and sometimes cannot.
-                # Never lose a post over a picture.
-                log.warning("Could not send the image for post %s (%s) — "
-                            "sending as text instead", post_id, error)
-                db.bump_counter("image_dropped_failed")
-
-        if message_id is None:
-            message_id = await telegram_client.send_text(
-                message,
-                reply_to_message_id=reply_to_message_id,
-            )
+                if reply_to_message_id is None or not _reply_target_gone(error):
+                    raise
+                # Someone deleted the story's opening post in the channel. Take it
+                # out of the story, then thread under whatever post is left.
+                log.warning("Message %s was deleted from the channel — removing it "
+                            "from its story and sending post %s without it",
+                            reply_to_message_id, post_id)
+                story_id = db.mark_message_deleted(reply_to_message_id)
+                remaining = db.get_story_posts(story_id) if story_id else []
+                reply_to_message_id = (remaining[0]["telegram_message_id"]
+                                       if remaining else None)
 
         db.mark_post_sent(post_id, message_id, telegram_client.build_post_url(message_id))
         db.set_item_status(item["id"], "published", f"sent as message {message_id}")

@@ -298,13 +298,12 @@ STORY_MIN_GAP_MINUTES = _get_int("STORY_MIN_GAP_MINUTES", 6)
 # second half.
 STORY_MAX_POSTS = _get_int("STORY_MAX_POSTS", 12)
 
-# ROUNDUP: when items waiting >= ITEMS and >= MINUTES passed, post together (arithmetic,
-# not editor).
+# ROUNDUP: when items waiting >= ITEMS and >= MINUTES passed, the gate is asked ONCE
+# whether together they say something new. Until 2026-10-01 this posted without asking.
 STORY_DIGEST_ITEMS = _get_int("STORY_DIGEST_ITEMS", 3)
 STORY_DIGEST_MINUTES = _get_int("STORY_DIGEST_MINUTES", 180)
 
-# Breaks DEADLOCK: material while editor says no. Past MAX_QUIET_HOURS, story stopped,
-# don't publish.
+# Past MAX_QUIET_HOURS the story is over: no roundup is asked about at all.
 # 30-year Treasury out twice 2026-09-29 in 7h: 3 items over 37h silence + rule fired.
 STORY_DIGEST_MAX_QUIET_HOURS = _get_int("STORY_DIGEST_MAX_QUIET_HOURS", 12)
 

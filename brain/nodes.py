@@ -318,7 +318,7 @@ async def gatekeeper_node(state: dict) -> dict[str, Any]:
                 "story_brief": stories.brief_for_writer(story, "", single_item=True),
                 "gate_reason": "forced", "trigger_item_id": item["id"]}
 
-    verdict = await stories.should_post(story, now)
+    verdict = await stories.should_post(story, now, roundup=bool(state.get("sweep")))
 
     if verdict["verdict"] == "not_this_story":
         log.info("Item %s does not belong in story %s (%s) — giving it its own",
@@ -346,6 +346,9 @@ async def gatekeeper_node(state: dict) -> dict[str, Any]:
                  item["id"], story.id, verdict["reason"][:120])
         return {"outcome": "held", "story": story, "story_id": story.id,
                 "gate_reason": verdict["reason"]}
+
+    log.info("Posting on story %s from item %s: %s",
+             story.id, item["id"], verdict["reason"][:120])
 
     # Folding the story into state["item"] is the one seam: every station after
     # this keeps working on "an item" and needs to know nothing about stories.

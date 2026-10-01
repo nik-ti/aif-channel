@@ -471,6 +471,20 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   4. `tools/stats.py --declines` prints rejections in full so you can judge them.
 - **Fails closed:** no verdict means nothing is published; the post waits.
   (Note this is the *opposite* of dedup, on purpose.)
+- **The gate sees the whole channel, not only its story.** It is shown the
+  channel's recent posts that most resemble what came in, whichever story they
+  were filed under. Stories close after 7 days, and the next post on a long
+  run (yields, 1 October) used to be judged by a gate that had never seen the
+  run's earlier posts.
+- **Roundups are asked once.** When 3+ items have waited 3+ hours on a story
+  that posted within the last 12, the gate is asked one more time whether
+  together they tell the reader something new — and not again until another
+  item joins. Before 1 October a roundup posted without asking, and the sweep
+  re-asked every round until a "no" became a "yes".
+- **Yields post once per whole percent** (5%, then 6%). A higher reading in
+  between is the run continuing, unless something else happened: a sharp jump
+  in a day, a central bank reacting, a failed auction. The exit check carries
+  the same rule.
 
 ### `publisher.py`
 - **What:** adds the one emoji and the source link, then sends.
@@ -500,6 +514,10 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   then a separate message. If the text is too long to caption, the picture is
   dropped and the full text sent. If the image fails to send, it falls back to
   text. **A post is never lost over a picture.**
+- **A post you delete in the channel leaves its story.** Telegram does not tell
+  bots about deletions, so the publisher finds out when a reply to that post is
+  refused. It marks the post `deleted`, which takes it out of every story query,
+  and sends under the story's next surviving post, or as an ordinary post.
 - **Injection defence:** any link in the post that doesn't point at our own
   source is stripped, keeping the words. This is plain code, not a model being
   asked nicely.
