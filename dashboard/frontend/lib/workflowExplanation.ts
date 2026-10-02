@@ -183,9 +183,23 @@ For items that pass the gate, the writer composes the Telegram post.
 - **Headline:** One fact = one line (no fluff)
 - **Body:** Answers questions the headline leaves open, sourced only from the wire (never invented)
 - **Length:** Tight (often just headline, sometimes 2-3 lines of detail)
-- **Emoji:** Semantic (🟢 = growth, 🔴 = decline, 🏦 = banking, etc.) — 15-item whitelist + country flags
+- **Emoji:** one mark at the start, from a fixed list in \`config.py\` (\`POST_MARKS\`) plus country flags —
+  e.g. 🔺/🔻 a number moving, 🏛️ a central bank, 🛢️ oil, 💱 forex, 🏠 housing, 🔬 research,
+  💎 diamonds and gems (not gold or silver), 🫆 fingerprints and biometrics. Anything off the list is deleted by code.
 - **Bullets:** Use ▪️ whenever a list fits
-- **Data print format:** \`📊 <b>US CPI 3.4% y/y (forecast 3.4%, previous 3.4%)</b>\`
+- **Scheduled releases (📍, set by code):** the figure, the forecast and the previous value on separate lines,
+  then one short paragraph — what the indicator is, and whether it beat the forecast, read by a fixed table
+  (inflation above forecast = negative, growth above = positive, and so on). The source's own consensus
+  beats the calendar's when it gives one, because the calendar match is sometimes wrong.
+
+  \`\`\`
+  📍 US PPI m/m: +0.4%
+  Forecast: +0.2%
+  Previous: +0.1%
+
+  PPI tracks the prices producers charge, an early read on inflation. It came in above
+  the forecast, which is a negative sign for the markets.
+  \`\`\`
 
 ---
 
