@@ -241,6 +241,33 @@ check was dead for days while looking healthy.
 
 ---
 
+### Phase 7½: THE MEDIA ANALYSTS (Image_Analyst and Video_Analyst Nodes)
+Which picture goes with the post — and on the AI news channel, which clip — or none.
+They never change or block the text; they only choose the media.
+
+**Candidates** come from every item the post was written from: all of a tweet's
+images (not only the first, as before), and on the AI channel the article page's
+pictures and video files too.
+
+**The image rubric** (\`channels/<name>/image_rubric.md\`, editable without code):
+- **Rejected:** a picture that just shows a person · stock photos and logos · another
+  news account's branding, watermark or "BREAKING" template (a chart platform's small
+  logo is fine) · unreadable on a phone · a different subject from the post.
+- **Accepted only** when it shows the data (a chart of the move, a table of the
+  release) or is the maker's own announcement material.
+- Several pass → the single best one. **None passing is normal**, not an error.
+
+**The video analyst** (AI news only): a clip over **2 minutes** or **20 MB** is refused
+in code before any model sees it; the rest go to Gemini, which asks whether the clip
+shows what the post says. A passing clip beats a picture; the picture is its fallback.
+On Market One, clips go out unchecked as before — only their fallback picture is judged.
+
+**It fails closed.** If a check breaks, the post goes out on time with no media. The
+publisher sends only what is recorded on the post row, so nothing unjudged gets out.
+Measured on 29 labelled cases: 29 of 29, twice. About $0.0007 a picture.
+
+---
+
 ### Phase 8: PUBLISHING (Publish Node)
 Approved post is sent to Telegram \`@market_one_news\`
 

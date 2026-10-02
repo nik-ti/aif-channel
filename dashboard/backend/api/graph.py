@@ -40,7 +40,9 @@ _STATION_INFO: dict[str, tuple[str, str]] = {
     "writer": ("Writer", "Writes the post in the channel's voice."),
     "editor": ("Editor", "Checks the finished post against its source. The one station that fails closed."),
     "repeat_check": ("Repeat check", "The exit. Refuses a finished post that tells the reader what a recent post already did."),
-    "publish": ("Publish", "Sends it to Telegram and books it against its story."),
+    "image_analyst": ("Image analyst", "Chooses the one picture that goes with the post, or none. A failure means no picture."),
+    "video_analyst": ("Video analyst", "AI news only. Does the clip show what the post says? Over 2 minutes is refused unseen."),
+    "publish": ("Publish", "Sends it to Telegram, with only the media the analysts chose, and books it against its story."),
 }
 
 
