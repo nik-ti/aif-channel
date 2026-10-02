@@ -30,6 +30,32 @@ _FORMATTING_COMPLAINTS = (
 )
 
 
+# Telegram's words for "I could not fetch the file at that address". The file is
+# usually fine — post 663's picture downloaded in a second — so we upload it ourselves.
+_FETCH_COMPLAINTS = (
+    "failed to get http url content",
+    "wrong file identifier/http url specified",
+    "wrong type of the web page content",
+)
+
+
+def _is_fetch_problem(error: Exception) -> bool:
+    """True if Telegram could not download the media from the address we gave it."""
+    text = str(error).lower()
+    return any(complaint in text for complaint in _FETCH_COMPLAINTS)
+
+
+async def _download(url: str, limit_mb: int) -> bytes:
+    """The file's bytes, for uploading it ourselves. Raises if it is missing or too big."""
+    import httpx
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+        response = await client.get(url)
+    response.raise_for_status()
+    if len(response.content) > limit_mb * 1_000_000:
+        raise ValueError(f"over {limit_mb} MB")
+    return response.content
+
+
 async def _get_bot() -> Bot:
     """Return the shared bot connection, setting it up on first use."""
     global _bot
@@ -134,13 +160,13 @@ async def send_clip(video_url: str, kind: str, caption_html: str,
     if reply_to_message_id is not None:
         reply_kwargs["reply_to_message_id"] = reply_to_message_id
 
-    async def _send(caption: str) -> int:
+    async def _send(caption: str, source=video_url) -> int:
         common = dict(chat_id=config.CHANNEL_ID, caption=caption,
                       parse_mode="HTML", **reply_kwargs)
         if kind == "gif":
-            message = await bot.send_animation(animation=video_url, **common)
+            message = await bot.send_animation(animation=source, **common)
         else:
-            message = await bot.send_video(video=video_url, supports_streaming=True,
+            message = await bot.send_video(video=source, supports_streaming=True,
                                            **common)
         return message.message_id
 
@@ -154,6 +180,11 @@ async def send_clip(video_url: str, kind: str, caption_html: str,
         return await _send(safe)
 
     except BadRequest as error:
+        if _is_fetch_problem(error):
+            # Bytes go up through send_video / send_animation, so it still
+            # arrives as a playable clip, not as a file attachment.
+            log.warning("Telegram could not fetch the clip (%s) — uploading it ourselves", error)
+            return await _send(safe, await _download(video_url, config.MAX_VIDEO_MB))
         if not _is_formatting_problem(error):
             raise    # the file itself was refused; the caller falls back
         log.warning("Telegram rejected the caption formatting (%s) — sending it plain", error)
@@ -204,6 +235,15 @@ async def send_photo(image_url: str, caption_html: str,
         return message.message_id
 
     except BadRequest as error:
+        if _is_fetch_problem(error):
+            # Bytes go up through send_photo, so Telegram shows them as a photo in
+            # the post, never as a file attachment.
+            log.warning("Telegram could not fetch the image (%s) — uploading it ourselves", error)
+            message = await bot.send_photo(
+                chat_id=config.CHANNEL_ID, photo=await _download(image_url, 10),
+                caption=safe, parse_mode="HTML", **reply_kwargs,
+            )
+            return message.message_id
         if not _is_formatting_problem(error):
             raise    # a broken image address; the caller falls back to text
         log.warning("Telegram rejected the caption formatting (%s) — sending it plain", error)

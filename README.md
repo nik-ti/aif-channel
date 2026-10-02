@@ -545,6 +545,10 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   then a separate message. If the text is too long to caption, the picture is
   dropped and the full text sent. If the image fails to send, it falls back to
   text. **A post is never lost over a picture.**
+- **When Telegram cannot fetch a picture or clip from its address** ("Failed to
+  get http url content", post 663 on 1 October), the publisher downloads it and
+  uploads the bytes itself — through send_photo / send_video, so it still shows
+  as a photo or a playable clip, never as a file attachment.
 - **A post you delete in the channel leaves its story.** Telegram does not tell
   bots about deletions, so the publisher finds out when a reply to that post is
   refused. It marks the post `deleted`, which takes it out of every story query,

@@ -345,6 +345,57 @@ async def a_station_failure_still_sends_the_text():
     assert log == [("text", "")]
 
 
+# --- Telegram cannot fetch the address ----------------------------------------
+
+class FakeBot:
+    """Refuses media given as an address, like Telegram did for post 663; takes bytes."""
+    def __init__(self):
+        self.calls = []
+
+    async def _media(self, method, value, **kwargs):
+        from telegram.error import BadRequest
+        self.calls.append((method, type(value).__name__))
+        if isinstance(value, str):
+            raise BadRequest("Failed to get http url content")
+        return type("Message", (), {"message_id": 77})()
+
+    async def send_photo(self, *, photo, **kwargs):
+        return await self._media("send_photo", photo, **kwargs)
+
+    async def send_video(self, *, video, **kwargs):
+        return await self._media("send_video", video, **kwargs)
+
+
+def with_fake_bot():
+    import importlib
+    from utils import telegram_client as real
+    real = importlib.reload(real)
+    bot = FakeBot()
+
+    async def get_bot():
+        return bot
+
+    async def download(url, limit_mb):
+        return b"\xff\xd8 jpeg bytes"
+    real._get_bot, real._download = get_bot, download
+    return real, bot
+
+
+@test
+async def an_image_telegram_cannot_fetch_is_uploaded_as_a_photo():
+    client, bot = with_fake_bot()
+    assert await client.send_photo("https://pbs.twimg.com/media/x.jpg", "<b>Post</b>",
+                                   reply_to_message_id=553) == 77
+    assert bot.calls == [("send_photo", "str"), ("send_photo", "bytes")]
+
+
+@test
+async def a_clip_telegram_cannot_fetch_is_uploaded_as_a_video():
+    client, bot = with_fake_bot()
+    assert await client.send_clip("https://video.twimg.com/v.mp4", "video", "<b>Post</b>") == 77
+    assert bot.calls == [("send_video", "str"), ("send_video", "bytes")]
+
+
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")
 for line in FAILED:
     print("  FAIL", line[:200])
