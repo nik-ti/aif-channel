@@ -14,7 +14,7 @@ from typing import Any
 
 import config
 from brain import persona_loader
-from nodes import (article, dedup, echo, editor, image_analyst, media, publisher,
+from nodes import (article, calendar, dedup, echo, editor, image_analyst, media, publisher,
                    sorter, stories, video_analyst, writer)
 from utils import db, logger as log_setup
 
@@ -427,6 +427,10 @@ async def writer_node(state: dict) -> dict[str, Any]:
             topic=item.get("topic") or state["sorter_verdict"]["topic"],
             post_html=post_html, image_url=item.get("image_url") or "",
             writer_model=writer.MODEL,
+            source_context={"source_items": item.get("source_items") or [
+                {"id": item_id, "source_name": item["source_name"], "url": item["url"]}],
+                "title": item["title"], "body": (item["body"] or "")[:config.MAX_BODY_CHARS],
+                "calendar": calendar.describe(item)},
         )
         if post_id is None:
             # A previous run got this far before stopping. Reuse its post.

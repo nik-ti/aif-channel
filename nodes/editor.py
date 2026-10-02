@@ -113,13 +113,25 @@ Everything else must still come from the reply's own source. The earlier post wi
   tracks an asset's price" is expected and is not drift.
 
   A scheduled release (the source has a "Scheduled release" line) may also say what the indicator is in one short
-  sentence, and compare the figure with the forecast as markets conventionally read it. That comparison is not drift
-  when it follows this table; one that contradicts the table or the numbers IS drift:
+  sentence, and compare the figure with the forecast. Conditional policy implications are not drift
+  when they follow these rules; an automatic market-direction claim IS an overclaim:
 {market_reading}
   So this ending is expected, and is neither FACTUAL_DRIFT nor OVERCLAIM, even though no source says it:
         "Jobless claims count new applications for unemployment benefits. The figure came in below the forecast,
-         which is a positive sign for the markets."
-  Reject it only if the definition is wrong, the comparison misreads the numbers, or the sign contradicts the table.
+         indicating fewer new applications than expected."
+  Reject a wrong definition, a misread comparison, or an unsupported market-direction claim.
+  These rules also apply to macro updates without a Scheduled release line. Under
+  FACTUAL_DRIFT/OVERCLAIM reject missing or incorrect attribution for survey forecasts,
+  rate probabilities and third-party market-cap estimates. In folded [source] blocks,
+  the source carrying the figure determines attribution, not the newest article.
+  A calendar-only prior with unknown revision status must say revision unconfirmed.
+  Above/below expectations is an allowed numerical comparison, not invented
+  commentary. For example actual +29K versus source consensus +84K is below
+  expectations, even if the calendar says +89K: the source's +84K wins.
+  "Hiring came in below expectations, which can reduce pressure for further
+  rate hikes" is an allowed conditional implication under the shared rules.
+  A Forecast line without any survey/platform/reporting-source attribution
+  breaks OVERCLAIM, even when its number is correct.
 * OVERCLAIM — the post drops a hedge the source had. "Proposed" became "approved". "Could" became "will". "Reportedly" disappeared.
 * NO_NEWS — nothing actually happened. It is opinion, analysis, promotion, a roundup, or a reaction with no event.
 * WRONG_TOPIC — it is not about cryptocurrency, markets or geopolitics. Markets covers central banks, economic data,

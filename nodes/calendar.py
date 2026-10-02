@@ -151,6 +151,10 @@ def match(text: str, when: datetime, headline: str = "") -> dict | None:
             plain = title.replace("core ", "").strip()
             if plain in titles:
                 continue
+        if "core" in title and head and "core" not in head:
+            plain = title.replace("core ", "").strip()
+            if plain in titles and any(i in head for words in hits for i in words):
+                continue
         in_headline = bool(head) and any(i in head for words in hits for i in words)
         gap = abs((when - datetime.fromisoformat(row["at_utc"])
                    .replace(tzinfo=timezone.utc)).total_seconds())
@@ -179,26 +183,36 @@ def describe(item) -> str:
         return ""
     parts = [f"Scheduled release: {title}"]
     if item["calendar_forecast"]:
-        parts.append(f"forecast {item['calendar_forecast']}")
+        parts.append(f"forecast {item['calendar_forecast']} (Forex Factory calendar consensus)")
     if item["calendar_previous"]:
-        parts.append(f"previous {item['calendar_previous']}")
+        parts.append(f"previous {item['calendar_previous']} (calendar value; revision status unknown)")
     return ", ".join(parts)
 
 
-# How markets conventionally read a release against its forecast. The writer
-# states it and the editor checks it against this, so both prompts quote it.
+# Shared interpretation rules: economic surprises are not market returns.
 MARKET_READING = """\
-  - Inflation (CPI, PPI, PCE, wages, import prices): above the forecast is a
-    negative sign for the markets, below is a positive one.
-  - Jobs: unemployment rate or jobless claims above the forecast is negative,
-    below is positive. Payrolls or job openings above the forecast is positive,
-    below is negative.
-  - Growth and activity (GDP, retail sales, PMI, ISM, industrial production,
-    sentiment, housing starts): above the forecast is positive, below is negative.
-  - A central bank rate decision: a hike, or a rate above the forecast, is
-    negative; a cut, or a rate below it, is positive.
-  - Within the forecast's last decimal, or exactly on it: "in line with
-    expectations", and no positive or negative.
-  - No forecast given: no comparison and no positive or negative.
-  - A release that fits none of these: no positive or negative."""
-
+  - First compare the actual with the forecast: above, below, or in line with
+    expectations. Never label a release automatically positive or negative
+    "for markets": the effect differs by asset and the policy backdrop.
+  - Payrolls/job openings below forecast, or unemployment/claims above it,
+    signal softer labor demand. They can reduce pressure for further hikes,
+    but do not establish that cuts are likely or that stocks will rise.
+  - Inflation/wages above forecast can increase pressure for tighter policy;
+    below forecast can ease that pressure. Do not infer a price reaction.
+  - Growth/activity above forecast indicates stronger activity; below forecast
+    indicates weaker activity. Do not infer an equity or currency direction.
+  - Rate decisions: report the hike, hold or cut and its difference from the
+    forecast. A decision's asset-price effect is not automatic.
+  - If no forecast is supplied, omit the expectation comparison. Do not invent
+    one. Equality at the reported precision means in line with expectations.
+  - Actual market moves and probability changes require source evidence.
+    Lower hike odds do not imply higher cut odds: a hold is a separate outcome.
+    Preserve the probability's platform, meeting and observation time when
+    supplied; never invent missing metadata or substitute another platform.
+  - Retain attribution for forecasts: source-stated consensus wins over the
+    calendar, but is a survey estimate, not an official agency forecast.
+  - Use a revised prior value when supplied, retaining the original in a
+    revision note. A calendar-only prior must be labelled revision unconfirmed;
+    never present it as the confirmed revised value.
+  - Rising inflation is not a bullish market move. Use a neutral data mark
+    rather than an upward market arrow for inflation data alone."""

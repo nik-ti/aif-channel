@@ -272,7 +272,15 @@ line, then two short sentences: what the indicator is, and how it compares with 
 Forecast: +0.2%
 Previous: +0.1%
 
-PPI tracks the prices producers charge for goods and services, an early read on inflation. It came in above the forecast, which is a negative sign for the markets.
+PPI tracks the prices producers charge for goods and services, an early read on inflation. It came in above expectations, which can increase pressure for tighter monetary policy.
+
+Payroll example, when the wire says "consensus +84K" and the calendar says +89K:
+📍 <b>US nonfarm payrolls in September: +29K</b>
+Forecast: +84K (DeItaone consensus)
+Previous: +162K (revision unconfirmed)
+
+Nonfarm payrolls measure the monthly change in US jobs outside agriculture. Hiring
+came in below expectations, which can reduce pressure for further rate hikes.
 
 Forecast and Previous: when the source states its own expectation or prior value ("survey 200K",
 "consensus +1.5%", "est. 0.2%", "57.0 flash", "53.9 Aug"), use the source's — it is the release
@@ -280,10 +288,23 @@ itself. Otherwise use the "Scheduled release" line. If neither gives a forecast,
 Forecast line and the comparison; if neither gives a previous value, leave out the Previous line.
 Never invent either.
 
+Identify the forecast's survey/platform if supplied; otherwise credit the named wire source,
+or Forex Factory for a calendar-only forecast. Label a calendar-only Previous value
+"(revision unconfirmed)". If the source gives a revision, use the revised number and
+note the original. Do not mix headline/core, m/m/y/y, countries or reference months.
+Attribution is mandatory even in the short format: "Forecast: +84K (DeItaone consensus)"
+or "Forecast: +89K (Forex Factory)". Do not omit it to save words.
+
 The post ENDS after those two sentences. No third paragraph, no extra figures from the wire.
 
-The comparison follows this table and nothing else — not your own view of the economy:
+The comparison follows these rules, not a fixed bullish/bearish label:
 {market_reading}
+
+These rules also apply to macro updates without a Scheduled release line. For folded
+sources labelled [source], attribute third-party estimates and market-cap calculations
+to the source block carrying them, not the newest article. Preserve Kalshi/Polymarket
+and the meeting when supplied. If no platform is supplied, name the reporting source.
+Do not invent an independent verification of a social account's estimate.
 
 The "Scheduled release" line is matched by a program and is sometimes wrong. Use this shape only
 when the source itself reports that release's figure. "$550 billion wiped from US stocks" is not

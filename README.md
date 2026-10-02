@@ -520,8 +520,17 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
 ### `publisher.py`
 - **What:** adds the one emoji and the source link, then sends.
 - **Scheduled releases go out as 📍 multi-liners:** figure, Forecast, Previous, then
-  what the indicator is and whether it beat the forecast, read by the fixed table in
-  `calendar.MARKET_READING` (the editor checks against the same table). Code sets 📍
+  what the indicator is and how it compares with the forecast. Shared rules in
+  `calendar.MARKET_READING` distinguish economic surprises from conditional policy
+  implications; they never assign an automatic positive/negative market sign.
+  Forecasts retain their survey or reporting-source attribution. A revised prior
+  beats the calendar; calendar-only priors say "revision unconfirmed". Probability
+  updates retain Kalshi/Polymarket and the meeting when supplied, and lower hike
+  odds never become an invented cut probability. The editor checks these rules.
+  Folded story posts credit the source carrying a third-party estimate, not the
+  newest article. Each new post stores its input text and contributing item IDs,
+  source names and URLs in `posts.source_context`, so a multi-source update can be
+  traced beyond its trigger item. Code sets 📍
   and cuts anything after the explainer — but only when the post is really in that
   shape, because the calendar match is sometimes wrong ("$550 billion wiped from US
   stocks" matched the ISM PMI). The source's own consensus beats the calendar's.

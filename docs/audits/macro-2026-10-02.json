@@ -1,0 +1,138 @@
+{
+  "changes": [
+    {
+      "post_id": 671,
+      "message_id": 561,
+      "post_url": "https://t.me/market_one_news/561",
+      "old_text": "📍 <b>Eurozone inflation y/y: +3.8%</b>\nForecast: +3.6%\nPrevious: +3.2%\n\nCore inflation, which excludes energy and food, rose to 2.5% from 2.4%, matching its forecast. The headline rate came in above expectations, a negative sign for the markets.",
+      "new_text": "📍 <b>Eurozone inflation in September y/y: 3.8%</b>\nForecast: 3.6% (DeItaone consensus)\nPrevious: 3.2%\n\nCore inflation, excluding energy, food, alcohol and tobacco, rose to 2.5% from 2.4%, matching the source’s forecast. Headline inflation exceeded expectations, which can increase pressure for tighter monetary policy.",
+      "had_media": false,
+      "sources": [
+        {
+          "id": 19917,
+          "source_name": "DeItaone",
+          "url": "https://x.com/DeItaone/status/2105946083054497985",
+          "title": "🇪🇺 EUROZONE INFLATION JUMPS TO 3.8%, ABOVE FORECASTS",
+          "body": "🇪🇺 EUROZONE INFLATION JUMPS TO 3.8%, ABOVE FORECASTS\n\nEurozone inflation accelerated to 3.8% YoY in September, above the 3.6% consensus and sharply higher than 3.2% in August, according to Eurostat.\n\nCore inflation rose slightly to 2.5% from 2.4%, matching expectations.\n\nThe"
+        }
+      ],
+      "telegram_verified_at": "2026-10-02 20:23:31",
+      "applied_at": "2026-10-02 20:23:31"
+    },
+    {
+      "post_id": 676,
+      "message_id": 565,
+      "post_url": "https://t.me/market_one_news/565",
+      "old_text": "📍 <b>US Nonfarm Payrolls: +29K</b>\nForecast: +84K\nPrevious: +162K\n\nNonfarm payrolls measure the number of jobs added in the US, excluding farm workers and a few other categories. The figure came in well below the forecast, a negative sign for the markets.",
+      "new_text": "📍 <b>US nonfarm payrolls in September: +29K</b>\nForecast: +84K (DeItaone consensus)\nPrevious: +133K (revised from +162K)\n\nNonfarm payrolls measure the monthly change in US jobs outside agriculture. Hiring came in below expectations, which can reduce pressure for further rate hikes.",
+      "had_media": false,
+      "sources": [
+        {
+          "id": 19970,
+          "source_name": "DeItaone",
+          "url": "https://x.com/DeItaone/status/2105998835512410570",
+          "title": "US LABOR SEP NONFARM PAYROLLS +29K; CONSENSUS +84K",
+          "body": "US LABOR SEP NONFARM PAYROLLS +29K; CONSENSUS +84K"
+        },
+        {
+          "id": 19974,
+          "source_name": "BLS_gov",
+          "url": "https://x.com/BLS_gov/status/2105999306092052976",
+          "title": "Both payroll employment (+29,000) and unemployment rate (4.2%) change little in September  #JobsReport #BLSdata",
+          "body": "Both payroll employment (+29,000) and unemployment rate (4.2%) change little in September https://t.co/ZwrVfLviqL #JobsReport #BLSdata"
+        }
+      ],
+      "telegram_verified_at": "2026-10-02 20:23:31",
+      "applied_at": "2026-10-02 20:23:31"
+    },
+    {
+      "post_id": 686,
+      "message_id": 571,
+      "post_url": "https://t.me/market_one_news/571",
+      "old_text": "📈 <b>Nonfuel import prices rose 5.5% for the year ending August 2026</b>",
+      "new_text": "🇺🇸 <b>Nonfuel import prices rose 5.5% for the year ending August 2026</b>",
+      "had_media": true,
+      "sources": [
+        {
+          "id": 20018,
+          "source_name": "BLS_gov",
+          "url": "https://x.com/BLS_gov/status/2106047913554260110",
+          "title": "Nonfuel import prices rose 5.5 percent for year ending August 2026, largest increase since May 2022  #BLSdata",
+          "body": "Nonfuel import prices rose 5.5 percent for year ending August 2026, largest increase since May 2022 https://t.co/gpuOOfwsjb #BLSdata https://t.co/L6S6kHYTUY"
+        }
+      ],
+      "telegram_verified_at": "2026-10-02 20:23:32",
+      "applied_at": "2026-10-02 20:23:32"
+    },
+    {
+      "post_id": 687,
+      "message_id": 572,
+      "post_url": "https://t.me/market_one_news/572",
+      "old_text": "<b>US jobs report update</b>\n\n▪️ The unemployment rate rose to 4.2% in September, above the 4.1% forecast.\n▪️ The two-month payroll revision subtracted 60,000 jobs from the previous totals.\n\nMarkets now see an 85% chance the Fed will hold rates steady at its October meeting, up sharply from before the report.",
+      "new_text": "<b>US jobs report update</b>\n\n▪️ The unemployment rate rose to 4.2% in September, above the 4.1% forecast reported by DeItaone.\n▪️ July and August payroll estimates were revised down by a combined 60,000 jobs.\n\nAfter the report, Kalshi priced an 85% chance the Fed would hold rates steady at its October meeting, according to DeItaone.",
+      "had_media": true,
+      "sources": [
+        {
+          "id": 19971,
+          "source_name": "BullTheoryio",
+          "url": "https://x.com/BullTheoryio/status/2105998897701343415",
+          "title": "",
+          "body": "BREAKING:\n\n🇺🇸US Unemployment came in at 4.2%\n\nExpectations: 4.1%\n\nThe US economy added 29,000 jobs in September, 61,000 jobs lower than the expectations of 90,000. https://t.co/vONiJjD9YO"
+        },
+        {
+          "id": 19973,
+          "source_name": "DeItaone",
+          "url": "https://x.com/DeItaone/status/2105999215201583285",
+          "title": "US SEPT. TWO-MONTH PAYROLL NET REVISION SUBTRACTS 60,000",
+          "body": "US SEPT. TWO-MONTH PAYROLL NET REVISION SUBTRACTS 60,000"
+        },
+        {
+          "id": 19976,
+          "source_name": "DeItaone",
+          "url": "https://x.com/DeItaone/status/2105999726768247044",
+          "title": "FED PAUSE ODDS SURGE TO 85% AFTER WEAK JOBS REPORT",
+          "body": "FED PAUSE ODDS SURGE TO 85% AFTER WEAK JOBS REPORT\n\nKalshi now prices an 85% chance the Fed holds rates in October after payrolls rose just 29,000 vs. 84,000 expected.\n\nUnemployment climbed to 4.2%, triggering a sharp dovish repricing of the Fed outlook.\nhttps://t.co/zjyZ70SiCv https://t.co/uO5vZcyQkT"
+        }
+      ],
+      "telegram_verified_at": "2026-10-02 20:23:32",
+      "applied_at": "2026-10-02 20:23:32"
+    },
+    {
+      "post_id": 690,
+      "message_id": 575,
+      "post_url": "https://t.me/market_one_news/575",
+      "old_text": "📈 US jobs report update\n\n▪️ The market reaction to the weak jobs data was a surge of over $700 billion added to US stocks, with the S&P 500 up 0.9% at open.\n▪️ Fed rate hike odds for the next meeting crashed to 16% after the report.",
+      "new_text": "📈 <b>US jobs report update</b>\n\n▪️ The S&amp;P 500 rose 0.9% at the open after the weak jobs report. BullTheory estimated that over $700 billion was added to US stock-market value.\n▪️ The probability of a Fed rate hike at the October meeting fell to 16% on Polymarket.\n\nThe repricing favoured a pause; lower hike odds do not by themselves establish that a cut is likely.",
+      "had_media": true,
+      "sources": [
+        {
+          "id": 19986,
+          "source_name": "BullTheoryio",
+          "url": "https://x.com/BullTheoryio/status/2106007039113847063",
+          "title": "🇺🇸 Fed rate hike odds just crashed to 16% after US unemployment rose and job growth badly missed expectations.",
+          "body": "BREAKING: 🇺🇸 Fed rate hike odds just crashed to 16% after US unemployment rose and job growth badly missed expectations. https://t.co/2M47401e0v"
+        },
+        {
+          "id": 19995,
+          "source_name": "BullTheoryio",
+          "url": "https://x.com/BullTheoryio/status/2106016188438650957",
+          "title": "🇺🇸 Over $700 BILLION added to US stocks as S&amp;P 500 surges +0.9% at open after higher-than-expected unemployment reduced expectations for further Fed rate hikes.",
+          "body": "BREAKING: 🇺🇸 Over $700 BILLION added to US stocks as S&amp;P 500 surges +0.9% at open after higher-than-expected unemployment reduced expectations for further Fed rate hikes. https://t.co/2jtJbjJAy6"
+        }
+      ],
+      "telegram_verified_at": "2026-10-02 20:23:32",
+      "applied_at": "2026-10-02 20:23:32"
+    }
+  ],
+  "additional_verified_sources": [
+    "https://www.bls.gov/news.release/empsit.nr0.htm",
+    "https://finance.yahoo.com/economy/policy/articles/fed-hike-odds-collapse-16-145446547.html",
+    "https://forbeseu.com/wall-street-opens-higher-as-softer-payrolls-data-lower-yields-lift-sentiment/"
+  ],
+  "validation": {
+    "automated_checks": "2 macro regressions and 23 media checks passed",
+    "live_model_checks": "new payroll draft approved; revised-prior correction approved; original payroll draft rejected",
+    "deployment": "market-one-channel restarted; running with source_context migration applied",
+    "telegram_edits": "5 edits verified from Telegram response and matching database text"
+  }
+}

@@ -600,6 +600,8 @@ def as_source(story: Story) -> dict:
         "url": newest["url"],
         "title": newest["title"],
         "body": "\n\n".join(parts)[:4000],
+        "source_items": [{"id": i["id"], "source_name": i["source_name"],
+                          "url": i["url"]} for i in pending],
         # Every waiting item's pictures and clips, for the media analysts.
         "candidate_media": media.merge(pending),
         "image_url": newest.get("image_url") or "",

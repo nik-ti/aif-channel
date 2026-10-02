@@ -67,6 +67,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("media_json", "ALTER TABLE items ADD COLUMN media_json TEXT DEFAULT ''"),  # Every candidate image and video — see nodes/media.py.
     ],
     "posts": [
+        ("source_context", "ALTER TABLE posts ADD COLUMN source_context TEXT DEFAULT ''"),
         # What the analysts chose. The publisher sends only these, so nothing unjudged goes out.
         ("media_checked", "ALTER TABLE posts ADD COLUMN media_checked INTEGER DEFAULT 0"),
         ("media_image_url", "ALTER TABLE posts ADD COLUMN media_image_url TEXT DEFAULT ''"),
@@ -621,7 +622,7 @@ def _log_dedup_hit(item_id, matched_item_id, rung, score, kept, detail) -> None:
 
 def create_post(
     *, item_id: int, topic: str, post_html: str, image_url: str,
-    writer_model: str,
+    writer_model: str, source_context: dict | None = None,
 ) -> int | None:
     """Store post, return its id or None if already exists (prevents duplicate sends on
     crash).
@@ -631,12 +632,13 @@ def create_post(
             """
             INSERT INTO posts (
                 item_id, topic, post_html, image_url, has_image,
-                char_count, writer_model, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?)
+                char_count, writer_model, status, created_at, source_context
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
             """,
             (
                 item_id, topic, post_html, image_url, 1 if image_url else 0,
                 len(post_html), writer_model, now_iso(),
+                json.dumps(source_context or {}, ensure_ascii=False),
             ),
         )
         conn().commit()
