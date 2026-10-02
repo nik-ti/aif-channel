@@ -183,3 +183,22 @@ def describe(item) -> str:
     if item["calendar_previous"]:
         parts.append(f"previous {item['calendar_previous']}")
     return ", ".join(parts)
+
+
+# How markets conventionally read a release against its forecast. The writer
+# states it and the editor checks it against this, so both prompts quote it.
+MARKET_READING = """\
+  - Inflation (CPI, PPI, PCE, wages, import prices): above the forecast is a
+    negative sign for the markets, below is a positive one.
+  - Jobs: unemployment rate or jobless claims above the forecast is negative,
+    below is positive. Payrolls or job openings above the forecast is positive,
+    below is negative.
+  - Growth and activity (GDP, retail sales, PMI, ISM, industrial production,
+    sentiment, housing starts): above the forecast is positive, below is negative.
+  - A central bank rate decision: a hike, or a rate above the forecast, is
+    negative; a cut, or a rate below it, is positive.
+  - Within the forecast's last decimal, or exactly on it: "in line with
+    expectations", and no positive or negative.
+  - No forecast given: no comparison and no positive or negative.
+  - A release that fits none of these: no positive or negative."""
+

@@ -34,6 +34,14 @@ LENGTH_RULE_IMAGE = (
     "Two short paragraphs at most."
 )
 
+# A scheduled release always gets the multi-line shape in the prompt, however
+# thin the wire it arrived on ("*US PPI M/M 0.4%, EST. 0.2%").
+LENGTH_RULE_RELEASE = (
+    "The scheduled-release shape below, and nothing more: the figure, the "
+    "Forecast and Previous lines, an empty line, then the two sentences. "
+    "Under 60 words."
+)
+
 # Short X posts have no padding material; padding = inventing.
 LENGTH_RULE_BRIEF = (
     "As short as the news. Often that is ONE line — the bold headline alone, "
@@ -78,6 +86,9 @@ def _build_emoji_rule() -> str:
         "mentioned.\n"
         "\n"
         "How to choose, in order:\n"
+        "  0. The post reports a scheduled release's figure (the source carries "
+        "a \"Scheduled release\" line AND reports that number): 📍, always. 📍 "
+        "is never used for anything else.\n"
         "  1. A short post whose news IS a number moving: 🔺 🔻 for the level "
         "now, 📈 📉 for a trend or an expectation.\n"
         "  2. A central bank or government deciding or projecting: 🏛️ — unless "
@@ -86,9 +97,12 @@ def _build_emoji_rule() -> str:
         "show rates higher for longer\".\n"
         "  3. A bill, a tax, a law — proposed, passed, or signed: 📝. "
         "\"📝 US House passes crypto tax bill\". A hack or exploit: ⚠️. "
-        "Oil: 🛢️. A commercial bank: 🏦. A freeze or lock-up: 🔒.\n"
+        "Oil: 🛢️. A commercial bank: 🏦. A freeze or lock-up: 🔒. Housing: 🏠. "
+        "Research or a study: 🔬. Diamonds or gems (not gold, not silver): 💎. "
+        "Fingerprints or biometrics: 🫆.\n"
         "  4. Money itself — the dollar, liquidity, crypto flows: 💵; the yen: "
-        "💴; the euro: 💶.\n"
+        "💴; the euro: 💶; exchange rates in general, one currency against "
+        "another: 💱.\n"
         "  5. One country's own story: its flag.\n"
         "  6. Nothing fits cleanly: no mark. Better none than a wrong one.\n"
         "\n"
@@ -248,20 +262,34 @@ The Fed's new dot plot points to more tightening ahead:
 ▪️ Four see rates reaching 4.375%
 ▪️ 14 project rates ending 2026 above the long-run neutral level
 
-## Data prints: the number, then what was expected
+## Scheduled releases: the number, the expectation, then what it means
 
-When the source carries a "Scheduled release" line, the post is a data print, and it has one
-shape: the figure, then the forecast and the previous value in brackets, on ONE line.
+When the source carries a "Scheduled release" line, the post is a data print and has exactly
+this shape. One line each for the figure, the forecast and the previous value, then an empty
+line, then two short sentences: what the indicator is, and how it compares with the forecast.
 
-📊 <b>US CPI 3.4% y/y (forecast 3.4%, previous 3.4%)</b>
-🔺 <b>Fed raises rates to 4.00% (forecast 4.00%, previous 3.75%)</b>
-📊 <b>US retail sales +1.2% m/m (forecast +0.8%, previous -0.6%)</b>
+📍 <b>US PPI m/m: +0.4%</b>
+Forecast: +0.2%
+Previous: +0.1%
 
-The bracket comes from the "Scheduled release" line and from nowhere else. If that line gives
-no forecast, write no forecast. A reader who trades on this wants to see the surprise in one
-glance, not a sentence explaining that expectations were met.
+PPI tracks the prices producers charge for goods and services, an early read on inflation. It came in above the forecast, which is a negative sign for the markets.
 
-## Example of a good ONE-LINE post
+Forecast and Previous: when the source states its own expectation or prior value ("survey 200K",
+"consensus +1.5%", "est. 0.2%", "57.0 flash", "53.9 Aug"), use the source's — it is the release
+itself. Otherwise use the "Scheduled release" line. If neither gives a forecast, leave out the
+Forecast line and the comparison; if neither gives a previous value, leave out the Previous line.
+Never invent either.
+
+The post ENDS after those two sentences. No third paragraph, no extra figures from the wire.
+
+The comparison follows this table and nothing else — not your own view of the economy:
+{market_reading}
+
+The "Scheduled release" line is matched by a program and is sometimes wrong. Use this shape only
+when the source itself reports that release's figure. "$550 billion wiped from US stocks" is not
+a PMI print even if the line says PMI: ignore the line and write an ordinary post.
+
+## Example of a good ONE-LINE post## Example of a good ONE-LINE post
 
 Source: "US diesel prices jump above $6 a gallon"
 
@@ -447,7 +475,8 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
         f"Topic: {item['topic'] or item['topic_hint']}\n\n"
         f"Headline: {title}\n\n"
         f"Text:\n{body}"
-        + (f"\n\n{scheduled}" if scheduled else "")
+        + (f"\n\n{scheduled} (where the text above states its own survey, consensus, "
+           f"estimate or prior value, the text's figure wins)" if scheduled else "")
     )
 
     if editor_feedback:
@@ -463,7 +492,9 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     # invented "organized crime rings".
     thin = has_thin_source(item)
 
-    if thin:
+    if scheduled:
+        length_rule = LENGTH_RULE_RELEASE
+    elif thin:
         length_rule = LENGTH_RULE_BRIEF
     elif has_image:
         length_rule = LENGTH_RULE_IMAGE
@@ -471,7 +502,8 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
         length_rule = LENGTH_RULE_TEXT
 
     system_prompt = PROMPT.format(length_rule=length_rule, emoji_rule=EMOJI_RULE,
-                                  today=_today())
+                                  today=_today(),
+                                  market_reading=calendar.MARKET_READING)
 
     # Persona = voice only; factual-accuracy rules above override it.
     if persona.strip():
@@ -517,9 +549,29 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     if post != before:
         log.info("Tidied the marks on item %s — kept %s", item["id"], mark or "none")
 
+    # A post written in the release shape is always 📍, whatever the model picked.
+    # The shape, not the calendar match, decides: the match is sometimes wrong
+    # ("$550 billion wiped from US stocks" matched the ISM PMI).
+    release_shaped = bool(scheduled) and bool(
+        re.search(r"(?m)^(Forecast|Previous):", re.sub(r"<[^>]+>", "", post)))
+    if not release_shaped and mark == "📍":
+        post = post[len(mark):].lstrip()
+        log.info("Item %s used 📍 outside the release shape — removed it", item["id"])
+    if release_shaped and mark != "📍":
+        body = post[len(mark):].lstrip() if mark else post
+        post = f"📍 {body}"
+        log.info("Item %s is a scheduled release — mark set to 📍", item["id"])
+    if release_shaped:
+        # The figure lines, one empty line, the explainer — and nothing after it.
+        blocks = re.split(r"\n\s*\n", post.strip())
+        if len(blocks) > 2:
+            post = "\n\n".join(blocks[:2])
+            log.info("Item %s: cut the release post after its explainer", item["id"])
+
     # One-fact source = one-line post (prompt says so, model adds body anyway, editor
-    # waves it). Guaranteed, not requested.
-    if is_one_line_source(item) and "\n" in post.strip():
+    # waves it). Guaranteed, not requested. Not for a scheduled release, whose
+    # Forecast and Previous lines come from the calendar, not the wire.
+    if not release_shaped and is_one_line_source(item) and "\n" in post.strip():
         post = headline_only(post)
         log.info("Item %s has a one-line source — kept the headline only", item["id"])
 

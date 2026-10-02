@@ -111,6 +111,15 @@ Everything else must still come from the reply's own source. The earlier post wi
 
   The ONE exception is the short definition of a technical term the post is required to explain — "an ETF, a fund that
   tracks an asset's price" is expected and is not drift.
+
+  A scheduled release (the source has a "Scheduled release" line) may also say what the indicator is in one short
+  sentence, and compare the figure with the forecast as markets conventionally read it. That comparison is not drift
+  when it follows this table; one that contradicts the table or the numbers IS drift:
+{market_reading}
+  So this ending is expected, and is neither FACTUAL_DRIFT nor OVERCLAIM, even though no source says it:
+        "Jobless claims count new applications for unemployment benefits. The figure came in below the forecast,
+         which is a positive sign for the markets."
+  Reject it only if the definition is wrong, the comparison misreads the numbers, or the sign contradicts the table.
 * OVERCLAIM — the post drops a hedge the source had. "Proposed" became "approved". "Could" became "will". "Reportedly" disappeared.
 * NO_NEWS — nothing actually happened. It is opinion, analysis, promotion, a roundup, or a reaction with no event.
 * WRONG_TOPIC — it is not about cryptocurrency, markets or geopolitics. Markets covers central banks, economic data,
@@ -205,7 +214,7 @@ async def execute(item, post_html: str, post_id: int, record: bool = True,
     source_text = (item["body"] or "")[: config.MAX_BODY_CHARS]
     started = time.monotonic()
 
-    system_prompt = PROMPT.format(today=_today())
+    system_prompt = PROMPT.format(today=_today(), market_reading=calendar.MARKET_READING)
 
     reply_context = ""
     if parent_post:
@@ -220,7 +229,9 @@ async def execute(item, post_html: str, post_id: int, record: bool = True,
         f"From: {item['source_name']}\n"
         f"Headline: {item['title']}\n"
         f"Text: {source_text}\n"
-        + (f"{calendar.describe(item)}\n" if calendar.describe(item) else "")
+        + (f"{calendar.describe(item)} (where the text above states its own survey, "
+           f"consensus, estimate or prior value, the text's figure wins)\n"
+           if calendar.describe(item) else "")
         + "\n"
         f"## The finished post, filed under '{item['topic'] or item['topic_hint']}'\n"
         f"{post_html}"

@@ -49,7 +49,7 @@ def _text(post_html: str) -> str:
 def _by_message(conn, mid: int) -> tuple[str, str]:
     row = conn.execute(
         "SELECT post_html, sent_at FROM posts "
-        "WHERE telegram_message_id=? AND status='sent'", (mid,)).fetchone()
+        "WHERE telegram_message_id=? AND status IN ('sent', 'deleted')", (mid,)).fetchone()
     if row is None:
         raise SystemExit(f"message {mid} is not in this database")
     return _text(row["post_html"]), row["sent_at"]

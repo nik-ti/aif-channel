@@ -120,7 +120,9 @@ POST_MARKS = {
     "🔻": "a price, yield or figure falling — the number is the news",
     "📈": "a market or trend moving up over a period, or an expected rise",
     "📉": "a market or trend moving down over a period, or an expected fall",
-    "📊": "a scheduled data release or official statistics",
+    "📍": "a SCHEDULED economic release from the calendar (CPI, PPI, jobs, GDP, a "
+          "rate decision) — always this one, set in code",
+    "📊": "official statistics or data that is NOT a scheduled calendar release",
     # institutions
     "🏛️": "a central bank, government or regulator deciding or projecting",
     "🏦": "a commercial bank, or the banking system",
@@ -130,7 +132,12 @@ POST_MARKS = {
     "💵": "the dollar, dollar liquidity, or money in general; crypto too",
     "💴": "the yen or Japan's money",
     "💶": "the euro or the eurozone's money",
+    "💱": "forex: exchange rates, one currency against another",
     "🛢️": "oil, gas, refining, pipelines",
+    "💎": "diamonds and precious stones — never gold or silver",
+    "🏠": "housing: home prices, sales, mortgages, rents, builders",
+    "🔬": "research: a study, a paper, a scientific or technical finding",
+    "🫆": "fingerprints, biometrics, identity checks",
     # risk
     "⚠️": "a hack, exploit, breach or security vulnerability",
     "🔒": "safety, custody, a freeze or a lock-up of funds or assets",

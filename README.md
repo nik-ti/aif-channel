@@ -519,6 +519,12 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
 
 ### `publisher.py`
 - **What:** adds the one emoji and the source link, then sends.
+- **Scheduled releases go out as 📍 multi-liners:** figure, Forecast, Previous, then
+  what the indicator is and whether it beat the forecast, read by the fixed table in
+  `calendar.MARKET_READING` (the editor checks against the same table). Code sets 📍
+  and cuts anything after the explainer — but only when the post is really in that
+  shape, because the calendar match is sometimes wrong ("$550 billion wiped from US
+  stocks" matched the ISM PMI). The source's own consensus beats the calendar's.
 - **One emoji per post, added by code and never by the AI:** `crypto → 🪙`,
   `geopolitics → 🌍`, and `⚡` in place of the topic emoji for short X posts.
   That single mark is the channel's whole visual signature.
