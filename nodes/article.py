@@ -64,8 +64,8 @@ def _usable(text: str | None) -> bool:
     return not any(marker in head for marker in _NOT_AN_ARTICLE)
 
 
-async def _plain(url: str) -> str | None:
-    """Fetch and extract without a browser. The common path."""
+async def _plain(url: str) -> tuple[str | None, str]:
+    """Fetch and extract without a browser. The common path. Returns (text, page html)."""
     try:
         async with httpx.AsyncClient(
             timeout=config.ARTICLE_TIMEOUT_SECONDS, follow_redirects=True,
@@ -74,25 +74,25 @@ async def _plain(url: str) -> str | None:
             response = await client.get(url)
         if response.status_code != 200:
             log.debug("Plain fetch got HTTP %s for %s", response.status_code, url[:80])
-            return None
+            return None, ""
     except Exception as error:  # noqa: BLE001 - a slow site must not stop the channel
         log.debug("Plain fetch failed for %s: %s", url[:80], error)
-        return None
+        return None, ""
 
     # include_comments=False keeps reader comments out of what the writer is
     # told is the source; they read like reporting and are not.
     text = trafilatura.extract(response.text, include_comments=False,
                                include_tables=False, favor_precision=True)
-    return text if _usable(text) else None
+    return (text if _usable(text) else None), response.text
 
 
-async def _browser(url: str) -> str | None:
-    """Fetch through crawl4ai's stealth browser. Only for sites that refuse step 1."""
+async def _browser(url: str) -> tuple[str | None, str]:
+    """Fetch through crawl4ai's stealth browser, for sites that refuse step 1. (text, html)"""
     try:
         from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
     except ImportError:
         log.warning("crawl4ai is not installed; skipping the browser path")
-        return None
+        return None, ""
 
     async with _browser_lock:
         try:
@@ -110,7 +110,7 @@ async def _browser(url: str) -> str | None:
                 )
         except Exception as error:  # noqa: BLE001
             log.info("Browser fetch failed for %s: %s", url[:80], error)
-            return None
+            return None, ""
 
     html = getattr(result, "html", "") or ""
     text = trafilatura.extract(html, include_comments=False, include_tables=False,
@@ -119,7 +119,7 @@ async def _browser(url: str) -> str | None:
         # crawl4ai's own markdown, in case trafilatura disliked the shape.
         markdown = getattr(result, "markdown", None)
         text = str(markdown) if markdown else None
-    return text if _usable(text) else None
+    return (text if _usable(text) else None), html
 
 
 def _record_failure() -> None:
@@ -162,11 +162,18 @@ async def fetch_for(item) -> str | None:
     if any(host in url for host in ("x.com/", "twitter.com/")):
         return None
 
-    text = await _plain(url)
+    text, html = await _plain(url)
     used = "plain"
     if text is None:
-        text = await _browser(url)
+        text, html = await _browser(url)
         used = "browser"
+    if config.COLLECT_ARTICLE_MEDIA and html:
+        from nodes import media
+        images, videos = media.from_article_html(html, url)
+        if images or videos:
+            db.add_item_media(item_id, images=images, videos=videos)
+            log.info("Article media for item %s: %d image(s), %d video(s)",
+                     item_id, len(images), len(videos))
 
     if text is None:
         _record_failure()

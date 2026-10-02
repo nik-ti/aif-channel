@@ -105,6 +105,11 @@ def _store_tweet(tweet: fetch_tweets.Tweet) -> bool:
 
     if item_id is None:
         return False
+    if tweet.handle not in config.NO_MEDIA_SOURCES:
+        # All of the tweet's pictures, not only the first; the image analyst chooses.
+        db.add_item_media(item_id, images=list(tweet.media),
+                          videos=[{"url": tweet.video, "kind": tweet.video_kind or "video"}]
+                          if tweet.video else [])
 
     if dedup.check_headline(item_id, title, fingerprint):
         db.set_item_status(item_id, "duplicate", "same headline already seen")

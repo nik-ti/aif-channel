@@ -20,6 +20,9 @@ CHANNEL_ID_KEY = "CHANNEL_ID"
 PERSONA_PATH = HERE / "persona.md"
 RUBRIC_PATH = HERE / "rubric.md"
 
+# The image analyst judges every picture; clips go out unchecked, as before.
+IMAGE_RUBRIC_PATH = HERE / "image_rubric.md"
+
 MIN_IMPORTANCE = 4
 
 # MUST match rubric.md: the provider enforces this list, so a topic the rubric
@@ -76,5 +79,6 @@ PIPELINE = [
     "writer",
     "editor",
     "repeat_check",
+    "image_analyst",
     "publish",
 ]

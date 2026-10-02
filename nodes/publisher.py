@@ -1,8 +1,10 @@
 """Sends an approved post to the channel without changing a character of it.
 
-A post with media goes out as ONE captioned message, which caps the text at 1024
-characters instead of 4096. If the text will not fit, the media is dropped rather
-than the words. If a video cannot be fetched, its thumbnail is used.
+It sends only the media the analysts recorded on the post row (see
+nodes/image_analyst.py). A post with media goes out as ONE captioned message,
+which caps the text at 1024 characters instead of 4096. If the text will not
+fit, the media is dropped rather than the words. If a video cannot be fetched,
+the chosen picture is used.
 """
 
 from __future__ import annotations
@@ -152,9 +154,13 @@ async def execute(item, post_html: str, post_id: int,
     """
     topic = item["topic"] or item["topic_hint"] or "crypto"
     message = compose(post_html, item["url"] or "")
-    image_url = item["image_url"] or ""
-    video_url = item["video_url"] or ""
-    video_kind = item["video_kind"] or ""
+    # Only what the analysts chose for this post. A post they never saw goes out
+    # as text, so no picture reaches the channel unjudged.
+    chosen = db.get_post_media(post_id)
+    checked = bool(chosen and chosen["media_checked"])
+    image_url = (chosen["media_image_url"] or "") if checked else ""
+    video_url = (chosen["media_video_url"] or "") if checked else ""
+    video_kind = (chosen["media_video_kind"] or "") if checked else ""
 
     try:
         while True:

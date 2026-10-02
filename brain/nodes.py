@@ -14,7 +14,8 @@ from typing import Any
 
 import config
 from brain import persona_loader
-from nodes import article, dedup, echo, editor, publisher, sorter, stories, writer
+from nodes import (article, dedup, echo, editor, image_analyst, media, publisher,
+                   sorter, stories, video_analyst, writer)
 from utils import db, logger as log_setup
 
 log = log_setup.get("brain")
@@ -553,6 +554,65 @@ async def repeat_check_node(state: dict) -> dict[str, Any]:
     return {"outcome": "held"}
 
 
+def _media_source(item):
+    """The item as the analysts should see it: a folded story as is, a lone item re-read.
+
+    A lone item (a forced post) is the row read before fetch_article stored its
+    page's media, so it is read again to pick those up.
+    """
+    if media._get(item, "candidate_media", None):
+        return item
+    return db.get_item(item["id"]) or item
+
+
+async def image_analyst_node(state: dict) -> dict[str, Any]:
+    """Choose the picture for the post, or none. Records the choice on the post row.
+
+    On a channel that does not check clips, a clip goes out unchecked as before,
+    and the picture chosen here is only its fallback.
+    """
+    post_id = state.get("post_id")
+    if state.get("dry_run") or not post_id:
+        return {}
+    found = media.candidates(_media_source(state["item"]))
+    text = persona_loader.visible_text(state.get("post_html", ""))
+    try:
+        choice = await image_analyst.choose(text, found.images)
+    except Exception as error:  # noqa: BLE001 - the post goes out without a picture
+        log.exception("Image analyst crashed on post %s: %s", post_id, error)
+        choice = image_analyst.Choice(reason=f"check crashed: {error}"[:200], failed=True)
+
+    fields = {"media_image_url": choice.url, "media_note": f"image: {choice.reason}"}
+    if found.videos and not config.CHECK_VIDEOS:
+        fields["media_video_url"] = found.videos[0]["url"]
+        fields["media_video_kind"] = found.videos[0].get("kind") or "video"
+        fields["media_note"] += " | video: sent unchecked, this channel does not check clips"
+    db.set_post_media(post_id, **fields)
+    return {}
+
+
+async def video_analyst_node(state: dict) -> dict[str, Any]:
+    """Choose the clip for the post, or none. A chosen clip goes out ahead of the picture."""
+    post_id = state.get("post_id")
+    if state.get("dry_run") or not post_id:
+        return {}
+    found = media.candidates(_media_source(state["item"]))
+    if not found.videos:
+        return {}
+    text = persona_loader.visible_text(state.get("post_html", ""))
+    try:
+        choice = await video_analyst.choose(text, found.videos)
+    except Exception as error:  # noqa: BLE001 - the post goes out without a clip
+        log.exception("Video analyst crashed on post %s: %s", post_id, error)
+        choice = image_analyst.Choice(reason=f"check crashed: {error}"[:200], failed=True)
+
+    before = db.get_post_media(post_id)
+    note = ((before["media_note"] + " | ") if before and before["media_note"] else "")
+    db.set_post_media(post_id, media_video_url=choice.url, media_video_kind=choice.kind,
+                      media_note=f"{note}video: {choice.reason}")
+    return {}
+
+
 async def publish_node(state: dict) -> dict[str, Any]:
     """Send the approved post, then book it against its story. Dry-run stops here."""
     if state.get("dry_run"):
@@ -599,5 +659,7 @@ STAGES: dict[str, tuple] = {
                         {"publish": "next", "rewrite": "writer", "end": "end"}),
     "repeat_check":    (repeat_check_node,     route_after_repeat_check,
                         {"send": "next", "end": "end"}),
+    "image_analyst":   (image_analyst_node,    None, {}),
+    "video_analyst":   (video_analyst_node,    None, {}),
     "publish":         (publish_node,          None, {}),
 }

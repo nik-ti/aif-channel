@@ -20,6 +20,12 @@ CHANNEL_ID_KEY = "AI_CHANNEL_ID"
 PERSONA_PATH = HERE / "persona.md"
 RUBRIC_PATH = HERE / "rubric.md"
 
+# Both analysts, and article pages are searched for pictures and clips too.
+IMAGE_RUBRIC_PATH = HERE / "image_rubric.md"
+VIDEO_RUBRIC_PATH = HERE / "video_rubric.md"
+CHECK_VIDEOS = True
+COLLECT_ARTICLE_MEDIA = True
+
 MIN_IMPORTANCE = 4
 
 # Placeholders. The markets channel's third axis is "which market reprices",
@@ -36,8 +42,7 @@ NO_MEDIA_SOURCES: set[str] = set()
 # The economic calendar is a markets thing.
 USE_ECONOMIC_CALENDAR = False
 
-# The same stations as the markets channel for now. A media-reading station
-# would slot in after fetch_article, once it exists in nodes.py beside this file.
+# The markets stations, plus the video analyst.
 PIPELINE = [
     "dedup",
     "sorter",
@@ -47,5 +52,7 @@ PIPELINE = [
     "writer",
     "editor",
     "repeat_check",
+    "image_analyst",
+    "video_analyst",
     "publish",
 ]

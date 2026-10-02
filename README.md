@@ -73,7 +73,13 @@ Feeds are checked every 10 minutes; tweets arrive continuously.
     │            │        anything a post of the last 5 days did not?     │
     │            │        the last gate; nothing routes around it         │
     │            ▼                                                        │
-    │   9.  publisher.py  add the source link, then send                 │
+    │   9.  image_analyst.py  AI · which picture, if any, goes with it?  │
+    │            │        gemini-2.5-flash · "none" is a normal answer    │
+    │            ▼                                                        │
+    │  10.  video_analyst.py  AI · AI news channel only: does the clip   │
+    │            │        show what the post says? over 2 min = no        │
+    │            ▼                                                        │
+    │  11.  publisher.py  send, with only the media chosen above         │
     │            │        max 2 per round, 4 per hour from .env          │
     │            ▼                                                        │
     │      YOUR TELEGRAM CHANNEL                                         │
@@ -486,6 +492,31 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   in a day, a central bank reacting, a failed auction. The exit check carries
   the same rule.
 
+### `image_analyst.py` and `video_analyst.py` (AI) — the media
+- **What:** choose the one picture, and on the AI news channel the one clip,
+  that goes out with a post — or none. They never change or block the text.
+- **In:** every candidate from every item the post was written from
+  (`media.py`): all of a tweet's images, and on the AI channel the article
+  page's pictures and video files · **Out:** the choice, with its reason, on
+  the post row (`posts.media_*`)
+- **The rubric is a text file:** `channels/<name>/image_rubric.md` and
+  `channels/ai_news/video_rubric.md`. Rejected: a picture that just shows a
+  person, stock photos and logos, another account's branding, anything
+  unreadable on a phone, anything off the post's subject. Accepted only when
+  it shows the data or is the maker's own announcement material.
+- **It fails CLOSED:** if the check breaks, the post goes out on time with no
+  media. The publisher sends only what is recorded on the post row, so a
+  picture nobody judged cannot reach the channel.
+- **Markets clips are not checked,** as before; their fallback picture is.
+- **Two fixes the labelled set forced:** the model is told today's date (it
+  read "highest since May 2025" as a date in the future), and it is told it is
+  not fact-checking — it rejected a price chart on a market-cap post as "not
+  market cap".
+- **Measured** on 22 labelled images, 2 sets and 5 videos: 29 of 29, twice.
+  About $0.0007 per picture and $0.003-0.004 per clip.
+  Run `python3 tools/check_media.py --labelled` before changing a rubric or
+  `IMAGE_MODEL` / `VIDEO_MODEL`; `python3 tests/test_media.py` checks the rules.
+
 ### `publisher.py`
 - **What:** adds the one emoji and the source link, then sends.
 - **One emoji per post, added by code and never by the AI:** `crypto → 🪙`,
@@ -595,6 +626,8 @@ restarting the service.
 | `DEDUP_TOP_K` | 3 | How many shortlisted candidates get considered. Was effectively 1, which meant a rejected front-runner ended the search. |
 | `JUDGE_MODEL` | `google/gemini-2.5-flash` | Decides "same event or not". Prefer a model that errs towards publishing. |
 | `ECHO_MODEL` | `mistralai/mistral-medium-3.1` | The exit check. Run `tools/check_echo.py --labelled` before changing it — this station fails open, so a model that cannot answer looks exactly like one that says send. |
+| `IMAGE_MODEL` / `VIDEO_MODEL` | `google/gemini-2.5-flash` | The media analysts. Run `tools/check_media.py --labelled` before changing either. |
+| `MAX_VIDEO_SECONDS` / `MAX_VIDEO_MB` | `120` / `20` | Clips longer or bigger are refused in code, before any model call. |
 
 ## The four numbers worth watching
 

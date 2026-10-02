@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 import config
 from brain import persona_loader
+from nodes import media
 from utils import db, logger as log_setup, openrouter, textclean
 
 log = log_setup.get("stories")
@@ -599,6 +600,8 @@ def as_source(story: Story) -> dict:
         "url": newest["url"],
         "title": newest["title"],
         "body": "\n\n".join(parts)[:4000],
+        # Every waiting item's pictures and clips, for the media analysts.
+        "candidate_media": media.merge(pending),
         "image_url": newest.get("image_url") or "",
         "video_url": newest.get("video_url") or "",
         "video_kind": newest.get("video_kind") or "",

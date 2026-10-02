@@ -64,6 +64,15 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),  # Human override from dashboard; graph skips gate stations.
         ("calendar_key", "ALTER TABLE items ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Stable name of the scheduled release—see calendar.key_for.
         ("sorter_reason", "ALTER TABLE items ADD COLUMN sorter_reason TEXT DEFAULT ''"),  # Why the sorter scored it so. status_reason only keeps this for items it REJECTED.
+        ("media_json", "ALTER TABLE items ADD COLUMN media_json TEXT DEFAULT ''"),  # Every candidate image and video — see nodes/media.py.
+    ],
+    "posts": [
+        # What the analysts chose. The publisher sends only these, so nothing unjudged goes out.
+        ("media_checked", "ALTER TABLE posts ADD COLUMN media_checked INTEGER DEFAULT 0"),
+        ("media_image_url", "ALTER TABLE posts ADD COLUMN media_image_url TEXT DEFAULT ''"),
+        ("media_video_url", "ALTER TABLE posts ADD COLUMN media_video_url TEXT DEFAULT ''"),
+        ("media_video_kind", "ALTER TABLE posts ADD COLUMN media_video_kind TEXT DEFAULT ''"),
+        ("media_note", "ALTER TABLE posts ADD COLUMN media_note TEXT DEFAULT ''"),
     ],
     "stories": [
         ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),  # Short name for dashboard/list (not headline/summary).
@@ -394,6 +403,45 @@ def recent_published_posts(hours: int, limit: int) -> list[sqlite3.Row]:
             ORDER BY p.sent_at DESC LIMIT ?""",
         (f"-{int(hours)} hours", int(limit)),
     ))
+
+
+def add_item_media(item_id: int, *, images: list[str] = (),
+                   videos: list[dict] = ()) -> None:
+    """Add candidate images and videos to an item, keeping order and dropping repeats."""
+    import json
+    row = conn().execute("SELECT media_json FROM items WHERE id = ?", (item_id,)).fetchone()
+    try:
+        current = json.loads(row["media_json"]) if row and row["media_json"] else {}
+    except ValueError:
+        current = {}
+    have_images = current.get("images", [])
+    have_videos = current.get("videos", [])
+    have_images += [u for u in images if u and u not in have_images]
+    known = {v["url"] for v in have_videos}
+    have_videos += [v for v in videos if v.get("url") and v["url"] not in known]
+    conn().execute("UPDATE items SET media_json = ? WHERE id = ?",
+                   (json.dumps({"images": have_images, "videos": have_videos}), item_id))
+    conn().commit()
+
+
+def set_post_media(post_id: int, **fields) -> None:
+    """Record what the analysts chose for a post. Marks the post as checked."""
+    allowed = {"media_image_url", "media_video_url", "media_video_kind", "media_note"}
+    fields = {k: v for k, v in fields.items() if k in allowed}
+    sets = ", ".join(f"{k} = ?" for k in fields)
+    conn().execute(
+        f"UPDATE posts SET media_checked = 1{', ' + sets if sets else ''} WHERE id = ?",
+        (*fields.values(), post_id),
+    )
+    conn().commit()
+
+
+def get_post_media(post_id: int) -> sqlite3.Row | None:
+    """The media the analysts chose for a post, or None if the post does not exist."""
+    return conn().execute(
+        "SELECT media_checked, media_image_url, media_video_url, media_video_kind, media_note "
+        "FROM posts WHERE id = ?", (post_id,),
+    ).fetchone()
 
 
 def set_article_text(item_id: int, text: str) -> None:

@@ -88,6 +88,11 @@ TOPICS = _profile.TOPICS
 MARKETS = _profile.MARKETS
 RUBRIC_PATH = _profile.RUBRIC_PATH
 PIPELINE = _profile.PIPELINE
+# Media analysts (SPEC.md). A channel without CHECK_VIDEOS sends its clips unchecked.
+IMAGE_RUBRIC_PATH = _profile.IMAGE_RUBRIC_PATH
+VIDEO_RUBRIC_PATH = getattr(_profile, "VIDEO_RUBRIC_PATH", None)
+CHECK_VIDEOS = getattr(_profile, "CHECK_VIDEOS", False)
+COLLECT_ARTICLE_MEDIA = getattr(_profile, "COLLECT_ARTICLE_MEDIA", False)
 USE_ECONOMIC_CALENDAR = getattr(_profile, "USE_ECONOMIC_CALENDAR", False)
 
 
@@ -372,3 +377,13 @@ ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.72)
 ECHO_MODEL = _get("ECHO_MODEL", "mistralai/mistral-medium-3.1")
 ECHO_WINDOW_HOURS = _get_int("ECHO_WINDOW_HOURS", 120)
 ECHO_MAX_COMPARED = _get_int("ECHO_MAX_COMPARED", 40)
+
+# THE MEDIA ANALYSTS (nodes/image_analyst.py, nodes/video_analyst.py). Measured
+# 2026-10-01: about $0.0007 per image and $0.003 for a 6 MB video on Flash.
+IMAGE_MODEL = _get("IMAGE_MODEL", "google/gemini-2.5-flash")
+VIDEO_MODEL = _get("VIDEO_MODEL", "google/gemini-2.5-flash")
+MEDIA_TIMEOUT_SECONDS = _get_int("MEDIA_TIMEOUT_SECONDS", 60)
+MAX_IMAGES_JUDGED = _get_int("MAX_IMAGES_JUDGED", 6)
+MAX_VIDEO_SECONDS = _get_int("MAX_VIDEO_SECONDS", 120)
+# Telegram's limit for sending a file by its address; bigger could not go out anyway.
+MAX_VIDEO_MB = _get_int("MAX_VIDEO_MB", 20)
