@@ -170,6 +170,18 @@ async def send_clip(video_url: str, kind: str, caption_html: str,
                                            **common)
         return message.message_id
 
+    if kind == "embed":
+        # A player page is not a file Telegram can fetch: download and upload it.
+        from utils import embeds
+        path = await asyncio.to_thread(embeds.download, video_url, config.MAX_VIDEO_MB)
+        if path is None:
+            raise BadRequest("the embedded video could not be downloaded")
+        try:
+            return await _send(safe, path.read_bytes())
+        finally:
+            import shutil
+            shutil.rmtree(path.parent, ignore_errors=True)
+
     try:
         return await _send(safe)
 

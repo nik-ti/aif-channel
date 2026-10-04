@@ -11,7 +11,7 @@ import remarkGfm from "remark-gfm";
 import { EmptyState } from "@/components/EmptyState";
 import { useGraph } from "@/hooks/useApi";
 import type { GraphNode } from "@/lib/types";
-import { WORKFLOW_EXPLANATION } from "@/lib/workflowExplanation";
+import { workflowExplanation } from "@/lib/workflowExplanation";
 
 const HEALTH_CLASS: Record<GraphNode["health"], string> = {
   ok: "healthy",
@@ -156,7 +156,7 @@ export function GraphViewer({ channel }: { channel: string }) {
               ),
             }}
           >
-            {WORKFLOW_EXPLANATION}
+            {workflowExplanation(channel)}
           </ReactMarkdown>
         </article>
       </div>

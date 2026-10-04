@@ -24,7 +24,7 @@ from utils import db, logger as log_setup, openrouter
 
 log = log_setup.get("video_analyst")
 
-_MAX_JUDGED = 2
+_MAX_JUDGED = 3
 
 SCHEMA = {
     "type": "object",
@@ -37,8 +37,13 @@ SCHEMA = {
 }
 
 
-async def _download(url: str) -> tuple[Path, int] | None:
+async def _download(video: dict) -> tuple[Path, int] | None:
     """Save the clip to a temporary file. None if it fails or passes MAX_VIDEO_MB."""
+    url = video["url"]
+    if video.get("kind") == "embed":
+        from utils import embeds
+        path = await asyncio.to_thread(embeds.download, url, config.MAX_VIDEO_MB)
+        return (path, path.stat().st_size) if path else None
     limit = config.MAX_VIDEO_MB * 1_000_000
     handle, name = tempfile.mkstemp(suffix=Path(url.split("?")[0]).suffix or ".mp4")
     path, size = Path(name), 0
@@ -96,7 +101,7 @@ async def _judge(post_text: str, path: Path, kind: str) -> dict:
 
 async def _judge_one(post_text: str, video: dict) -> tuple[str, str, bool]:
     """(verdict, reason, failed) for one clip, with its file always cleaned up."""
-    saved = await _download(video["url"])
+    saved = await _download(video)
     if saved is None:
         return "reject", "could not be downloaded, or too large to send", False
     path, _ = saved

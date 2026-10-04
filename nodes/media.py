@@ -128,4 +128,10 @@ def from_article_html(html: str, page_url: str) -> tuple[list[str], list[dict]]:
         if _VIDEO_FILE.search(src) and src not in {v["url"] for v in videos}:
             videos.append({"url": src, "kind": "video"})
 
-    return images[:_MAX_FROM_PAGE], videos[:3]
+    # Launch pages embed a player more often than they link a file.
+    from utils import embeds
+    for url in embeds.find(html):
+        if url not in {v["url"] for v in videos}:
+            videos.append({"url": url, "kind": "embed"})
+
+    return images[:_MAX_FROM_PAGE], videos[:4]

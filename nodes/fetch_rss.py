@@ -53,6 +53,8 @@ class Article:
     title: str
     summary: str
     published: datetime | None   # None when the feed didn't say
+    link_url: str = ""           # Atom <link rel="related">: the repo a post is about
+    baseline: bool = False       # already on a watched page before we started watching
 
 
 def _parse_date(raw: str) -> datetime | None:
@@ -113,10 +115,19 @@ def _parse_feed(xml_text: str, source_name: str, topic: str) -> list[Article]:
         # RSS puts the address inside <link>. Atom puts it in an attribute:
         # <link href="..."/>, so findtext returns nothing and we look again.
         link = (node.findtext("link") or node.findtext(f"{_RSS1}link") or "").strip()
-        if not link:
-            link_element = node.find(f"{_ATOM}link")
-            if link_element is not None:
+        related = ""
+        for link_element in node.findall(f"{_ATOM}link"):
+            rel = link_element.get("rel") or "alternate"
+            if rel == "alternate" and not link:
                 link = (link_element.get("href") or "").strip()
+            elif rel == "related" and not related:
+                related = (link_element.get("href") or "").strip()
+        if not link:
+            # No alternate link: the first one that is not a picture or a repo.
+            for link_element in node.findall(f"{_ATOM}link"):
+                if (link_element.get("rel") or "") not in ("related", "enclosure"):
+                    link = (link_element.get("href") or "").strip()
+                    break
 
         if not title or not link:
             continue
@@ -147,9 +158,38 @@ def _parse_feed(xml_text: str, source_name: str, topic: str) -> list[Article]:
             title=title,
             summary=summary[: config.MAX_BODY_CHARS],
             published=published,
+            link_url=related,
         ))
 
     return articles
+
+
+def trim_to_whole_entries(head: bytes) -> str:
+    """The start of a huge feed, cut after its last complete entry and closed again."""
+    text = head.decode("utf-8", errors="ignore")
+    for closing, end in (("</entry>", "</feed>"), ("</item>", "</channel></rss>")):
+        cut = text.rfind(closing)
+        if cut != -1:
+            return text[: cut + len(closing)] + end
+    return text
+
+
+async def _read(client: httpx.AsyncClient, url: str, headers: dict,
+                max_bytes: int) -> tuple[int, dict, str]:
+    """(status, headers, text), reading at most max_bytes of the body when that is set."""
+    if not max_bytes:
+        response = await client.get(url, headers=headers, timeout=_TIMEOUT,
+                                    follow_redirects=True)
+        return response.status_code, response.headers, response.text
+    async with client.stream("GET", url, headers=headers, timeout=_TIMEOUT,
+                             follow_redirects=True) as response:
+        head = b""
+        if response.status_code == 200:
+            async for chunk in response.aiter_bytes():
+                head += chunk
+                if len(head) >= max_bytes:
+                    break
+        return response.status_code, response.headers, trim_to_whole_entries(head)
 
 
 async def fetch_one(client: httpx.AsyncClient, source: dict) -> tuple[list[Article], str]:
@@ -172,25 +212,25 @@ async def fetch_one(client: httpx.AsyncClient, source: dict) -> tuple[list[Artic
     if source.get("last_modified"):
         headers["If-Modified-Since"] = source["last_modified"]
 
+    # A huge feed (Tom Dörr's is 33 MB) is read only as far as its newest entries.
+    max_bytes = next((s.get("max_bytes", 0) for s in config.SOURCES if s["name"] == name), 0)
     try:
-        response = await client.get(
-            source["url"], headers=headers, timeout=_TIMEOUT, follow_redirects=True
-        )
+        status, response_headers, text = await _read(client, source["url"], headers, max_bytes)
     except Exception as error:  # noqa: BLE001 - network problems are routine
         db.record_source_failure(name, str(error))
         return [], f"error:{type(error).__name__}"
 
     # 304 = "nothing new since you last asked". The happy path most of the time.
-    if response.status_code == 304:
+    if status == 304:
         db.record_source_success(name, source.get("etag", ""), source.get("last_modified", ""))
         return [], "cached"
 
-    if response.status_code != 200:
-        db.record_source_failure(name, f"HTTP {response.status_code}")
-        return [], f"error:HTTP {response.status_code}"
+    if status != 200:
+        db.record_source_failure(name, f"HTTP {status}")
+        return [], f"error:HTTP {status}"
 
     try:
-        articles = _parse_feed(response.text, name, source["topic"])
+        articles = _parse_feed(text, name, source["topic"])
     except ET.ParseError as error:
         # Usually means the address returns a normal web page, not a feed.
         db.record_source_failure(name, f"not valid XML: {error}")
@@ -202,10 +242,15 @@ async def fetch_one(client: httpx.AsyncClient, source: dict) -> tuple[list[Artic
     # Remember the new tokens for next time.
     db.record_source_success(
         name,
-        response.headers.get("ETag", ""),
-        response.headers.get("Last-Modified", ""),
+        response_headers.get("ETag", ""),
+        response_headers.get("Last-Modified", ""),
     )
     return articles[:_MAX_PER_FEED], "ok"
+
+
+def feeds_only(sources) -> list:
+    """The sources read as feeds; watched pages are nodes/fetch_pages.py's."""
+    return [s for s in sources if (s["kind"] or "rss") == "rss"]
 
 
 async def execute() -> list[Article]:
@@ -215,7 +260,7 @@ async def execute() -> list[Article]:
     the only place that decides what counts as "already seen". This node's only
     job is fetching.
     """
-    sources = db.get_enabled_sources()
+    sources = feeds_only(db.get_enabled_sources())
     if not sources:
         log.warning("No feeds are enabled — check config.SOURCES")
         return []

@@ -25,7 +25,7 @@ log = log_setup.get("brain")
 FIXABLE_RULES = frozenset({
     "FACTUAL_DRIFT", "OVERCLAIM", "INCOMPLETE", "BROKEN_HTML", "TOO_LONG",
     "EMPTY_BODY",
-})
+}) | config.EXTRA_FIXABLE_RULES
 
 # Two rules: "worth posting" not "post any good". Forced items skip these; others still
 # enforced (override ≠ publish broken/untrue).
@@ -473,6 +473,7 @@ async def editor_node(state: dict) -> dict[str, Any]:
         record=not dry,
         attempt=rewrite_count + 1,
         parent_post=parent_post,
+        previous_reason=state.get("previous_editor_reason", ""),
     )
 
     if decision["error"]:
@@ -507,6 +508,7 @@ async def editor_node(state: dict) -> dict[str, Any]:
                 db.set_item_status(item["id"], "written",
                                    f"editor asked for a rewrite: {feedback[:200]}")
             return {"editor_verdict": decision, "editor_feedback": feedback,
+                    "previous_editor_reason": feedback,
                     "rewrite_count": rewrite_count + 1, "rewrite_requested": True}
 
         # Final rejection.

@@ -14,3 +14,12 @@ export function channelLabel(id: string): string {
     .map((w) => (w.toLowerCase() === "ai" ? "AI" : w.charAt(0).toUpperCase() + w.slice(1)))
     .join(" ");
 }
+
+// Words that differ by channel: the sorter scores "market impact" on Market One
+// and "usefulness" on AI Flow, and its third answer is a market or an audience.
+export function channelCopy(channel: string) {
+  if (channel === "ai_news") {
+    return { importance: "Usefulness", market: "Who can use it", marketShort: "for" };
+  }
+  return { importance: "Market impact", market: "Market", marketShort: "market:" };
+}

@@ -220,7 +220,10 @@ async def place(item: dict, stories: list["Story"], now: datetime
     try:
         answer = await asyncio.wait_for(
             openrouter.chat_json(
-                model=config.STORY_MODEL, system=PLACE_SYSTEM, user=user,
+                model=config.STORY_MODEL,
+                system=PLACE_SYSTEM + (f"\n\n{config.STORY_PLACE_NOTES}"
+                                       if config.STORY_PLACE_NOTES else ""),
+                user=user,
                 schema=PLACE_SCHEMA, schema_name="place",
                 temperature=0.0, max_tokens=700,
             ),
@@ -353,7 +356,8 @@ Be specific — name the fact, not the category."""
 ROUNDUP_ANGLE = (
     "This is a ROUNDUP: smaller developments on a story the reader is already "
     "following, none of which earned its own post. Title it plainly as an update "
-    "— name the story and say 'update' or 'latest', no drama. Then one ▪️ bullet "
+    "— name the story and say 'update' or 'latest', no drama. Then one "
+    f"{config.BULLET} bullet "
     "per NEW development, one line each, in the order they happened. Leave out "
     "anything the channel already published, and never let two bullets say the "
     "same thing in different words: a Commission in talks and member states in "
@@ -598,6 +602,9 @@ def as_source(story: Story) -> dict:
         "source_name": newest["source_name"],
         "origin": newest["origin"],
         "url": newest["url"],
+        # The newest item that knows where the thing itself lives.
+        "link_url": next((i["link_url"] for i in reversed(pending)
+                          if "link_url" in i.keys() and i["link_url"]), ""),
         "title": newest["title"],
         "body": "\n\n".join(parts)[:4000],
         "source_items": [{"id": i["id"], "source_name": i["source_name"],

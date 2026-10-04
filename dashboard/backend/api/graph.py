@@ -46,6 +46,25 @@ _STATION_INFO: dict[str, tuple[str, str]] = {
 }
 
 
+# Where a channel's stations do a different job, its own wording wins.
+_CHANNEL_STATION_INFO: dict[str, dict[str, tuple[str, str]]] = {
+    "ai_news": {
+        "sorter": ("Sorter", "Can a regular person use this today? Scores usefulness 1-5; the bar is 4. 'Nobody can use it' caps at 3."),
+        "fetch_article": ("Fetch article", "Reads the page (plain, then browser, then reader service), finds the product link, pictures and video players."),
+        "story_organizer": ("Story organizer", "One product = one story. Same company or same event is not enough."),
+        "writer": ("Writer", "Bold first line, • lines, bold key words, link last. No emoji. Simple enough for a 12-year-old."),
+        "editor": ("Editor", "Checks the post against the source, including JARGON. Sees its own earlier reason on the rewrite."),
+        "video_analyst": ("Video analyst", "Downloads clips and video players (yt-dlp) and keeps one that shows what the post says. Over 2 minutes is refused unseen."),
+        "publish": ("Publish", "Fills in the product link, adds the 'AI Flow | Subscribe' signature, sends with the chosen media."),
+    },
+}
+
+
+def _station_info(channel: str, node_id: str) -> tuple[str, str]:
+    own = _CHANNEL_STATION_INFO.get(channel, {})
+    return own.get(node_id) or _STATION_INFO.get(node_id, (node_id.replace("_", " "), ""))
+
+
 def _graph_node_ids(channel: str) -> list[str]:
     stations = pipeline.channel_pipeline(channel)
     return [_DISPLAY_NAME.get(s, s) for s in stations]
@@ -131,8 +150,8 @@ def get_graph(channel: str | None = Query(default=None, description="Which chann
         nodes.append(
             {
                 "id": node_id,
-                "label": _STATION_INFO.get(node_id, (node_id.replace("_", " "), ""))[0],
-                "description": _STATION_INFO.get(node_id, ("", ""))[1],
+                "label": _station_info(name, node_id)[0],
+                "description": _station_info(name, node_id)[1],
                 "last_invocation": health["last_invocation"],
                 "error_count": health["error_count"],
                 "health": _health(health["error_count"]),

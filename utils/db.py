@@ -65,6 +65,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("calendar_key", "ALTER TABLE items ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Stable name of the scheduled release—see calendar.key_for.
         ("sorter_reason", "ALTER TABLE items ADD COLUMN sorter_reason TEXT DEFAULT ''"),  # Why the sorter scored it so. status_reason only keeps this for items it REJECTED.
         ("media_json", "ALTER TABLE items ADD COLUMN media_json TEXT DEFAULT ''"),  # Every candidate image and video — see nodes/media.py.
+        ("link_url", "ALTER TABLE items ADD COLUMN link_url TEXT DEFAULT ''"),  # The thing itself (repo, product page) when url is an aggregator's page.
     ],
     "posts": [
         ("source_context", "ALTER TABLE posts ADD COLUMN source_context TEXT DEFAULT ''"),
@@ -124,13 +125,14 @@ def sync_sources(sources: Iterable[dict]) -> None:
         conn().execute(
             """
             INSERT INTO sources (name, url, kind, topic, enabled)
-            VALUES (?, ?, 'rss', ?, 1)
+            VALUES (?, ?, ?, ?, 1)
             ON CONFLICT(name) DO UPDATE SET
                 url = excluded.url,
+                kind = excluded.kind,
                 topic = excluded.topic,
                 enabled = 1
             """,
-            (source["name"], source["url"], source["topic"]),
+            (source["name"], source["url"], source.get("kind", "rss"), source["topic"]),
         )
 
     # Switch off anything no longer in config.
@@ -258,6 +260,7 @@ def insert_item(
     topic_hint: str = "",
     status: str = "queued",
     status_reason: str = "",
+    link_url: str = "",
 ) -> int | None:
     """Store item; return its id or None if already exists (duplicate check 1)."""
     try:
@@ -268,8 +271,8 @@ def insert_item(
                 video_url, video_kind,
                 calendar_title, calendar_forecast, calendar_previous, calendar_key,
                 published_at, norm_title, title_hash, topic_hint,
-                status, status_reason, fetched_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, status_reason, fetched_at, updated_at, link_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 origin, source_name, external_id, url, title,
@@ -278,7 +281,7 @@ def insert_item(
                 (calendar or {}).get("previous", ""), _calendar_key(calendar),
                 published_at,
                 norm_title, title_hash, topic_hint,
-                status, status_reason, now_iso(), now_iso(),
+                status, status_reason, now_iso(), now_iso(), link_url,
             ),
         )
         conn().commit()
@@ -288,6 +291,12 @@ def insert_item(
         # "database is locked"—especially dashboard force-post.
         conn().rollback()
         return None
+
+
+def item_seen(origin: str, external_id: str) -> bool:
+    """True if this address is already stored, whatever happened to it."""
+    return conn().execute("SELECT 1 FROM items WHERE origin = ? AND external_id = ?",
+                          (origin, external_id)).fetchone() is not None
 
 
 def title_hash_seen(title_hash: str, hours: int) -> sqlite3.Row | None:
@@ -443,6 +452,12 @@ def get_post_media(post_id: int) -> sqlite3.Row | None:
         "SELECT media_checked, media_image_url, media_video_url, media_video_kind, media_note "
         "FROM posts WHERE id = ?", (post_id,),
     ).fetchone()
+
+
+def set_item_link(item_id: int, link_url: str) -> None:
+    """Record the link to the thing itself, found on an aggregator's page."""
+    conn().execute("UPDATE items SET link_url = ? WHERE id = ?", (link_url, item_id))
+    conn().commit()
 
 
 def set_article_text(item_id: int, text: str) -> None:

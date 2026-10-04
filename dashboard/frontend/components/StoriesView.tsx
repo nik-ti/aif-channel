@@ -10,7 +10,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 
 import { EmptyState } from "@/components/EmptyState";
-import { StatusReason } from "@/components/StatusReason";
+import { DecisionTrail } from "@/components/DecisionTrail";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useStories } from "@/hooks/useApi";
@@ -105,7 +105,7 @@ function HoldMeter({ postCount, itemCount, declinedCount }: {
   );
 }
 
-function StoryPostRow({ post }: { post: StoryPost }) {
+function StoryPostRow({ post, channel }: { post: StoryPost; channel: string }) {
   const label = post.status === "published" ? "Post" : "Item";
   return (
     <div className="flex flex-col gap-1.5 border-t border-border py-3 first:border-t-0">
@@ -118,32 +118,7 @@ function StoryPostRow({ post }: { post: StoryPost }) {
       {post.body && post.body !== post.title && (
         <p className="whitespace-pre-wrap break-words text-sm text-ink-muted">{post.body}</p>
       )}
-      {post.sorter_reason && (
-        <p className="text-xs text-ink-muted">
-          <span className="font-medium text-ink-primary">Why it was covered: </span>
-          {post.sorter_reason}
-        </p>
-      )}
-      {post.editor_verdict && post.editor_reason && (
-        <p className="text-xs text-ink-muted">
-          <span className="font-medium text-ink-primary">
-            {post.editor_verdict === "approve" ? "Why it was approved" : "Why it was rejected"}
-            {post.editor_confidence != null && (
-              <span className="font-normal text-ink-muted">
-                {" "}· {Math.round(post.editor_confidence * 100)}% sure
-              </span>
-            )}
-            <span className="font-medium text-ink-primary">: </span>
-          </span>
-          {post.editor_reason}
-        </p>
-      )}
-      {post.status_reason && !post.status_reason.startsWith("sent as message") && (
-        <p className="text-xs text-ink-muted">
-          <span className="font-medium text-ink-primary">Why: </span>
-          <StatusReason reason={post.status_reason} />
-        </p>
-      )}
+      <DecisionTrail item={post} channel={channel} />
       {post.telegram_url && (
         <a
           href={post.telegram_url}
@@ -158,7 +133,7 @@ function StoryPostRow({ post }: { post: StoryPost }) {
   );
 }
 
-function StoryCard({ story }: { story: Story }) {
+function StoryCard({ story, channel }: { story: Story; channel: string }) {
   const [open, setOpen] = useState(false);
   const title = story.name || story.headline;
   const ago = timeAgo(story.last_post_at);
@@ -209,7 +184,7 @@ function StoryCard({ story }: { story: Story }) {
           ) : (
             <div className="flex flex-col">
               {story.posts.map((post) => (
-                <StoryPostRow key={post.item_id} post={post} />
+                <StoryPostRow key={post.item_id} post={post} channel={channel} />
               ))}
             </div>
           )}
@@ -243,7 +218,7 @@ export function StoriesView({ channel }: { channel: string }) {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {live.map((story) => (
-          <StoryCard key={story.id} story={story} />
+          <StoryCard key={story.id} story={story} channel={channel} />
         ))}
         {live.length === 0 && <p className="text-sm text-ink-muted">No active stories right now.</p>}
       </div>
@@ -259,7 +234,7 @@ export function StoriesView({ channel }: { channel: string }) {
         {showClosed && (
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {closed.map((story) => (
-              <StoryCard key={story.id} story={story} />
+              <StoryCard key={story.id} story={story} channel={channel} />
             ))}
           </div>
         )}

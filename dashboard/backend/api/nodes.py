@@ -35,6 +35,8 @@ STATION_TO_NODE: dict[str, str] = {
     "writer": "writer",
     "editor": "editor",
     "repeat_check": "repeat_check",
+    "image_analyst": "image_analyst",
+    "video_analyst": "video_analyst",
 }
 
 # Mapping node to its (source file, prompt constant). Judge's SYSTEM_THREE_WAY is the
@@ -57,6 +59,8 @@ MODEL_VARS: dict[str, str] = {
     "writer": "WRITER_MODEL",
     "editor": "EDITOR_MODEL",
     "repeat_check": "ECHO_MODEL",
+    "image_analyst": "IMAGE_MODEL",
+    "video_analyst": "VIDEO_MODEL",
     "embeddings": "EMBEDDING_MODEL",
 }
 
@@ -72,6 +76,9 @@ LABELS: dict[str, str] = {
     "gatekeeper": "Gatekeeper",
     "writer": "Writer",
     "editor": "Editor",
+    "repeat_check": "Repeat check",
+    "image_analyst": "Image analyst",
+    "video_analyst": "Video analyst",
     "embeddings": "Embeddings",
 }
 
@@ -92,6 +99,10 @@ DESCRIPTIONS: dict[str, str] = {
                     "post of the last 5 days and asks whether a reader who saw "
                     "the closest one learns anything new — the only check "
                     "nothing can route around.",
+    "image_analyst": "Looks at every candidate picture and picks the one that shows "
+                     "what the post says, or none.",
+    "video_analyst": "Watches candidate clips and keeps the first one that shows what "
+                     "the post says. Over 2 minutes is refused before it is watched.",
     "embeddings": "Turns text into meaning-vectors so near-duplicate stories "
                   "can be shortlisted before the judge rules on them "
                   "(dedup check 4). No prompt — it is not an LLM call.",
@@ -119,6 +130,56 @@ def _node_order_for(channel: str) -> list[str]:
     if "dedup_judge" in order:
         order.append("embeddings")
     return order
+
+
+# Where a node does a different job on a channel, its own description wins.
+CHANNEL_DESCRIPTIONS: dict[str, dict[str, str]] = {
+    "ai_news": {
+        "sorter": "Scores every incoming item 1-5 for how useful it is to a regular "
+                  "person today, names its kind and who can use it — the only node "
+                  "that decides if something is worth covering at all.",
+        "writer": "Writes the post in AI Flow's voice: simple, bold first line, "
+                  "• lines, bold key words, link last, no emoji. Shown with the "
+                  "voice file (persona.md) it is given in front of the prompt.",
+        "editor": "Reads the finished post against its source and approves or rejects "
+                  "it, including for JARGON. On a rewrite it is shown its own earlier reason.",
+        "story_organizer": "Decides which running story a new item joins. On this "
+                           "channel one product is one story.",
+    },
+}
+
+
+def _channel_file(channel: str, name: str) -> str | None:
+    """A prompt file that lives beside the channel's profile, or None."""
+    try:
+        return (paths.channel_dir(channel) / name).read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+
+
+def _profile_string(channel: str, const_name: str) -> str | None:
+    """A triple-quoted string constant from the channel's profile.py, read as text."""
+    try:
+        text = (paths.channel_dir(channel) / "profile.py").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(rf'^{re.escape(const_name)}\s*=\s*"""(.*?)"""', text, re.DOTALL | re.MULTILINE)
+    return match.group(1).strip() if match else None
+
+
+def _channel_prompt(channel: str, node_id: str) -> str | None:
+    """The prompt this channel really uses for node_id, where it is the channel's own."""
+    if node_id == "writer":
+        own = _channel_file(channel, "writer.md")
+        persona = _channel_file(channel, "persona.md")
+        if own and persona:
+            return f"{persona}\n\n--- (persona.md above, writer.md below) ---\n\n{own}"
+        return own
+    if node_id == "editor":
+        return _channel_file(channel, "editor.md")
+    if node_id in ("image_analyst", "video_analyst"):
+        return _channel_file(channel, node_id.replace("_analyst", "_rubric") + ".md")
+    return None
 
 
 def _channel_rubric(channel: str) -> str | None:
@@ -185,10 +246,13 @@ def get_nodes(channel: str | None = Query(default=None, description="Which chann
 
     nodes = []
     for node_id in _node_order_for(name):
-        prompt: str | None = None
-        if node_id in PROMPT_SOURCES:
+        prompt: str | None = _channel_prompt(name, node_id)
+        if prompt is None and node_id in PROMPT_SOURCES:
             filename, const_name = PROMPT_SOURCES[node_id]
             prompt = _extract_prompt(NODES_DIR / filename, const_name)
+            notes = _profile_string(name, "STORY_PLACE_NOTES") if node_id == "story_organizer" else None
+            if prompt and notes:
+                prompt = f"{prompt}\n\n--- added for this channel (profile.py) ---\n\n{notes}"
         elif node_id == "sorter":
             # The sorter's rubric is the one prompt that belongs to the channel
             # rather than to the machinery, so it lives beside its profile.
@@ -206,7 +270,8 @@ def get_nodes(channel: str | None = Query(default=None, description="Which chann
             {
                 "id": node_id,
                 "label": LABELS.get(node_id, node_id.replace("_", " ").title()),
-                "description": DESCRIPTIONS.get(node_id, ""),
+                "description": CHANNEL_DESCRIPTIONS.get(name, {}).get(node_id)
+                               or DESCRIPTIONS.get(node_id, ""),
                 "model": model,
                 "fallback_model": fallback_model,
                 "prompt": prompt,

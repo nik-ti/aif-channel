@@ -1,8 +1,10 @@
 # Market One — news channels that run themselves
 
 One codebase, one channel per folder under `channels/`. The first is
-**markets** (crypto / markets / geopolitics), live at @market_one_news.
-`CHANNEL` in `.env` picks which one a process is.
+**markets** (crypto / markets / geopolitics), live at @market_one_news. The
+second is **ai_news** (AI tools regular people can use, written so a
+12-year-old gets it), built and rehearsed but not live yet (see SPEC.md).
+`CHANNEL` in `.env` or the service file picks which one a process is.
 
 **What it does:** reads news from RSS feeds and from X accounts, throws away
 anything it has already covered or that isn't market-moving, rewrites what's left
@@ -184,6 +186,24 @@ after a day or two.
   that wrong fails *silently* — a valid page with no articles found in it. That
   happened with the DW feed on day one, so `check_sources.py` now reports any
   feed returning zero articles as broken.
+
+### `fetch_pages.py`
+- **What:** watches news pages that have no feed (x.ai/news, skills.sh), listed
+  in a channel's `SOURCES` with `"kind": "page"` and a `link_pattern`.
+- **How:** a plain request first. If that fails or finds no story links (a bot
+  check, a page built by JavaScript), crawl4ai's stealth browser reads it
+  instead, the same two steps `article.py` uses.
+- **New = not seen before.** The first look at a page only remembers its links;
+  after that, a matching link that wasn't there before is a story, and its own
+  page is read so the sorter has more than a name to judge.
+- **Pace:** each page has `every_minutes` (default 60), since a browser is heavy.
+
+On the AI channel, a page that both the plain request and the browser fail on
+(OpenAI's, behind a Cloudflare challenge) is read through r.jina.ai
+(`READER_FALLBACK_URL`), and Vimeo/YouTube players on a page become video
+candidates, downloaded with yt-dlp (`utils/embeds.py`). Sites change and yt-dlp
+breaks until updated, so a cron job upgrades it every Monday at 04:00
+(`crontab -l`), and three failed downloads in a row send you a Telegram alert.
 
 ### `fetch_tweets.py`
 - **What:** reads X posts from the shared relay over Redis.
@@ -625,8 +645,9 @@ Two places, because the relay is shared with the trading bot:
 2. `X_ACCOUNTS` in `config.py` — decides which of those *this* channel wants.
 
 ### Changing the writing style
-`PROMPT` at the top of `nodes/writer.py`. Rehearse with `tools/test_brain.py` before
-restarting the service.
+Market One: `PROMPT` at the top of `nodes/writer.py`. The AI channel has its own
+prompt in `channels/ai_news/writer.md` (and its editor's in `editor.md`).
+Rehearse with `CHANNEL=<name> python3 tools/test_brain.py` before restarting.
 
 ---
 
@@ -702,8 +723,14 @@ channels/markets/
    profile.py      sources, X accounts, thresholds, and its PIPELINE
    rubric.md       what this channel considers important (the sorter's prompt)
    persona.md      its voice
+   image_rubric.md which pictures may go out with a post
    nodes.py        optional: stations only this channel has
 ```
+
+A channel can also bring its own writer and editor prompts (`writer.md`,
+`editor.md`), its own post marks or none, a signature under every post, and a
+product link the publisher fills in. `channels/ai_news/profile.py` uses all of
+these; every one is optional, and leaving it out keeps Market One's behaviour.
 
 Per-channel files, named after the channel, in shared directories:
 

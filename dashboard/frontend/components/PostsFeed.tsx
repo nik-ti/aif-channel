@@ -16,7 +16,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
-import { StatusReason } from "@/components/StatusReason";
+import { DecisionTrail } from "@/components/DecisionTrail";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useItemAction, usePosts, useStats } from "@/hooks/useApi";
+import { channelCopy } from "@/lib/channel";
 import { FORCEABLE, STATUS_FILTERS } from "@/lib/status";
 import type { PostItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -72,10 +73,10 @@ function Highlight({ text, terms }: { text: string; terms: string[] }) {
   );
 }
 
-function ImportanceDots({ value }: { value: number }) {
+function ImportanceDots({ value, label = "Market impact" }: { value: number; label?: string }) {
   if (!value) return <span className="text-ink-muted">-</span>;
   return (
-    <span className="inline-flex items-center gap-0.5" title={`Market impact ${value} of 5`} aria-label={`Market impact ${value} of 5`}>
+    <span className="inline-flex items-center gap-0.5" title={`${label} ${value} of 5`} aria-label={`${label} ${value} of 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
         <span
           key={n}
@@ -126,11 +127,11 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
         <div>
-          <dt className="text-ink-muted">Market impact</dt>
-          <dd className="mt-0.5"><ImportanceDots value={item.importance} /></dd>
+          <dt className="text-ink-muted">{channelCopy(channel).importance}</dt>
+          <dd className="mt-0.5"><ImportanceDots value={item.importance} label={channelCopy(channel).importance} /></dd>
         </div>
         <div>
-          <dt className="text-ink-muted">Market</dt>
+          <dt className="text-ink-muted">{channelCopy(channel).market}</dt>
           <dd className="mt-0.5 text-ink-primary">{item.market || "-"}</dd>
         </div>
         <div>
@@ -143,37 +144,7 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
         </div>
       </dl>
 
-      {item.sorter_reason && (
-        <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
-          <span className="font-medium text-ink-primary">Why it was covered: </span>
-          {item.sorter_reason}
-        </p>
-      )}
-
-      {item.editor_verdict && item.editor_reason && (
-        <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
-          <span className="font-medium text-ink-primary">
-            {item.editor_verdict === "approve" ? "Why it was approved" : "Why it was rejected"}
-            {item.editor_confidence != null && (
-              <span className="font-normal text-ink-muted">
-                {" "}· {Math.round(item.editor_confidence * 100)}% sure
-              </span>
-            )}
-            {item.editor_attempt != null && item.editor_attempt > 1 && (
-              <span className="font-normal text-ink-muted"> · after a rewrite</span>
-            )}
-            <span className="font-medium text-ink-primary">: </span>
-          </span>
-          {item.editor_reason}
-        </p>
-      )}
-
-      {item.status_reason && !item.status_reason.startsWith("sent as message") && (
-        <p className="rounded-md bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
-          <span className="font-medium text-ink-primary">Why: </span>
-          <StatusReason reason={item.status_reason} />
-        </p>
-      )}
+      <DecisionTrail item={item} channel={channel} />
 
       <div className="flex flex-wrap items-center gap-2">
         {item.telegram_url && (

@@ -386,3 +386,96 @@ will tune a number the running channel never sees.
 - **\`ECHO_MODEL\`**: run \`tools/check_echo.py --labelled\` before changing it. This
   station fails open, so a model that cannot answer looks like one that says send.
 `;
+
+// The same write-up for the AI news channel (AI Flow, @ai_flow_daily). It shares
+// most of Market One's machinery, so this covers what is different and why.
+export const AI_FLOW_EXPLANATION = `
+# AI Flow — how a post gets made (A to Z)
+
+AI Flow posts AI news that **regular people can use**: freelancers, business owners,
+designers, video makers, students. Every post has to make sense to a 12-year-old.
+It runs on the same code as Market One, with its own sources, rules, voice and prompts
+(folder: channels/ai_news).
+
+## 1. Where the news comes from
+Checked every 10 minutes:
+- **Feeds:** OpenAI news, Anthropic news (a community-made feed, Anthropic has none),
+  Hugging Face blog, AI/TLDR, Tom Dörr's repo posts, MindStudio blog.
+- **Watched pages** (sites with no feed): x.ai/news every hour, skills.sh trending every
+  6 hours, skills.sh official company skills every 12 hours. Each page is read with a
+  plain request first; if that fails or finds nothing, a stealth browser (crawl4ai)
+  reads it instead. A link that was not on the page last time is a new story. The very
+  first look at a page only remembers what is already there, so nothing old floods in.
+- Items older than **48 hours** are ignored (AI/TLDR dates everything at midnight).
+
+## 2. Dedup — have we already seen this?
+Same five checks as Market One: same link, same headline, nearly the same wording,
+same subject (embeddings shortlist), then an AI judge reads both texts.
+
+## 3. Sorter — is it worth posting?
+Reads the headline and summary (and today's date) and answers three things:
+- **Kind:** launch (a big company ships its own model or feature), tool (an app, site,
+  plugin or skill someone made), resource (a guide, course or prompt pack), or other.
+- **Who can use it today:** everyone, creators, business, students, developers, or none.
+  **"none" caps the score at 3**, so research papers, benchmark scores, waitlists,
+  funding and company drama never get posted.
+- **Usefulness 1-5.** **4 or more is posted.** New models and price cuts from major AI
+  companies are a 4 even when they are only for developers. Version updates, unknown
+  developer repos and third-party guides to someone else's release are a 3.
+
+## 4. Fetch article — read the full page
+Three ways in, in order: a plain request, then the stealth browser, then a free reader
+service (r.jina.ai) for pages behind a bot check that even the browser cannot pass,
+which is OpenAI's whole site. While reading the page it also collects:
+- **Pictures** on the page, and **video players** (Vimeo, YouTube) as clip candidates.
+- **The product link:** on AI/TLDR pages, the first official link (the GitHub release,
+  the company blog post), so the post links to the thing itself, not to AI/TLDR.
+
+## 5. Story organizer — which story is this?
+On this channel **one story is one product or release**: a launch, its rollout, a
+guide to it. Two announcements from the same company on the same day are two stories.
+
+## 6. Gatekeeper — has the story moved?
+Same as Market One: post, hold as fuel for the story's next post, or "wrong story".
+
+## 7. Writer
+Its own prompt (writer.md) plus the voice file (persona.md). The shape:
+- a **bold first line** saying what it is and why the reader should care,
+- two to four short "•" lines, or one or two short paragraphs, with **two or three key
+  words in bold** (a name, a price, "free"),
+- the link line last ("Try it here", "Read the guide here").
+
+**No emoji at all**, only the "•" bullet. No hype words, no capitals for shouting. The
+writer never copies a link: it writes LINK and the publisher fills in the address.
+
+## 8. Editor — is the post right?
+Its own prompt (editor.md), on a different model from the writer. It checks the post
+against the source and can only reject by naming a rule. This channel adds **JARGON**:
+a word a 12-year-old would not know, left unexplained ("tokens" and "API" are fine).
+A fixable rejection goes back to the writer **once**, and on that second check the editor
+is shown **its own earlier reason**, so it cannot ask for the opposite of what it asked
+before. A second rejection is final.
+
+## 9. Repeat check
+The exit: does this finished post tell the reader anything a post of the last 5 days
+did not? If not, it is held.
+
+## 10. Image analyst and video analyst
+Gemini looks at every candidate picture and clip and picks the one that shows what the
+post says, or none. Clips from video players are downloaded with **yt-dlp** (720p, at
+most 20 MB); anything **over 2 minutes is refused** before the model sees it. A video
+that passes beats any picture, and the best picture is the backup. yt-dlp updates itself
+every Monday, and 3 failed downloads in a row send an alert.
+
+## 11. Publish
+Fills in the link, adds the signature ("AI Flow | Subscribe"), and sends the post with
+the chosen media. Pace: at most 30 posts an hour and 200 a day, 90 seconds apart.
+
+## Reading an item on the Posts tab
+Open an item and read **What happened** top to bottom: what the **sorter** decided and
+why, what the **editor** decided about the written post and why, and the **outcome**.
+`;
+
+export function workflowExplanation(channel: string): string {
+  return channel === "ai_news" ? AI_FLOW_EXPLANATION : WORKFLOW_EXPLANATION;
+}

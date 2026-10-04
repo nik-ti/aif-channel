@@ -1,0 +1,32 @@
+# AI Flow (@ai_flow_daily): the ai_news channel, from the same code as Market One.
+# Install: sudo install -m 644 deploy/ai-news-channel.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now ai-news-channel
+# More memory than Market One: it opens a browser for pages with no feed and
+# downloads video clips.
+
+[Unit]
+Description=AI Flow — AI tools news Telegram channel (ai_news)
+After=network-online.target redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nikita
+Group=nikita
+WorkingDirectory=/home/nikita/systems/news-channels
+ExecStart=/usr/bin/python3 /home/nikita/systems/news-channels/main.py run
+
+Restart=always
+RestartSec=15
+
+Environment=CHANNEL=ai_news
+Environment=PYTHONUNBUFFERED=1
+
+StandardOutput=append:/home/nikita/systems/news-channels/logs/ai-news.log
+StandardError=append:/home/nikita/systems/news-channels/logs/ai-news.log
+
+MemoryHigh=700M
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

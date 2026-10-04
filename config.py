@@ -95,6 +95,42 @@ CHECK_VIDEOS = getattr(_profile, "CHECK_VIDEOS", False)
 COLLECT_ARTICLE_MEDIA = getattr(_profile, "COLLECT_ARTICLE_MEDIA", False)
 USE_ECONOMIC_CALENDAR = getattr(_profile, "USE_ECONOMIC_CALENDAR", False)
 
+# A channel's own writer and editor prompts. None means the built-in Market One
+# prompts in nodes/writer.py and nodes/editor.py.
+WRITER_PROMPT_PATH = getattr(_profile, "WRITER_PROMPT_PATH", None)
+EDITOR_PROMPT_PATH = getattr(_profile, "EDITOR_PROMPT_PATH", None)
+
+# The sorter's third answer, by the name the model sees: "which market reprices"
+# on Market One. Stored in the items.market column whatever it is called.
+SORTER_AXIS = getattr(_profile, "SORTER_AXIS", "market")
+
+# Extra editor rules for this channel, the subset of them a rewrite can fix, and
+# its own wording of WRONG_TOPIC ("" keeps Market One's).
+EXTRA_EDITOR_RULES = getattr(_profile, "EXTRA_EDITOR_RULES", {})
+EXTRA_FIXABLE_RULES = frozenset(getattr(_profile, "EXTRA_FIXABLE_RULES", ()))
+WRONG_TOPIC_RULE = getattr(_profile, "WRONG_TOPIC_RULE", "")
+
+# The product link: the writer leaves href="LINK" and the publisher fills it in
+# (nodes/publisher.py). PRODUCT_LINK_PAGES are aggregator sites whose pages link
+# to the real thing (nodes/article.py).
+LINK_TO_PRODUCT = getattr(_profile, "LINK_TO_PRODUCT", False)
+PRODUCT_LINK_PAGES = tuple(getattr(_profile, "PRODUCT_LINK_PAGES", ()))
+LINK_FALLBACK_TEXT = getattr(_profile, "LINK_FALLBACK_TEXT", "Link")
+
+# A reader service tried after the plain request and the browser both fail, e.g.
+# "https://r.jina.ai/" (the page address is appended). "" = none (Market One).
+READER_FALLBACK_URL = getattr(_profile, "READER_FALLBACK_URL", "")
+
+# On a rewrite, show the editor its own earlier rejection so it cannot reverse
+# itself ("say units of text" → "say tokens"). Off = Market One as before.
+EDITOR_REMEMBERS_REWRITES = getattr(_profile, "EDITOR_REMEMBERS_REWRITES", False)
+
+# Extra guidance for the story placer, added after its built-in prompt ("" = none).
+STORY_PLACE_NOTES = getattr(_profile, "STORY_PLACE_NOTES", "")
+
+# Put today's date in front of what the sorter reads, so "2026" is not "the future".
+SORTER_SHOWS_DATE = getattr(_profile, "SORTER_SHOWS_DATE", False)
+
 
 # SECRETS (from .env); key names are per-channel.
 
@@ -109,12 +145,16 @@ OPENROUTER_BASE_URL = _get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
 
 
 
+# A line added under every post, e.g. the channel name and a subscribe link.
+SIGNATURE_HTML = _get("SIGNATURE_HTML", getattr(_profile, "SIGNATURE_HTML", ""))
+
+
 # POST APPEARANCE: one mark per post at front (WRITER picks from list or flag).
 # Fixed list prevents emoji misuse (🔥 on drone strike); marks signal what, not how to
 # feel.
 # No hashtags: two would sort posts by desk, not reader.
 
-POST_MARKS = {
+_MARKETS_POST_MARKS = {
     # a number moving — the short, specific posts
     "🔺": "a price, yield or figure rising — the number is the news",
     "🔻": "a price, yield or figure falling — the number is the news",
@@ -143,8 +183,14 @@ POST_MARKS = {
     "🔒": "safety, custody, a freeze or a lock-up of funds or assets",
 }
 
+# A channel may bring its own marks; these are Market One's.
+POST_MARKS = getattr(_profile, "POST_MARKS", _MARKETS_POST_MARKS)
+
 # Bullet for lists (only emoji allowed in body; strip_emojis protects it).
-BULLET = "▪️"
+BULLET = getattr(_profile, "BULLET", "▪️")
+
+# Whether a country flag counts as a mark (Market One: "🇯🇵 Japan's 10-year...").
+ALLOW_FLAG_MARKS = getattr(_profile, "ALLOW_FLAG_MARKS", True)
 
 # Country flags are valid marks when country is the story (250 of them; accept any
 # flag).
@@ -168,12 +214,14 @@ POLL_MINUTES = _get_int("POLL_MINUTES", 10)
 # from "sniper-ingest".
 REDIS_URL = _get("REDIS_URL", "redis://localhost:6379/0")
 TWEET_STREAM_KEY = _get("TWEET_STREAM_KEY", "tweets:stream")
-TWEET_STREAM_GROUP = _get("TWEET_STREAM_GROUP", "news-channel")
+TWEET_STREAM_GROUP = _get("TWEET_STREAM_GROUP",
+                          getattr(_profile, "TWEET_STREAM_GROUP", "news-channel"))
 X_MAX_AGE_MINUTES = _get_int("X_MAX_AGE_MINUTES", 45)  # Stop restart floods.
 X_MAX_BURST = _get_int("X_MAX_BURST", 25)
 
 # Stop old feeds replaying back catalogue on next poll.
-ARTICLE_MAX_AGE_HOURS = _get_int("ARTICLE_MAX_AGE_HOURS", 24)
+ARTICLE_MAX_AGE_HOURS = _get_int("ARTICLE_MAX_AGE_HOURS",
+                                 getattr(_profile, "ARTICLE_MAX_AGE_HOURS", 24))
 
 # Publishing pace
 PUBLISH_TICK_SECONDS = _get_int("PUBLISH_TICK_SECONDS", 120)
@@ -337,6 +385,9 @@ def check(require_telegram: bool = False, require_openrouter: bool = False) -> l
             problems.append("TELEGRAM_BOT_TOKEN is missing from .env")
         if not CHANNEL_ID:
             problems.append("CHANNEL_ID is missing from .env — nowhere to post")
+        if getattr(_profile, "REQUIRES_SIGNATURE", False) and not SIGNATURE_HTML:
+            problems.append(f"{_PREFIX}SIGNATURE_HTML is missing from .env — every "
+                            f"post on this channel is signed")
 
     if require_openrouter and not OPENROUTER_API_KEY:
         problems.append("OPENROUTER_API_KEY is missing from .env")

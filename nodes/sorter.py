@@ -11,6 +11,8 @@ score.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import config
 from nodes import calendar
 from utils import logger as log_setup, openrouter
@@ -48,7 +50,7 @@ NO_MARKET_CAP = 3
 SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["relevant", "topic", "market", "importance", "reason"],
+    "required": ["relevant", "topic", config.SORTER_AXIS, "importance", "reason"],
     "properties": {
         "relevant": {"type": "boolean"},
         # "markets" MUST be here. The prompt defines it, config.VALID_TOPICS
@@ -58,11 +60,29 @@ SCHEMA = {
         # call itself "crypto" and be killed by the editor for WRONG_TOPIC, or
         # answer "other" and be marked irrelevant on sight by the rule below.
         "topic": {"type": "string", "enum": list(config.TOPICS)},
-        "market": {"type": "string", "enum": list(config.MARKETS)},
+        config.SORTER_AXIS: {"type": "string", "enum": list(config.MARKETS)},
         "importance": {"type": "integer", "minimum": 1, "maximum": 5},
         "reason": {"type": "string"},
     },
 }
+
+
+def user_message(item) -> str:
+    """What the sorter reads about one item."""
+    title = item["title"] or ""
+    body = (item["body"] or "")[:600]
+    hint = item["topic_hint"] or "unknown"
+    origin = "a post on X" if item["origin"] == "x" else "a news article"
+    scheduled = calendar.describe(item)
+    today = (f"Today is {datetime.now(timezone.utc):%d %B %Y}.\n"
+             if config.SORTER_SHOWS_DATE else "")
+    return (
+        f"{today}Source: {item['source_name']} ({origin})\n"
+        f"The source files this under: {hint}\n"
+        + (f"{scheduled}\n" if scheduled else "")
+        + f"\nHeadline: {title}\n\n"
+        f"Text: {body}"
+    )
 
 
 async def execute(item) -> dict:
@@ -77,29 +97,18 @@ async def execute(item) -> dict:
         fallback   (bool)  True if the model failed and we guessed
     """
     title = item["title"] or ""
-    body = (item["body"] or "")[:600]
     hint = item["topic_hint"] or "unknown"
-    origin = "a post on X" if item["origin"] == "x" else "a news article"
-
-    scheduled = calendar.describe(item)
-    user_message = (
-        f"Source: {item['source_name']} ({origin})\n"
-        f"The source files this under: {hint}\n"
-        + (f"{scheduled}\n" if scheduled else "")
-        + f"\nHeadline: {title}\n\n"
-        f"Text: {body}"
-    )
 
     try:
         result = await openrouter.chat_json(
-            model=MODEL, system=PROMPT, user=user_message,
+            model=MODEL, system=PROMPT, user=user_message(item),
             schema=SCHEMA, schema_name="sorting",
             temperature=TEMPERATURE, max_tokens=MAX_TOKENS,
         )
 
         topic = result.get("topic", "other")
         relevant = bool(result.get("relevant", False))
-        market = str(result.get("market", "none"))
+        market = str(result.get(config.SORTER_AXIS, "none"))
         if market not in config.MARKETS:
             market = "none"
         importance = int(result.get("importance", 2))

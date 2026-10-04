@@ -61,6 +61,7 @@ class BrainState(TypedDict, total=False):
     post_id: int
     editor_verdict: dict
     editor_feedback: str
+    previous_editor_reason: str  # the editor's own rejection, shown to it on the rewrite
     rewrite_count: int
     outcome: str                # published | duplicate | irrelevant | low_impact |
                                 # held | placed | declined | retry | failed

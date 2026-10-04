@@ -112,7 +112,28 @@ def _build_emoji_rule() -> str:
     )
 
 
-EMOJI_RULE = _build_emoji_rule()
+def _build_plain_emoji_rule() -> str:
+    """The mark rule for a channel with its own short list and no flags."""
+    if not config.POST_MARKS:
+        return (f"none. This channel uses no emoji at all, anywhere. The only symbol "
+                f"allowed is the list bullet {config.BULLET}. Any emoji is deleted "
+                f"automatically.")
+    marks = "\n".join(f"  {mark} — {meaning}"
+                      for mark, meaning in config.POST_MARKS.items())
+    return (
+        "ONE mark at the VERY START of the post, before the opening <b> tag, "
+        "followed by a single space. Nowhere else.\n"
+        "\n"
+        "The mark says WHAT KIND of news this is. Pick from this list, by the "
+        f"meaning given:\n{marks}\n"
+        "\n"
+        "Nothing fits cleanly: no mark. Better none than a wrong one. A mark that "
+        "is not on this list, or a second one, is deleted automatically."
+    )
+
+
+EMOJI_RULE = (_build_emoji_rule() if config.WRITER_PROMPT_PATH is None
+              else _build_plain_emoji_rule())
 
 
 def _today() -> str:
@@ -325,6 +346,13 @@ The price of diesel fuel in the United States has risen above $6 per gallon.
 ---
 Now write the post for the story below."""
 
+# A channel with its own writer prompt (channels/<name>/writer.md) uses that.
+if config.WRITER_PROMPT_PATH is not None:
+    PROMPT = config.WRITER_PROMPT_PATH.read_text()
+
+# The line the publisher fills with the product link (see nodes/publisher.py).
+LINK_PLACEHOLDER = 'href="LINK"'
+
 
 _FENCE = re.compile(r"^```[a-zA-Z]*\s*|\s*```$")
 
@@ -361,6 +389,10 @@ def _looks_incomplete(text: str) -> bool:
     stripped = text.rstrip()
     if not stripped:
         return True
+    # A closing "Try it here" link line is not a sentence; judge what comes before it.
+    lines = stripped.splitlines()
+    if len(lines) > 1 and LINK_PLACEHOLDER in lines[-1]:
+        stripped = "\n".join(lines[:-1]).rstrip()
     # Ignore a trailing HTML tag when looking at the final character.
     without_tag = re.sub(r"<[^>]+>\s*$", "", stripped).rstrip()
     if not without_tag:
@@ -432,7 +464,7 @@ def enforce_mark(text: str) -> tuple[str, str]:
 
     # A country's flag: two regional-indicator symbols. Any pair is a flag, so
     # the list in config cannot enumerate them; the shape is enough.
-    if not mark:
+    if not mark and config.ALLOW_FLAG_MARKS:
         flag = _FLAG.match(text)
         if flag:
             mark = flag.group(0)
@@ -456,6 +488,15 @@ def is_one_line_source(item) -> bool:
     text = f"{item['title'] or ''} {item['body'] or ''}"
     words = {w for w in re.findall(r"[a-z0-9$%.]+", text.lower()) if len(w) > 1}
     return len(words) <= ONE_LINE_SOURCE_WORDS
+
+
+def link_line_last(post: str) -> str:
+    """Move the href="LINK" line to the very end, where the reader expects it."""
+    blocks = re.split(r"\n\s*\n", post.strip())
+    links = [b for b in blocks if LINK_PLACEHOLDER in b]
+    if len(links) != 1 or blocks[-1] == links[0]:
+        return post
+    return "\n\n".join([b for b in blocks if b != links[0]] + links)
 
 
 def headline_only(post: str) -> str:
@@ -595,6 +636,9 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     if not release_shaped and is_one_line_source(item) and "\n" in post.strip():
         post = headline_only(post)
         log.info("Item %s has a one-line source — kept the headline only", item["id"])
+
+    if config.LINK_TO_PRODUCT:
+        post = link_line_last(post)
 
     if _looks_incomplete(post):
         log.warning("Writer produced a post that stops mid-sentence for item %s — "

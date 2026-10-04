@@ -88,6 +88,8 @@ _BEFORE = timedelta(minutes=15)
 
 async def refresh() -> int:
     """Pull this week's feed into the calendar table. Returns rows stored."""
+    if not config.USE_ECONOMIC_CALENDAR:
+        return 0
     try:
         async with httpx.AsyncClient(timeout=20, headers={"User-Agent": "Mozilla/5.0"}) as client:
             response = await client.get(FEED_URL)
@@ -123,6 +125,8 @@ def match(text: str, when: datetime, headline: str = "") -> dict | None:
     matters: an item headlined "softer US inflation" also mentioned a GDP
     revision three lines later and was filed under Final GDP.
     """
+    if not config.USE_ECONOMIC_CALENDAR:
+        return None
     lowered = f" {text.lower()} "
     head = f" {headline.lower()} " if headline else ""
     since = (when - _AFTER).strftime("%Y-%m-%d %H:%M:%S")

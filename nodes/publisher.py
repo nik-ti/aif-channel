@@ -48,15 +48,31 @@ def _strip_foreign_links(html: str, allowed_url: str) -> str:
     return _LINK_TAG.sub(replace, html)
 
 
-def compose(post_html: str, url: str) -> str:
+def compose(post_html: str, url: str, link_url: str = "") -> str:
     """The post as it goes out: the writer's text, with any foreign link removed.
 
     No source credit. The channel speaks in its own voice, and a byline under
     every post read as a wire feed rather than a person. The source URL is
     still used here — to decide which links are ours — and stays on the item
     row for anyone who needs to trace a post back.
+
+    On a LINK_TO_PRODUCT channel the writer's href="LINK" becomes the thing
+    itself (link_url) or else the source, and a post without that line gets one.
     """
-    return _strip_foreign_links(post_html.strip(), url)
+    text = post_html.strip()
+    if config.LINK_TO_PRODUCT:
+        target = link_url or url
+        if target and 'href="LINK"' not in text:
+            text += f'\n\n<a href="LINK">{config.LINK_FALLBACK_TEXT}</a>'
+        if target:
+            text = text.replace('href="LINK"', f'href="{target}"')
+        else:
+            text = re.sub(r'<a\s+href="LINK"[^>]*>(.*?)</a>', r"\1", text, flags=re.DOTALL)
+        url = target
+    text = _strip_foreign_links(text, url)
+    if config.SIGNATURE_HTML:
+        text += "\n\n" + config.SIGNATURE_HTML
+    return text
 
 
 def check_limits(*, forced: bool = False) -> tuple[bool, str]:
@@ -153,7 +169,8 @@ async def execute(item, post_html: str, post_id: int,
     continuations. Failures are counted on the post row and eventually give up.
     """
     topic = item["topic"] or item["topic_hint"] or "crypto"
-    message = compose(post_html, item["url"] or "")
+    link_url = (item["link_url"] if "link_url" in item.keys() else "") or ""
+    message = compose(post_html, item["url"] or "", link_url)
     # Only what the analysts chose for this post. A post they never saw goes out
     # as text, so no picture reaches the channel unjudged.
     chosen = db.get_post_media(post_id)

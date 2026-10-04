@@ -16,8 +16,8 @@ Requires=redis-server.service
 Type=simple
 User=nikita
 Group=nikita
-WorkingDirectory=/home/nikita/systems/market-one-channel
-ExecStart=/usr/bin/python3 /home/nikita/systems/market-one-channel/main.py run
+WorkingDirectory=/home/nikita/systems/news-channels
+ExecStart=/usr/bin/python3 /home/nikita/systems/news-channels/main.py run
 
 Environment=CHANNEL=<name>
 Environment=PYTHONUNBUFFERED=1
@@ -25,8 +25,8 @@ Environment=PYTHONUNBUFFERED=1
 Restart=always
 RestartSec=15
 
-StandardOutput=append:/home/nikita/systems/market-one-channel/logs/<name>.log
-StandardError=append:/home/nikita/systems/market-one-channel/logs/<name>.log
+StandardOutput=append:/home/nikita/systems/news-channels/logs/<name>.log
+StandardError=append:/home/nikita/systems/news-channels/logs/<name>.log
 
 MemoryHigh=400M
 MemoryMax=600M

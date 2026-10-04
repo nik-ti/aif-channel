@@ -122,6 +122,39 @@ async def _browser(url: str) -> tuple[str | None, str]:
     return (text if _usable(text) else None), html
 
 
+async def _reader(url: str) -> str | None:
+    """The article through a reader service, for pages behind a JavaScript challenge."""
+    if not config.READER_FALLBACK_URL:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=config.ARTICLE_TIMEOUT_SECONDS * 3,
+                                     follow_redirects=True) as client:
+            response = await client.get(config.READER_FALLBACK_URL + url)
+        if response.status_code != 200:
+            return None
+    except Exception as error:  # noqa: BLE001
+        log.debug("Reader service failed for %s: %s", url[:80], error)
+        return None
+    text = response.text
+    # Its reply opens with Title / URL Source lines; the article follows this marker.
+    _, marker, body = text.partition("Markdown Content:")
+    text = (body if marker else text).strip()
+    return text if _usable(text) else None
+
+
+async def _reader_html(url: str) -> str:
+    """The page's HTML through the reader service, for its pictures and players."""
+    try:
+        async with httpx.AsyncClient(timeout=config.ARTICLE_TIMEOUT_SECONDS * 3,
+                                     follow_redirects=True,
+                                     headers={"X-Return-Format": "html"}) as client:
+            response = await client.get(config.READER_FALLBACK_URL + url)
+        return response.text if response.status_code == 200 else ""
+    except Exception as error:  # noqa: BLE001
+        log.debug("Reader service gave no HTML for %s: %s", url[:80], error)
+        return ""
+
+
 def _record_failure() -> None:
     global _consecutive_failures
     _consecutive_failures += 1
@@ -138,6 +171,27 @@ def _record_failure() -> None:
 def _record_success() -> None:
     global _consecutive_failures
     _consecutive_failures = 0
+
+
+def product_link(html: str, page_url: str) -> str:
+    """The first outside link in an aggregator page's main text: the thing it is about.
+
+    Only for sites named in PRODUCT_LINK_PAGES; anywhere else the page IS the source.
+    """
+    from urllib.parse import urlparse
+    from bs4 import BeautifulSoup
+
+    host = urlparse(page_url).netloc.lower()
+    if not any(host == site or host.endswith("." + site) for site in config.PRODUCT_LINK_PAGES):
+        return ""
+    soup = BeautifulSoup(html or "", "lxml")
+    body = soup.find("main") or soup.find("article") or soup.body or soup
+    for tag in body.find_all("a", href=True):
+        href = tag["href"].strip()
+        target = urlparse(href).netloc.lower()
+        if href.startswith("http") and target and target != host and not target.endswith("." + host):
+            return href
+    return ""
 
 
 async def fetch_for(item) -> str | None:
@@ -167,6 +221,17 @@ async def fetch_for(item) -> str | None:
     if text is None:
         text, html = await _browser(url)
         used = "browser"
+    if text is None:
+        text = await _reader(url)
+        used = "reader"
+        if text and config.COLLECT_ARTICLE_MEDIA:
+            html = await _reader_html(url)
+    known = (item["link_url"] if "link_url" in item.keys() else "") or ""
+    if config.PRODUCT_LINK_PAGES and html and not known:
+        link = product_link(html, url)
+        if link:
+            db.set_item_link(item_id, link)
+            log.info("Product link for item %s: %s", item_id, link[:80])
     if config.COLLECT_ARTICLE_MEDIA and html:
         from nodes import media
         images, videos = media.from_article_html(html, url)

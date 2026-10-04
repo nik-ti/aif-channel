@@ -14,7 +14,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 import config
-from nodes import calendar, dedup, fetch_rss, fetch_tweets
+from nodes import calendar, dedup, fetch_pages, fetch_rss, fetch_tweets
 from utils import db, logger as log_setup, textclean
 
 log = log_setup.get("collect")
@@ -38,6 +38,13 @@ def _store_article(article: fetch_rss.Article) -> bool:
     """Save a feed article if it is new. Runs the cheap filters on the way in."""
     if _is_stale(article):
         return False
+    if article.baseline:
+        # Remembered so it is never news later, but never queued.
+        db.insert_item(origin="rss", source_name=article.source_name,
+                       external_id=textclean.normalise_url(article.url), url=article.url,
+                       title=article.title, topic_hint=article.topic, status="duplicate",
+                       status_reason="already on the page when we started watching it")
+        return False
 
     normalised_url = textclean.normalise_url(article.url)
     norm_title = textclean.normalise_headline(article.title)
@@ -58,6 +65,7 @@ def _store_article(article: fetch_rss.Article) -> bool:
         norm_title=norm_title,
         title_hash=fingerprint,
         topic_hint=article.topic,
+        link_url=article.link_url,
     )
 
     # None means the link was already stored — the normal outcome.
@@ -125,14 +133,14 @@ async def collect_feeds_once() -> int:
     # The calendar rides along with the feed poll. Six hours is plenty: the
     # week's schedule does not change, only which day we are on.
     age = db.calendar_age_minutes()
-    if age is None or age > 6 * 60:
+    if config.USE_ECONOMIC_CALENDAR and (age is None or age > 6 * 60):
         # The feed rate-limits at a few requests a minute, so a failed refresh
         # still counts as the attempt — otherwise every ten-minute poll retries.
         if not await calendar.refresh():
             log.info("Calendar refresh failed — next attempt in 6 hours")
         db.meta_set("calendar_refreshed_at", db.now_iso())
 
-    articles = await fetch_rss.execute()
+    articles = await fetch_rss.execute() + await fetch_pages.execute()
     stale = sum(1 for article in articles if _is_stale(article))
     new_count = sum(1 for article in articles if _store_article(article))
 
@@ -144,8 +152,15 @@ async def collect_feeds_once() -> int:
     return new_count
 
 
+def reads_tweets() -> bool:
+    """A channel that follows no X accounts stays off the shared tweet stream."""
+    return bool(config.X_ACCOUNTS)
+
+
 async def collect_tweets_once() -> int:
     """Take whatever tweets are waiting and store them. Returns how many were new."""
+    if not reads_tweets():
+        return 0
     tweets = await fetch_tweets.drain_once()
     new_count = sum(1 for tweet in tweets if _store_tweet(tweet))
 
@@ -190,4 +205,4 @@ async def run(once: bool = False) -> None:
 
     log.info("Collecting: feeds every %d min, tweets continuously",
              config.POLL_MINUTES)
-    await asyncio.gather(_feed_task(), _tweet_task())
+    await asyncio.gather(_feed_task(), *([_tweet_task()] if reads_tweets() else []))
