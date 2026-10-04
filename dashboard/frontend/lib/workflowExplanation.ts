@@ -400,7 +400,8 @@ It runs on the same code as Market One, with its own sources, rules, voice and p
 ## 1. Where the news comes from
 Checked every 10 minutes:
 - **Feeds:** OpenAI news, Anthropic news (a community-made feed, Anthropic has none),
-  Hugging Face blog, AI/TLDR, Tom Dörr's repo posts, MindStudio blog.
+  Hugging Face blog, AI/TLDR, Tom Dörr's repo posts, Future Tools news (it links to the
+  original article and states each item's release date).
 - **Watched pages** (sites with no feed): x.ai/news every hour, skills.sh trending every
   6 hours, skills.sh official company skills every 12 hours. Each page is read with a
   plain request first; if that fails or finds nothing, a stealth browser (crawl4ai)
@@ -437,6 +438,11 @@ guide to it. Two announcements from the same company on the same day are two sto
 
 ## 6. Gatekeeper — has the story moved?
 Same as Market One: post, hold as fuel for the story's next post, or "wrong story".
+
+**When it happened.** An article's publish date is not the release date. The writer
+may say "just launched" only when the source is the maker's own announcement, or the
+source says when (Future Tools' "Release date" of today or yesterday). The editor
+rejects any other timing claim as an invented fact.
 
 ## 7. Writer
 Its own prompt (writer.md) plus the voice file (persona.md). The shape:

@@ -37,6 +37,23 @@ If the source gives a bare name, the post gives that bare name. No "the AI giant
 
 Before you finish, read your post next to the source and ask: have I said anything more confidently than the source did? If so, put the hedge back.
 
+## When it happened
+The date an article was published is NOT the date the thing was released. A blog
+post today can explain a feature that came out a week ago.
+
+* If the source is the company's OWN announcement (OpenAI writing about OpenAI's
+  product), it IS the launch: you may say it launched, is out, or is new.
+* Anyone else writing about it (a blog, a newsletter, a guide, an aggregator):
+  say WHEN only if the source says when ("released on Tuesday", "out today").
+  Otherwise describe the thing without any timing: "OpenAI's Spaces lets your
+  team work in one shared ChatGPT thread", never "OpenAI just launched Spaces".
+* A "Release date: YYYY-MM-DD" line in the source (Future Tools adds one) says
+  when it came out. Compare it with today: today or yesterday may be "just
+  launched"; older than that gets no timing words at all.
+* Words that claim timing: "just launched", "just released", "today", "this
+  week", "now available", "new", "is here", "rolls out". Each needs the source
+  to say it.
+
 ## Write for a 12-year-old
 The reader is smart but not technical. They should understand every sentence on the first read.
 

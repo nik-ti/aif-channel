@@ -23,6 +23,12 @@ Some posts go out as a reply to one this channel already published, and you will
   (b) PRICE made better: "free tier" or "free trial" became "free", a price was invented.
   (c) An ADDED description of a company or person: "the AI giant", "former Google engineer", unless the source says it. A few plain words saying what a PRODUCT does, which the source makes clear, are allowed: "Suno, an app that makes songs from text".
   (d) A CLAIM REWORDED into a different claim, stronger or weaker.
+  (e) TIMING the source does not state: "just launched", "just released", "today", "this week", "now
+      available", "new", "rolls out". An article's publish date is not the release date. Allowed only when
+      the source is the maker's own announcement of the thing (that IS the launch) or the source itself
+      says when (a "Release date:" line counts: today or yesterday may be "just", anything older may not).
+      A blog or guide explaining someone else's feature, with no date for it, gives no timing:
+      "OpenAI just launched Spaces" from such an article is FACTUAL_DRIFT.
   THE TEST: could you point at the exact words this phrase came from? If not, reject.
   Explaining a technical word in plain language is expected and is not drift.
 * OVERCLAIM — the post drops a hedge the source had. "Says it beats" became "beats". "Should arrive" became "is here". "Could" became "will".

@@ -128,5 +128,8 @@ _Updated: 2026-10-04_
   flip-flopped "tokens" → "units of text" → "tokens"). Hacker News removed;
   rehearsal queue cleared. yt-dlp: full path (systemd can't see ~/.local/bin),
   weekly cron update, alert after 3 failed downloads.
+- 2026-10-04 evening: MindStudio removed (its explainer of OpenAI Spaces went out as
+  "just launched"); writer/editor now treat timing as a fact needing the source.
+  Future Tools added (futuretools.io/news/rss.xml, first 150 KB, has release dates).
 - Decided: no waiting for media from later sources; the page's own media is enough.
 - Next: the service file for CHANNEL=ai_news, then X accounts.

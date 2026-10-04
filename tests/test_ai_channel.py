@@ -201,7 +201,7 @@ def feed_dates_get_two_days():
 @test
 def every_source_has_a_known_topic_and_the_big_feed_is_capped():
     names = {s["name"] for s in config.SOURCES}
-    assert {"ai_tldr", "openai", "anthropic", "tom_doerr"} <= names, names
+    assert {"ai_tldr", "openai", "anthropic", "tom_doerr", "futuretools"} <= names, names
     tom = next(s for s in config.SOURCES if s["name"] == "tom_doerr")
     assert 0 < tom["max_bytes"] <= 2_000_000
 
@@ -465,6 +465,17 @@ def the_downloader_is_found_without_a_login_shell_and_failing_downloads_raise_an
     finally:
         embeds.subprocess.run, telegram_error.send_error = real_run, real_send
     assert len(alerts) == 1 and "yt-dlp" in alerts[0], alerts
+
+
+
+@test
+def a_third_partys_article_is_never_written_as_just_released():
+    assert "mindstudio" not in {s["name"] for s in config.SOURCES}
+    from nodes import editor, writer
+    w = writer.PROMPT
+    assert "## When it happened" in w and "just launched" in w
+    e = editor.PROMPT.format(today="4 October 2026", market_reading="")
+    assert "TIMING" in e and "just launched" in e
 
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")
 for line in FAILED:

@@ -54,8 +54,13 @@ SOURCES = [
     {"name": "tom_doerr",  "topic": "tool",
      "url": "https://tom-doerr.github.io/repo_posts/feed.xml", "max_bytes": 1_000_000},
 
-    # Practical explainers of new releases.
-    {"name": "mindstudio", "topic": "resource", "url": "https://www.mindstudio.ai/rss.xml"},
+    # Future Tools (Matt Wolfe's AI news list). Links go to the original article and
+    # each item states its release date. 1000 items; the newest are at the top.
+    {"name": "futuretools", "topic": "launch",
+     "url": "https://www.futuretools.io/news/rss.xml", "max_bytes": 150_000},
+
+    # MindStudio removed 2026-10-04: its explainers of releases from days earlier
+    # were posted as "just launched".
 
     # Pages with no feed, watched by nodes/fetch_pages.py: plain request first,
     # stealth browser if that fails. A link matching link_pattern that was not
