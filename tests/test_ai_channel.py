@@ -477,6 +477,30 @@ def a_third_partys_article_is_never_written_as_just_released():
     e = editor.PROMPT.format(today="4 October 2026", market_reading="")
     assert "TIMING" in e and "just launched" in e
 
+
+
+@test
+async def the_article_is_read_before_the_sorter_judges():
+    assert config.PIPELINE.index("fetch_article") < config.PIPELINE.index("sorter")
+    from brain import nodes
+    from nodes import article, sorter
+
+    async def fetched(item):
+        db.set_article_text(item["id"], "Suno Speech makes voice and music together. " * 30)
+        return "Suno Speech makes voice and music together. " * 30
+    real = article.fetch_for
+    article.fetch_for = fetched
+    item_id = db.insert_item(origin="rss", source_name="futuretools", external_id="suno",
+                             url="https://suno.com/blog/speech", title="Suno Launches Speech Beta",
+                             body="Source: suno.com | Release date: 2026-10-02")
+    try:
+        state = await nodes.fetch_article_node({"item": dict(db.get_item(item_id))})
+    finally:
+        article.fetch_for = real
+    message = sorter.user_message(state["item"])
+    assert "Suno Speech makes voice and music together." in message, message[:300]
+    assert "Release date: 2026-10-02" in message
+
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")
 for line in FAILED:
     print("  FAIL", line[:240])

@@ -50,7 +50,7 @@ _STATION_INFO: dict[str, tuple[str, str]] = {
 _CHANNEL_STATION_INFO: dict[str, dict[str, tuple[str, str]]] = {
     "ai_news": {
         "sorter": ("Sorter", "Can a regular person use this today? Scores usefulness 1-5; the bar is 4. 'Nobody can use it' caps at 3."),
-        "fetch_article": ("Fetch article", "Reads the page (plain, then browser, then reader service), finds the product link, pictures and video players."),
+        "fetch_article": ("Fetch article", "Reads the full page BEFORE the sorter (plain, then browser, then reader service), finds the product link, pictures and video players."),
         "story_organizer": ("Story organizer", "One product = one story. Same company or same event is not enough."),
         "writer": ("Writer", "Bold first line, • lines, bold key words, link last. No emoji. Simple enough for a 12-year-old."),
         "editor": ("Editor", "Checks the post against the source, including JARGON. Sees its own earlier reason on the rewrite."),

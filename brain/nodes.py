@@ -48,8 +48,11 @@ async def fetch_article_node(state: dict) -> dict[str, Any]:
     """
     if state.get("dry_run") or state.get("sweep"):
         return {}
-    await article.fetch_for(state["item"])
-    return {}
+    text = await article.fetch_for(state["item"])
+    if not text:
+        return {}
+    # Carried on the item, so a sorter placed after this station reads the article.
+    return {"item": {**state["item"], "article_text": text}}
 
 
 def route_after_story_organizer(state: dict) -> str:

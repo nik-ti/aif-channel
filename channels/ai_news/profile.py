@@ -134,10 +134,14 @@ EXTRA_EDITOR_RULES = {
 EXTRA_FIXABLE_RULES = ("JARGON",)
 
 # The markets stations, plus the video analyst.
+# The article is read BEFORE the sorter here: feeds like Future Tools give only
+# "Source: x | Release date: y", so the sorter would otherwise judge a headline.
+SORTER_READS_ARTICLE = True
+
 PIPELINE = [
     "dedup",
-    "sorter",
     "fetch_article",
+    "sorter",
     "story_organizer",
     "gatekeeper",
     "writer",

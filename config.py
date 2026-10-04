@@ -128,6 +128,9 @@ EDITOR_REMEMBERS_REWRITES = getattr(_profile, "EDITOR_REMEMBERS_REWRITES", False
 # Extra guidance for the story placer, added after its built-in prompt ("" = none).
 STORY_PLACE_NOTES = getattr(_profile, "STORY_PLACE_NOTES", "")
 
+# The sorter reads the article too (the channel runs fetch_article before it).
+SORTER_READS_ARTICLE = getattr(_profile, "SORTER_READS_ARTICLE", False)
+
 # Put today's date in front of what the sorter reads, so "2026" is not "the future".
 SORTER_SHOWS_DATE = getattr(_profile, "SORTER_SHOWS_DATE", False)
 

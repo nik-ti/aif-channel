@@ -413,8 +413,17 @@ Checked every 10 minutes:
 Same five checks as Market One: same link, same headline, nearly the same wording,
 same subject (embeddings shortlist), then an AI judge reads both texts.
 
-## 3. Sorter — is it worth posting?
-Reads the headline and summary (and today's date) and answers three things:
+## 3. Fetch article — read the full page, before anything is judged
+Every item that is not a repeat gets its article read first, so the sorter judges the
+real content and not a feed's one-line snippet. Three ways in, in order: a plain request, then the stealth browser, then a free reader
+service (r.jina.ai) for pages behind a bot check that even the browser cannot pass,
+which is OpenAI's whole site. While reading the page it also collects:
+- **Pictures** on the page, and **video players** (Vimeo, YouTube) as clip candidates.
+- **The product link:** on AI/TLDR pages, the first official link (the GitHub release,
+  the company blog post), so the post links to the thing itself, not to AI/TLDR.
+
+## 4. Sorter — is it worth posting?
+Reads the headline, the feed's summary and the start of the article (and today's date) and answers three things:
 - **Kind:** launch (a big company ships its own model or feature), tool (an app, site,
   plugin or skill someone made), resource (a guide, course or prompt pack), or other.
 - **Who can use it today:** everyone, creators, business, students, developers, or none.
@@ -423,14 +432,6 @@ Reads the headline and summary (and today's date) and answers three things:
 - **Usefulness 1-5.** **4 or more is posted.** New models and price cuts from major AI
   companies are a 4 even when they are only for developers. Version updates, unknown
   developer repos and third-party guides to someone else's release are a 3.
-
-## 4. Fetch article — read the full page
-Three ways in, in order: a plain request, then the stealth browser, then a free reader
-service (r.jina.ai) for pages behind a bot check that even the browser cannot pass,
-which is OpenAI's whole site. While reading the page it also collects:
-- **Pictures** on the page, and **video players** (Vimeo, YouTube) as clip candidates.
-- **The product link:** on AI/TLDR pages, the first official link (the GitHub release,
-  the company blog post), so the post links to the thing itself, not to AI/TLDR.
 
 ## 5. Story organizer — which story is this?
 On this channel **one story is one product or release**: a launch, its rollout, a

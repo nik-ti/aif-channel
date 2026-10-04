@@ -71,6 +71,10 @@ def user_message(item) -> str:
     """What the sorter reads about one item."""
     title = item["title"] or ""
     body = (item["body"] or "")[:600]
+    article = (item["article_text"] if "article_text" in item.keys() else "") or ""
+    if config.SORTER_READS_ARTICLE and article:
+        # The feed's snippet (often just "Source: x | Release date: y") plus the article.
+        body = f"{body}\n\n{article[:1500]}".strip()
     hint = item["topic_hint"] or "unknown"
     origin = "a post on X" if item["origin"] == "x" else "a news article"
     scheduled = calendar.describe(item)
