@@ -65,14 +65,14 @@ Feeds are checked every 10 minutes; tweets arrive continuously.
     │            │        a hold ends here — the item waits as fuel       │
     │            ▼                                                        │
     │   6.  writer.py     AI rewrite of the WHOLE story into the voice    │
-    │            │        deepseek-v3.2 · several wires become one post   │
+    │            │        gpt-6-luna · several wires become one post      │
     │            ▼                                                        │
     │   7.  editor.py     AI · approve or reject, naming a rule           │
     │            │        mistral-medium-3.1 · a different lab from the   │
     │            │        writer, and the one station that fails CLOSED   │
     │            ▼                                                        │
     │   8.  echo.py       AI · does the FINISHED POST tell the reader     │
-    │            │        anything a post of the last 5 days did not?     │
+    │            │        anything a post of the last 60 days did not?    │
     │            │        the last gate; nothing routes around it         │
     │            ▼                                                        │
     │   9.  image_analyst.py  AI · which picture, if any, goes with it?  │
@@ -91,9 +91,10 @@ Feeds are checked every 10 minutes; tweets arrive continuously.
     └────────────────────────────────────────────────────────────────────┘
 ```
 
-Roughly **$7.40 a month** at 40 posts a day, measured from the real prompts
-and the real call volume. The sorter is 88% of it: a 4529-token rubric sent
-142 times a day.
+Roughly **$3.50 a month** for the sorter and writer together at 40 posts a day,
+measured 2026-10-06 from real calls. The sorter is most of it: a ~1,900-token
+rubric sent 142 times a day. (Market One's models; AI Flow still runs the older
+gemini-2.5-flash sorter and deepseek-v3.2 writer — see its profile.)
 
 ---
 
@@ -333,28 +334,38 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   format, safety — and its rule list contains nothing about a story being dull,
   deliberately. So when something uninteresting reaches the channel, this prompt
   is what needs changing, not the editor's.
-- **It names the market before it scores.** The rubric used to ask only whether
-  something had been "decided, enforced, or broken", which is an event test, and
-  a war produces qualifying events daily. It let through *"Russian retailer
-  evacuates warehouses after drone attacks"* — a real event, correctly filed as
-  geopolitics, genuinely different from yesterday, and useless to anyone holding
-  a position. The model now picks one of `crypto`, `rates_fx`, `energy`,
-  `commodities`, `equities`, `risk_sentiment` or **`none`**, and `none` caps the
-  score at 3 **in code**, not just in the prompt. A named transmission channel is
-  a concrete claim you can disagree with later; "feels important" is not.
-- **Two tests that stop a running conflict flooding the channel:** the
-  *continuing-story* test (another instalment of something already underway is a
-  3 unless it crosses a line — a new participant, a new class of target, a
-  changed rule) and the *priced-in* test (a confirmation of what everyone
-  expected is a 3).
+- **One question, asked of every item: which MAJOR asset's price will this move,
+  or what striking fact does it tell about one?** The rubric
+  (`channels/markets/rubric.md`) was rewritten on 2026-10-06 from nikita's own
+  post/skip answers on past items, and halved in length (2,952 → ~1,250 words).
+  It lists what counts as a major asset — bitcoin, ether and the top coins; the
+  major indexes and only the top ~15 companies; the big central banks and
+  Treasuries; the dollar, euro, yen, yuan and pound; oil, gas, gold, silver,
+  copper — so McDonald's, lumber or a Broadcom–Anthropic loan score 3. Then a
+  4 needs the item to be **real** (rumours and sightings — "flames seen",
+  Fars/Tasnim/IRGC claims — stay 3 until a supply effect is confirmed; words
+  are 3 except a central bank chair or a formal decision), **new** (an
+  incident inside a running war is a 3), **striking** (a record, multi-year
+  extreme, big round number, huge sums moving fast, or data against its
+  forecast) and **now** (plans a year out, odds, upgrades are 3).
+- **It still names the market, and `none` caps the score at 3 in code.** That
+  cap is what keeps *"Russian retailer evacuates warehouses"* off the channel.
+- **Don't over-tighten it.** A first stricter draft cut posts from 104 to 55 of
+  400 and disagreed with nikita MORE: he wants striking market facts (global debt
+  milestone, a Nasdaq record close, $100B moving in 90 minutes), not only hard
+  state changes. Replay any change on past items before shipping it.
 - **Now inspectable.** Dropped stories get their own status (`low_impact`) rather
   than being mixed in with sport and opinion, and `tools/stats.py --dropped`
   prints them with the market and the reason. Same principle as the editor's
   audit log: a filter you cannot inspect is a filter you cannot fix.
-- **Model:** `google/gemini-2.5-flash`, temperature 0.0. This is the one station
-  where the model choice costs real money: it is sent the whole 4529-token rubric
-  142 times a day, which is **88% of the channel's entire model bill** — $6.53 of
-  $7.40 a month here, against $20 of $23 on claude-haiku-4.5. Prompt caching was
+- **Model:** `google/gemini-3.5-flash-lite` (set in `channels/markets/profile.py`),
+  temperature 0.0, and it is told today's date. Chosen 2026-10-06 from seven
+  candidates on 200 past items + 50 repeats: 100% in the required shape, agreed
+  with nikita's labels 43 of 49 (gemini-2.5-flash 40), let 1 of 14 known
+  rumours/small items through (gemini-2.5-flash 5), ~$3 a month, 0.7s a call.
+  Only claude-sonnet-5.5 matched it, at $32 a month. Served by Google alone, so
+  no provider roulette. gemini-3.8-flash is NOT a drop-in: its thinking ran out
+  of the 800-token budget on 9 of 250 calls. Prompt caching was
   measured and rejected: a cache read costs $0.000812 against $0.005091 uncached,
   but the cache expired after five minutes even when an hour was asked for, and
   the median gap between sorting rounds is 6.5 minutes. A miss costs $0.009909, so
@@ -382,9 +393,10 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
 - **A story remembers itself as a sentence**, rewritten from each post as it goes
   out. That is what lets a story that opened with "two tankers hit in Hormuz"
   be recognised later as the war it became — and you can read it in the table.
-- **A hold is never a drop.** `should_post()` always posts a story's FIRST post,
-  so every story speaks at least once; a hold after that means "the reader
-  already has this". Held items stay attached and feed the story's next post.
+- **A hold is never a drop.** A first post shortcuts only when there is no
+  related published history anywhere in the channel. Otherwise the story gate
+  reads earlier coverage even if this story has no posts. Held items stay
+  attached and feed a later meaningful development.
   Read the pile with `python3 tools/stats.py --held`.
 - **The gate can undo a bad placement** by answering `not_this_story`. Without
   it, one misfiling silenced real news — that is how "Fed rate hike odds above
@@ -398,7 +410,12 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   "does a waiting item carry a fact the reader was never told?" Without it, an
   item filed by dedup would wait forever, because a better-worded account of the
   same event is not a change of state.
-- **Placement fails open by leaving the item QUEUED, not by opening a new story.**
+- **Placement includes every live story and related closed stories from the
+  last 60 days.** It reads their names, original headlines and actual posts,
+  rather than relying on the latest summary alone. A confirmed continuation
+  reopens the original thread, preserves its posts and first publication date,
+  and starts a fresh activity lifetime. Stale waiting items remain stale.
+- **Placement failures leave the item QUEUED, not open a new story.**
   A story with no posts always sends its first, so guessing here publishes
   duplicates — that is how one Treasury yield went out twice under two story
   numbers. The gate still fails open into posting. A run of ten failures alerts,
@@ -431,9 +448,11 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   told this?
 - **In:** the finished post · **Out:** send, or hold
 - **It stands at the exit, so nothing routes around it** — not a new story, not a
-  roundup, not a forced post. And it compares the FINISHED POST against every post
-  of the last 120 hours, which is the only comparison that matches what a reader
-  sees.
+  roundup, not a forced post, nor an approved draft retry. It compares the
+  FINISHED POST against every visible published post in the last 60 days.
+  There is no newest-40 cap. Embeddings are cached by post ID, model and text
+  fingerprint; every match above 0.60 reaches the model. The model reads related
+  history together; large shortlists use batches and combined claim coverage.
 - **It does not ask dedup's question.** A 30-year Treasury yield closing at 5.59%
   and touching 5.587% intraday are different events but the same news to a reader.
   Dedup ruled them different three times over and was right; the reader still got
@@ -444,11 +463,12 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
   0.734 to 0.776, so the number only builds a shortlist and a model rules.
   Replaying the last 60 published posts: 11 pairs reach the shortlist, 6 hold, 5
   send.
-- **It fails open,** and the cost of that is worth knowing: a model that cannot
-  answer in JSON is indistinguishable from one that says send, and the log reads
-  the same either way. That is not hypothetical — deepseek-v3.2 answered 7 of 8
-  test pairs in prose and the check was dead for days while looking healthy. Run
-  `tools/check_echo.py --labelled` before ever changing `ECHO_MODEL`.
+- **Unavailable checks retry.** Missing vectors or malformed model answers do
+  not count as permission to send. The approved draft stays queued; even the
+  send-retry path runs this check again, since history may have changed.
+- **Only meaningful new information sends.** A partial overlap is insufficient
+  to hold a post that adds real news. Numeric levels are compared exactly:
+  5.656% is below 6%, regardless of rounding.
 
 ### `writer.py` (AI)
 - **What:** rewrites every story — articles and tweets alike — into one house
@@ -465,6 +485,18 @@ weekly columns titled *New Ecommerce Tools: July 15* and *July 22*.
 - **The voice** comes from `channels/markets/persona.md`, prepended to the writer's prompt.
   That file is where you change how the channel sounds; the factual-accuracy
   rules in `nodes/writer.py` still override anything in it.
+- **Model:** `openai/gpt-6-luna` for Market One (set in its profile). Chosen
+  2026-10-06: the same 40 past posts, written by six models and judged by the
+  live editor — luna 31/40 approved, deepseek-v3.2 24, claude-sonnet-5.5 27,
+  claude-haiku-4.5 25 (and 5 posts with invented figures), gemini-3.5-flash-lite
+  24; gemini-3.8-flash ran out of room on 24 of 40. Luna costs ~$0.0003 a post.
+  Its posts run ~20% shorter, and it now and then writes meta phrases like
+  "described in the post as" — watch for those. It must stay a different lab
+  from the editor (Mistral).
+- **A one-line source keeps its figures.** Code cuts a post from a bare wire
+  headline down to its headline, but not when that would drop a number the
+  source supplied (`figures_lost_by_cut`): "TESLA 3Q DELIVERIES 486,532, EST.
+  463,761" was going out as just "486,532", without the estimate.
 
 ### `editor.py` (AI)
 - **What:** the final check. Reads the finished post *against its source*.
@@ -665,9 +697,37 @@ Rehearse with `CHANNEL=<name> python3 tools/test_brain.py` before restarting.
 | `DUPLICATE_MAX_GAP_HOURS` | 12 | Two items further apart than this are never compared. **The cheapest accuracy setting in the project** — it is what stops yesterday's daily report absorbing today's. |
 | `DEDUP_TOP_K` | 3 | How many shortlisted candidates get considered. Was effectively 1, which meant a rejected front-runner ended the search. |
 | `JUDGE_MODEL` | `google/gemini-2.5-flash` | Decides "same event or not". Prefer a model that errs towards publishing. |
-| `ECHO_MODEL` | `mistralai/mistral-medium-3.1` | The exit check. Run `tools/check_echo.py --labelled` before changing it — this station fails open, so a model that cannot answer looks exactly like one that says send. |
+| `SORTER_MODEL` / `WRITER_MODEL` | from the channel profile; else `google/gemini-2.5-flash` / `deepseek/deepseek-v3.2` | Market One's profile sets `google/gemini-3.5-flash-lite` / `openai/gpt-6-luna`. `.env` (`MARKETS_SORTER_MODEL`, …) still wins. Replay past items before changing either. |
+| `ECHO_MODEL` | `mistralai/mistral-medium-3.1` | The exit check. Run `tools/check_reader_memory.py --labelled` before changing it. Unavailable checks defer drafts for retry. |
 | `IMAGE_MODEL` / `VIDEO_MODEL` | `google/gemini-2.5-flash` | The media analysts. Run `tools/check_media.py --labelled` before changing either. |
 | `MAX_VIDEO_SECONDS` / `MAX_VIDEO_MB` | `120` / `20` | Clips longer or bigger are refused in code, before any model call. |
+
+Reader memory uses `MEMORY_RETENTION_DAYS=60`, `ECHO_WINDOW_HOURS=1440`,
+`ECHO_SHORTLIST=0.60`, `STORY_MEMORY_HOURS=1440` and
+`STORY_MEMORY_SHORTLIST=0.60`. Both windows are capped by embedding retention.
+Published vectors are 1,536 float32 values (~6 KB per post): 6,000 retained posts
+use ~35 MB plus database overhead. Only this new cache expires; old item vectors,
+published text and story history remain. Freed SQLite pages are reusable; no
+compaction runs during posting.
+
+The final judge must identify the new information with a literal quote and a
+type of change. Code verifies whole-percent crossings using exact decimal
+arithmetic: 5.7% cannot count as crossing 6%. Another yield reading, a longer
+record date, or another US Treasury maturity continuing the same move cannot
+earn publication alone. A genuine reversal, first whole-percent crossing or
+policy decision remains eligible. Invalid approvals defer the draft; rejected
+grounds and accepted new information are logged for review.
+
+Backfill is resumable and sends no messages:
+`CHANNEL=markets python3 tools/check_reader_memory.py --backfill` (also use
+`CHANNEL=ai_news` for AI Flow). Rehearsals copy the database first:
+`CHANNEL=markets python3 tools/check_reader_memory.py --incident` and
+`CHANNEL=markets python3 tools/check_reader_memory.py --labelled`.
+`CHANNEL=markets python3 tools/check_reader_memory.py --roundup` replays the
+later 5.7% / 10-year-high repeat in three history orders and checks genuine
+new developments. `--model <id>` tests an alternative judge without changing
+the live model. Rehearsals never send messages.
+Free contract tests: `python3 -m unittest discover -s tests -p 'test_reader_memory.py'`.
 
 ## The four numbers worth watching
 

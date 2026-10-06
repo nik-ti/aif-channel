@@ -16,7 +16,7 @@ import config
 from brain import persona_loader
 from nodes import (article, calendar, dedup, echo, editor, image_analyst, media, publisher,
                    sorter, stories, video_analyst, writer)
-from utils import db, logger as log_setup
+from utils import db, semantic_memory, logger as log_setup
 
 log = log_setup.get("brain")
 
@@ -85,7 +85,7 @@ async def dedup_node(state: dict) -> dict[str, Any]:
     all stories).
     """
     item = state["item"]
-    if state.get("sweep"):
+    if state.get("sweep") or state.get("released"):
         return {}          # judged when it first arrived
     verdict, matched_id, score = await dedup.classify(
         item, with_meaning=True, persist=not state.get("dry_run", False))
@@ -142,11 +142,12 @@ async def sorter_node(state: dict) -> dict[str, Any]:
     item_id = item["id"]
     dry = state.get("dry_run", False)
 
-    if state.get("sweep") or state.get("forced"):
+    if state.get("sweep") or state.get("forced") or state.get("released"):
         # A roundup was judged when it first arrived. A forced item was judged
         # too, and a human disagreed — asking the same model again would only
         # produce the same answer that is being overruled.
-        why = "roundup" if state.get("sweep") else "forced past the sorter"
+        why = ("roundup" if state.get("sweep") else
+               "released from the reserve" if state.get("released") else "forced past the sorter")
         return {"sorter_verdict": {"topic": item.get("topic") or "", "importance": item.get("importance") or 0,
                                    "market": item.get("market") or "", "relevant": True,
                                    "reason": why, "fallback": False}}
@@ -187,6 +188,13 @@ async def sorter_node(state: dict) -> dict[str, Any]:
             db.bump_counter("below_importance")
         return {"sorter_verdict": verdict, "outcome": "low_impact"}
 
+    limit = "" if state.get("forced") else topic_limit_reason(verdict["topic"])
+    if limit:
+        if not dry:
+            db.set_item_status(item_id, "capped", limit)
+            db.bump_counter("capped")
+        return {"sorter_verdict": verdict, "outcome": "capped"}
+
     # Carry the verdict on the item so the writer and editor see the topic the
     # sorter decided.
     updated_item = dict(item)
@@ -197,6 +205,20 @@ async def sorter_node(state: dict) -> dict[str, Any]:
     return {"sorter_verdict": verdict, "item": updated_item}
 
 
+def topic_limit_reason(topic: str) -> str:
+    """Why this topic may not post right now, or "" if it may (config.TOPIC_LIMITS)."""
+    if topic not in config.TOPIC_LIMITS:
+        return ""
+    per_day, gap_hours = config.TOPIC_LIMITS[topic]
+    count, ago = db.topic_posts_since(topic, 24 * 60)
+    if count >= per_day:
+        return f"daily limit: {topic} posts are capped at {per_day} a day, and {count} went out"
+    if ago is not None and ago < gap_hours * 60:
+        return (f"too soon: the last {topic} post went out {ago / 60:.1f} hours ago, "
+                f"they are kept {gap_hours} hours apart")
+    return ""
+
+
 # =============================================================================
 # STATION 3: which story is this, and has it moved?
 # =============================================================================
@@ -204,9 +226,8 @@ async def sorter_node(state: dict) -> dict[str, Any]:
 async def story_organizer_node(state: dict) -> dict[str, Any]:
     """Put the item into a running story, or open one for it.
 
-    The only station that sees the incoming item and the channel's own output
-    together. Fails open into a NEW story: a wrongly separated item is one extra
-    post, which is what the channel did for every item before this existed.
+    Related closed stories retain their published context and can be reopened.
+    Unavailable retrieval or placement leaves the item queued to be asked again.
     """
     item = state["item"]
     now = datetime.now(timezone.utc)
@@ -248,8 +269,14 @@ async def story_organizer_node(state: dict) -> dict[str, Any]:
                  item["id"], story_id, item["calendar_title"])
         return {"story": story, "story_id": story_id}
 
-    open_stories = stories.load_open(now)
-    home, why, could_ask = await stories.place(item, open_stories, now)
+    try:
+        open_stories = await stories.placement_candidates(item, now, persist=not dry)
+    except semantic_memory.Unavailable as error:
+        log.warning("Item %s waits for story memory: %s", item["id"], error)
+        if not dry:
+            db.set_item_status(item["id"], "queued", f"waiting for story memory: {error}"[:300])
+        return {"outcome": "retry"}
+    home, why, could_ask = await stories.place(item, open_stories, now, persist=not dry)
 
     if not could_ask:
         # The model could not be reached or its answer could not be read. That
@@ -322,7 +349,7 @@ async def gatekeeper_node(state: dict) -> dict[str, Any]:
                 "story_brief": stories.brief_for_writer(story, "", single_item=True),
                 "gate_reason": "forced", "trigger_item_id": item["id"]}
 
-    verdict = await stories.should_post(story, now, roundup=bool(state.get("sweep")))
+    verdict = await stories.should_post(story, now, roundup=bool(state.get("sweep")), persist=not dry)
 
     if verdict["verdict"] == "not_this_story":
         log.info("Item %s does not belong in story %s (%s) — giving it its own",
@@ -339,7 +366,12 @@ async def gatekeeper_node(state: dict) -> dict[str, Any]:
             story = stories.load_one(story_id, now)
             db.bump_counter("story_ejected")
         # A story with no posts always speaks, so this cannot end in silence.
-        verdict = await stories.should_post(story, now)
+        verdict = await stories.should_post(story, now, persist=not dry)
+
+    if verdict["verdict"] == "retry":
+        if not dry:
+            db.set_item_status(item["id"], "queued", f"waiting for story gate memory: {verdict['reason']}"[:300])
+        return {"outcome": "retry", "story": story, "story_id": story.id}
 
     if verdict["verdict"] != "post":
         if not dry:
@@ -553,7 +585,12 @@ async def repeat_check_node(state: dict) -> dict[str, Any]:
     if state.get("dry_run"):
         return {}
 
-    repeats, why = await echo.repeats_something_published(state["post_html"])
+    try:
+        repeats, why = await echo.repeats_something_published(state["post_html"])
+    except semantic_memory.Unavailable as error:
+        log.warning("Post %s waits for reader memory: %s", state["post_id"], error)
+        db.set_item_status(state["item"]["id"], "queued", f"waiting for reader memory: {error}"[:300])
+        return {"outcome": "retry"}
     if not repeats:
         return {}
 

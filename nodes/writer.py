@@ -499,10 +499,43 @@ def link_line_last(post: str) -> str:
     return "\n\n".join([b for b in blocks if b != links[0]] + links)
 
 
+def _opening(text: str, words: int = 2) -> str:
+    """The first words of a post's first line, lowercased, without tags or punctuation."""
+    first = re.sub(r"<[^>]+>", "", (text or "").strip().split("\n", 1)[0])
+    first = first.replace("’", "'").lower()
+    return " ".join(re.findall(r"[a-z0-9']+", first)[:words])
+
+
+def repeated_opening(post: str, recent_posts: list[str], window: int = 10) -> str:
+    """The recent post whose first two words this post repeats, or "" if none does."""
+    mine = _opening(post)
+    if not mine:
+        return ""
+    for earlier in recent_posts[:window]:
+        if _opening(earlier) == mine:
+            return earlier.split("\n", 1)[0][:120]
+    return ""
+
+
 def headline_only(post: str) -> str:
     """Cut a post down to its first line — the mark and the bold headline."""
     first = post.strip().split("\n", 1)[0].strip()
     return first if "<b>" in first else post
+
+
+def _figures(text: str) -> set[str]:
+    """Every number in a text, commas dropped, so 486,532 and 486532 match."""
+    return {n.replace(",", "") for n in re.findall(r"\d[\d,.]*\d|\d", text)}
+
+
+def figures_lost_by_cut(item, post: str) -> set[str]:
+    """Source figures the body carries that the headline alone would drop.
+
+    "TESLA 3Q DELIVERIES 486,532, EST. 463,761" was cut to "Tesla Q3 deliveries:
+    486,532" — the estimate, the only thing that made the number mean anything, went.
+    """
+    source = _figures(f"{item['title'] or ''} {item['body'] or ''}")
+    return (_figures(post) - _figures(headline_only(post))) & source
 
 
 def has_thin_source(item) -> bool:
@@ -573,7 +606,21 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
 
     # One heading over two: voice examples + what reader read. Old wording (voice only)
     # caused model to match shape and change number (4 yields, same skeleton).
-    if recent_posts:
+    if recent_posts and config.VARY_WRITING:
+        examples = "\n\n".join(
+            f"Post {i + 1}:\n{p}" for i, p in enumerate(recent_posts[:10])
+        )
+        system_prompt += (
+            "\n\n---\nTHE CHANNEL'S LAST POSTS (newest first)\n\n"
+            "One person writes this channel, and a person does not repeat themselves. "
+            "Do NOT start your post the way any of these start, do not reuse their "
+            "phrases (\"Here's a\", \"It's a\", \"It's called\"), and do not copy their "
+            "structure: if most of them use • lines, use a short paragraph, and the "
+            "other way round. Your reader has also just read them, so do not repeat "
+            "their facts as part of your story.\n\n"
+            f"{examples}"
+        )
+    elif recent_posts:
         examples = "\n\n".join(
             f"Example {i + 1}:\n{p}" for i, p in enumerate(recent_posts[:10])
         )
@@ -605,6 +652,24 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
         log.warning("Writer returned nothing for item %s", item["id"])
         return ""
 
+    # A person would not open two posts in a row the same way. One more try.
+    echoed = repeated_opening(post, recent_posts or []) if config.VARY_WRITING else ""
+    if echoed:
+        log.info("Item %s opens like a recent post (%s) — asking for another opening",
+                 item["id"], echoed[:60])
+        try:
+            again = _clean(await openrouter.chat_text(
+                model=MODEL, system=system_prompt,
+                user=user_message + (
+                    f"\n\n---\nYour draft opened the same way as a recent post: \"{echoed}\". "
+                    f"Write it again with a different first line and different wording. "
+                    f"Your previous draft:\n{post}"),
+                temperature=TEMPERATURE + 0.2, max_tokens=MAX_TOKENS))
+            if again and not repeated_opening(again, recent_posts or []):
+                post = again
+        except Exception as error:  # noqa: BLE001 - the first draft still stands
+            log.info("Second opening for item %s failed: %s", item["id"], error)
+
     # Prompt not enough; guarantee it.
     before = post
     post, mark = enforce_mark(post)
@@ -634,8 +699,13 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     # waves it). Guaranteed, not requested. Not for a scheduled release, whose
     # Forecast and Previous lines come from the calendar, not the wire.
     if not release_shaped and is_one_line_source(item) and "\n" in post.strip():
-        post = headline_only(post)
-        log.info("Item %s has a one-line source — kept the headline only", item["id"])
+        lost = figures_lost_by_cut(item, post)
+        if lost:
+            log.info("Item %s has a one-line source, but the body carries source figures "
+                     "the headline lacks (%s) — kept it", item["id"], ", ".join(sorted(lost)))
+        else:
+            post = headline_only(post)
+            log.info("Item %s has a one-line source — kept the headline only", item["id"])
 
     if config.LINK_TO_PRODUCT:
         post = link_line_last(post)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable
 
 import config
@@ -77,6 +77,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("media_note", "ALTER TABLE posts ADD COLUMN media_note TEXT DEFAULT ''"),
     ],
     "stories": [
+        ("reopened_at", "ALTER TABLE stories ADD COLUMN reopened_at TEXT"),
         ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),  # Short name for dashboard/list (not headline/summary).
         ("calendar_key", "ALTER TABLE stories ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Set when the story IS one scheduled release; placement then needs no model.
         ("roundup_asked_item_id", "ALTER TABLE stories ADD COLUMN roundup_asked_item_id INTEGER DEFAULT 0"),  # Newest held item the last roundup asked about; asked again only once a newer one joins.
@@ -413,6 +414,63 @@ def recent_published_posts(hours: int, limit: int) -> list[sqlite3.Row]:
             ORDER BY p.sent_at DESC LIMIT ?""",
         (f"-{int(hours)} hours", int(limit)),
     ))
+
+
+def memory_posts(hours: int, *, now: datetime | None = None) -> list[sqlite3.Row]:
+    """All visible posts in the time window, with no count cap."""
+    at = now or datetime.now(timezone.utc)
+    return list(conn().execute(
+        """SELECT p.id, p.post_html, p.sent_at, i.story_id
+             FROM posts p JOIN items i ON i.id = p.item_id
+            WHERE p.status = 'sent' AND p.telegram_message_id IS NOT NULL
+              AND p.sent_at >= ? AND p.sent_at < ?
+            ORDER BY p.sent_at DESC, p.id DESC""",
+        ((at-timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S"),
+         at.strftime("%Y-%m-%d %H:%M:%S")),
+    ))
+
+
+def memory_stories(hours: int, *, now: datetime) -> list[sqlite3.Row]:
+    """All live stories plus closed stories active inside the memory window."""
+    return list(conn().execute(
+        """SELECT * FROM stories WHERE first_at <= ? AND (status = 'live'
+               OR (status = 'closed' AND last_item_at >= ? AND last_item_at < ?))
+            ORDER BY last_item_at DESC, id DESC""",
+        (now.strftime("%Y-%m-%d %H:%M:%S"),
+         (now-timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S"),
+         now.strftime("%Y-%m-%d %H:%M:%S")),
+    ))
+
+
+def cached_memory(kind: str) -> dict[int, sqlite3.Row]:
+    return {r["entity_id"]: r for r in conn().execute(
+        "SELECT * FROM memory_embeddings WHERE kind = ?", (kind,))}
+
+
+def save_memory(rows: list[tuple]) -> None:
+    conn().executemany(
+        """INSERT INTO memory_embeddings
+               (kind, entity_id, model, text_hash, dimensions, vector, activity_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(kind, entity_id) DO UPDATE SET model=excluded.model,
+               text_hash=excluded.text_hash, dimensions=excluded.dimensions,
+               vector=excluded.vector, activity_at=excluded.activity_at""", rows)
+    conn().commit()
+
+
+def prune_memory_embeddings(*, now: datetime | None = None) -> int:
+    at = now or datetime.now(timezone.utc)
+    cutoff = (at-timedelta(days=config.MEMORY_RETENTION_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+    count = conn().execute(
+        """DELETE FROM memory_embeddings WHERE activity_at < ?
+            OR (kind='post' AND NOT EXISTS (
+                SELECT 1 FROM posts WHERE id=entity_id AND status='sent'
+                  AND telegram_message_id IS NOT NULL))
+            OR (kind='story' AND NOT EXISTS (SELECT 1 FROM stories WHERE id=entity_id))""",
+        (cutoff,),
+    ).rowcount
+    conn().commit()
+    return count
 
 
 def add_item_media(item_id: int, *, images: list[str] = (),
@@ -764,6 +822,18 @@ def bump_send_attempts(post_id: int) -> int:
     return row["send_attempts"] if row else 0
 
 
+def topic_posts_since(topic: str, minutes: int) -> tuple[int, float | None]:
+    """(posts of this topic sent in the window, minutes since the newest of them)."""
+    row = conn().execute(
+        """SELECT COUNT(*) AS n,
+                  (julianday('now') - julianday(MAX(sent_at))) * 1440 AS ago
+             FROM posts
+            WHERE status = 'sent' AND topic = ?
+              AND sent_at >= datetime('now', ?)""",
+        (topic, f"-{int(minutes)} minutes")).fetchone()
+    return (row["n"] or 0), row["ago"]
+
+
 def posts_sent_since(minutes: int) -> int:
     """How many posts we have sent in the last N minutes — powers the rate caps."""
     return conn().execute(
@@ -834,6 +904,16 @@ def create_story(*, headline: str, summary: str, item_id: int, at: str,
 def attach_item_to_story(item_id: int, story_id: int) -> None:
     """Put an existing item into an existing story."""
     at = now_iso()
+    row = get_story(story_id)
+    if row is not None and row["status"] == "closed":
+        conn().execute(
+            """UPDATE items SET status='expired', status_reason='stale waiting item on reopened story',
+                       updated_at=? WHERE story_id=? AND id != ? AND status IN ('queued','held')
+                       AND fetched_at < datetime(?, ?)""",
+            (at, story_id, item_id, at, f"-{config.QUEUE_TTL_MINUTES} minutes"),
+        )
+        conn().execute("UPDATE stories SET status='live', reopened_at=?, roundup_asked_item_id=0 WHERE id=?",
+                       (at, story_id))
     conn().execute(
         "UPDATE items SET story_id = ?, updated_at = ? WHERE id = ?",
         (story_id, at, item_id),
@@ -974,8 +1054,8 @@ def close_stale_stories(idle_hours: int, max_hours: int) -> list[sqlite3.Row]:
           FROM stories s
          WHERE s.status = 'live'
            AND (s.last_item_at < datetime('now', '-{int(idle_hours)} hours')
-                OR s.first_at  < datetime('now', '-{int(max_hours)} hours'))
-        """
+                OR COALESCE(s.reopened_at, s.first_at) < datetime(?, '-{int(max_hours)} hours'))
+        """, (now_iso(),)
     ))
     if doomed:
         conn().executemany(

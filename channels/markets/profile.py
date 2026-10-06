@@ -25,6 +25,20 @@ IMAGE_RUBRIC_PATH = HERE / "image_rubric.md"
 
 MIN_IMPORTANCE = 4
 
+# Without today's date the sorter took "August 2026 payrolls" for a forecast and dropped it.
+SORTER_SHOWS_DATE = True
+
+# Measured 2026-10-06 against the old pair (gemini-2.5-flash sorter, deepseek-v3.2 writer).
+# Sorter, 200 past items + 50 repeats: 100% schema, agreed with nikita's labels 43/49
+# (old 40/49), let 1 of 14 known rumours/small items through (old 5), ~$3/month, 0.7s.
+# Only Claude Sonnet 5.5 matched it, at $32/month. Served by Google alone.
+SORTER_MODEL = "google/gemini-3.5-flash-lite"
+# Writer, 40 past posts judged by the live editor: 31/40 approved (old 24/40), one post
+# with a figure not in its source (old 2), ~$0.0003 a post. Posts run ~20% shorter.
+# A different lab from the editor (Mistral), as EDITOR_FALLBACK_MODEL's rule requires.
+# It declares no `temperature`; chat_text sends one and OpenRouter accepts it.
+WRITER_MODEL = "openai/gpt-6-luna"
+
 # MUST match rubric.md: the provider enforces this list, so a topic the rubric
 # asks for and this tuple omits is one the model physically cannot give. That
 # mismatch silently mislabelled a hundred items.

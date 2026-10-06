@@ -1,135 +1,103 @@
-# AI news channel (second channel on the Market One machinery)
+# Market One sorter rubric and model upgrade
 
-## What we're building
-A second Telegram channel that runs on the same code as Market One, and posts AI
-news that regular people can use: freelancers, business owners, students,
-creators. Think new ChatGPT features, a free tool for designers, an official
-prompt guide. Coding-only and run-it-yourself model news is allowed, but rare.
-Style reference: the Russian channel @incubeai_pro (teardown:
-https://claude.ai/artifact/N81CNKHc3nzdpa2TVksV4A). Runs on the VPS as its own
-service with `CHANNEL=ai_news`.
+## What we're improving
+On 2026-10-06 Market One posted "Flames and smoke seen at Venezuela's Cardon
+refinery" and "Unverified reports of fire over Saudi Arabia's largest oil field".
+The sorter scored both 4 on "could disrupt supply". Nothing had stopped, and the
+Saudi claim came from Iranian state media. Over the past month the same mistake
+let through five more sightings and war-side claims. The rubric had grown to
+2,952 words of patches, each added after one bad post, and the model followed it
+loosely. nikita asked for a simpler rubric, not another rule. The previous spec
+is preserved in docs/spec-story-continuity-2026-10-05.md.
 
 ## Contract
-
-GOAL: in a rehearsal (`tools/test_brain.py`) on real items from the AI sources,
-at least 8 of 10 written posts pass the "a 12-year-old gets it" read (no
-unexplained jargon, one clear benefit in the first line), each ends with a
-working link to the thing itself (the tool, repo or announcement, not an
-aggregator page), and Market One's prompts are byte-for-byte unchanged.
+GOAL: one short rubric built around nikita's own test, "which major asset's
+price will this move?". Its decisions must match his post/skip labels better
+than the old rubric on the same past items, and it must hold back rumours,
+sightings and small assets. Then pick the sorter and writer models on measured
+schema compliance, agreement, accuracy and cost.
 
 CONSTRAINTS:
-- Same codebase, same graph (brain/graph.py). The channel is a folder,
-  `channels/ai_news/`. Anything shared only grows an optional profile setting
-  whose default is exactly today's Market One behaviour.
-- Same OpenRouter key and models as Market One. No new paid services.
-- Sources (agreed 2026-10-04): AI/TLDR, Show HN (50+ points), Tom Dörr's
-  repo_posts, MindStudio blog, OpenAI news, Anthropic news (community feed, the
-  site has none), Hugging Face blog.
-- Not live until nikita creates the bot and channel and gives their names.
+- Market One only. AI Flow keeps its own rubric and its current models until
+  it is measured separately.
+- No change to the schema, the `none` → 3 cap, or anything after the writer.
+- Cost stays in the same range: a few dollars a month for these two stations.
+- Replays never write to the live database and never post.
 
 FORMAT:
-- `channels/ai_news/`: profile.py (sources, topics, marks, pacing), rubric.md
-  (what is worth posting), persona.md (voice), writer.md and editor.md (the
-  writer's and editor's prompts for this channel), image and video rubrics.
-- Post shape: one-line bold hook → 2-4 short "•" lines or one short paragraph
-  → a call-to-action line linking the thing → the channel signature.
-- Stations: dedup → sorter → fetch_article → story_organizer → gatekeeper →
-  writer → editor → repeat_check → image_analyst → video_analyst → publish.
+- `channels/markets/rubric.md`: an explicit major-asset list, then four tests
+  for a 4: real, new, striking, now. Short worked examples, taken from items
+  nikita labelled.
+- Models live in the channel profile (`SORTER_MODEL`, `WRITER_MODEL`); config.py
+  reads them through `getattr(_profile, …)`, and `.env` still wins.
+- The markets sorter is told today's date (`SORTER_SHOWS_DATE`).
+- `writer.figures_lost_by_cut`: the one-line-source cut never deletes a
+  figure that came from the source.
 
 FAILURE (any of these = not done):
-- Any Market One prompt, schema or emoji list changes (tests/fixtures hash).
-- The AI writer or editor prompt still talks about crypto, markets,
-  geopolitics or scheduled releases.
-- The AI channel reads from Market One's tweet group, so tweets go missing
-  from Market One.
-- A post links to something other than the item's own link or the product
-  link we extracted (a link from inside the scraped text).
-- A post goes out without the signature, or with the signature twice.
-- An item whose source page is a bot-check or empty is treated as the article.
-- A post contains any emoji (the "•" bullet is the only symbol allowed).
-- The 33 MB Tom Dörr feed is downloaded whole on every change.
-- A research paper, benchmark score, funding round or drama scores 4+ (not
-  usable by a regular person today).
+1. The new rubric agrees with nikita's labels less often than the old one, or
+   posts many fewer of the striking market facts he wants (records, big moves).
+2. A sighting, a rumour or a war-side damage claim scores 4 without a confirmed
+   supply effect.
+3. A chosen model returns the wrong JSON shape on more than 1% of calls, or is
+   served by providers that ignore the schema.
+4. The writer's posts are approved by the live editor less often than the old
+   writer's, or they contain more figures that are not in the source.
+5. AI Flow's models or rubric change as a side effect.
 
 ## Built on top of
-- Everything Market One already has: dedup, stories, editor, echo, media
-  analysts (`SPEC` history in git: media analysts done 2026-10-01).
-- Feeds: ai-tldr.dev/feed.xml (Atom, ~50 items, each page lists the official
-  source link first), hnrss.org/show?points=50, tom-doerr.github.io/repo_posts
-  /feed.xml (each entry has `<link rel="related">` to the repo),
-  mindstudio.ai/rss.xml, openai.com/news/rss.xml, Olshansk/rss-feeds
-  Anthropic feed on GitHub (community-run, fresh as of 2026-10-02),
-  huggingface.co/blog/feed.xml.
+- OpenRouter model catalogue and endpoints:
+  https://openrouter.ai/api/v1/models, /models/<id>/endpoints (providers per model)
+- Usage accounting in responses (`usage: {include: true}`) for the real cost of each call.
+- The live editor as a judge, after checking it on planted Tesla errors: it
+  rejected all four kinds of error 3/3 and approved both correct versions 3/3.
+- nikita's labels: artifact https://claude.ai/artifact/QFE7gctnRjtZu2fntSUknV
+  (41 post/skip answers + 8 he named in chat).
 
 ## Gotchas we're handling
-- x.ai/news blocks bots and its community feed stopped in May; Qwen's blog feed
-  stopped in 2025; daily.dev has no public feed. Skipped. Later option: their X
-  accounts through the tweet relay.
-- skills.sh and claudemarketplaces.com have no feed. They're directories, not
-  news, so they're left out of this round (would need "what's new since
-  yesterday" scraping).
-- Shared tweet stream: each channel gets its own reader group, and a channel
-  with no X accounts doesn't read the stream at all.
-- Feed dates: AI/TLDR stamps items at midnight, so the 24-hour "too old" cutoff
-  is 48 hours on this channel.
-- Tom Dörr's feed is 33 MB. We read only its first 1 MB and cut at the last
-  complete entry. It also hasn't updated since 2026-09-25.
-- Links: the writer never copies a link. It writes `href="LINK"` and the
-  publisher fills in the product link (repo / official source) or the item's own
-  address. Everything else is still stripped in code.
-- Jargon: a JARGON rule in this channel's editor sends a post back for one
-  rewrite if it uses a term a 12-year-old wouldn't know without explaining it.
+- The project's model helper retries, and falls back when a format breaks.
+  That hides schema failures, so the model test used a raw call with no
+  safety nets.
+- Over-tightening: a first "has it happened?" draft cut posts from 104 to 55 of
+  400 items, and nikita disagreed with it more. He wants striking market facts,
+  not only hard state changes.
+- Over-loosening: a "striking" draft posted 165 of 400, letting in leader
+  remarks, market odds and ETF-flow streaks. Fixed with "words are not
+  actions" and a background list.
+- Thinking budgets: gemini-3.8-flash ran out of room on 9 of 250 sorter calls
+  and 24 of 40 writer calls. It is not a drop-in model.
+- Concurrency against a small balance: OpenRouter refuses in-flight requests
+  that together could exceed the remaining credit (HTTP 402). Run tests at
+  three requests at a time and stop at the first 402.
+- Examples inside the rubric are also test items, so agreement on those items
+  is flattering. Compare models with each other, not against a perfect score.
 
 ## Build sequence
-1. Tests first: `tests/test_ai_channel.py` (AI channel) and
-   `tests/test_markets_unchanged.py` (prompt hashes). AI tests fail.
-2. Profile hooks: writer/editor prompt paths, marks and bullet, sorter axis
-   name, tweet group, article age, extra editor rules, signature, product link.
-3. Sources: related-link parsing, byte cap, product link from AI/TLDR pages.
-4. Content: rubric.md, persona.md, writer.md, editor.md.
-5. Rehearsal on real items, read every post, tune, update Status.
-6. Launch (needs bot token, channel id, channel name): service, labelled media
-   run with AI examples.
+1. Label past items (artifact), and replay old and new rubrics on 400 items.
+2. Iterate the rubric until it agrees with nikita more and lets fewer rumours through.
+3. Fix the date blind spot and the one-line cut that dropped estimates.
+4. Raw-call model test: 7 sorter candidates × 250 calls, 6 writers × 40 posts.
+5. Move models into the profile, show them per channel on the dashboard, restart.
 
 ## How to run and test
-- Tests (free, no model): `CHANNEL=ai_news /usr/bin/python3 tests/test_ai_channel.py`
-  and `CHANNEL=markets /usr/bin/python3 tests/test_markets_unchanged.py`
-  (plus the old `CHANNEL=markets /usr/bin/python3 tests/test_media.py`).
-- Collect real items: `CHANNEL=ai_news /usr/bin/python3 main.py initdb` then
-  `CHANNEL=ai_news /usr/bin/python3 main.py collect --once`
-- Rehearse (writes nothing, sends nothing, ~5 cents):
-  `CHANNEL=ai_news /usr/bin/python3 tools/test_brain.py --limit 25`
-- Setup to go live: `AI_TELEGRAM_BOT_TOKEN`, `AI_CHANNEL_ID`,
-  `AI_NEWS_SIGNATURE_HTML` in `.env`; bot is an admin of the channel.
+- Existing tests: `CHANNEL=markets /usr/bin/python3 tests/test_markets_unchanged.py`
+  (the sorter-prompt hash was updated for the new rubric),
+  `CHANNEL=ai_news /usr/bin/python3 tests/test_ai_channel.py`, `tests/test_macro.py`,
+  `tests/test_media.py`, `tests/test_reader_memory.py`.
+- Models in effect: `CHANNEL=markets /usr/bin/python3 -c "import config; print(config.SORTER_MODEL, config.WRITER_MODEL)"`.
+- Live schema health: `counters` rows `schema_ok:<model>` / `schema_bad:<model>`.
 
 ## Status
-_Updated: 2026-10-04_
-- Built: phases 1-5, and test posts are going to AI Flow (@ai_flow_daily, same bot
-  as Market One, signature in .env). Tests: AI 23/23, Market One prompts
-  unchanged 15/15, media 23/23.
-- Changed from plan (nikita, mid-build): no emoji, only "•", with bold key words
-  and blank lines. Pages without a feed are watched (nodes/fetch_pages.py:
-  plain request, then stealth crawl4ai). Posts should carry media wherever possible.
-- Media: OpenAI pages are behind a Cloudflare challenge even crawl4ai fails, so
-  r.jina.ai reads them (text, and the HTML for pictures). Vimeo/YouTube players
-  on a page are now clip candidates, downloaded with yt-dlp (720p, 20 MB, 2 min).
-  Dots, before: no media. After: OpenAI's own screen recording (t.me/ai_flow_daily/5).
-- Rehearsal 2 (69 real items): 4 posts approved, 4 sent back for jargon; developer
-  clutter gone. The editor is strict on jargon, which kills token-price stories.
-- Found and fixed: the shared tweet group would have split Market One's tweets;
-  USE_ECONOMIC_CALENDAR was never read; the sorter had no date ("DevDay 2026"
-  read as the future); the story placer merged two OpenAI products (now: one
-  product = one story).
-- Not covered: Qwen (no crawlable links), daily.dev (login), claudemarketplaces
-  (digest stopped 2026-08-31). Tom Dörr's feed hasn't updated since 2026-09-25.
-- 2026-10-04 later: "tokens"/"API" are not jargon here (nikita). Major labs' new
-  models and price cuts are wanted even when developer-only (GPT-6.1 Sol posted,
-  message 6). The editor sees its own earlier rejection on a rewrite (it had
-  flip-flopped "tokens" → "units of text" → "tokens"). Hacker News removed;
-  rehearsal queue cleared. yt-dlp: full path (systemd can't see ~/.local/bin),
-  weekly cron update, alert after 3 failed downloads.
-- 2026-10-04 evening: MindStudio removed (its explainer of OpenAI Spaces went out as
-  "just launched"); writer/editor now treat timing as a fact needing the source.
-  Future Tools added (futuretools.io/news/rss.xml, first 150 KB, has release dates).
-- Decided: no waiting for media from later sources; the page's own media is enough.
-- Next: the service file for CHANNEL=ai_news, then X accounts.
+_Updated: 2026-10-06_
+- Rubric live at 21:47 UTC. On 400 past items it posts 119 (old 104), agrees
+  with nikita on 40/49 (old 37/49), and holds every sighting and war-side claim
+  in the set.
+- Models live at 22:37 UTC. Sorter `google/gemini-3.5-flash-lite`: 100%
+  schema, 43/49, 1 of 14 traps through (old model 5), ~$3/month. Writer
+  `openai/gpt-6-luna`: 31/40 editor-approved (deepseek-v3.2 24/40), 1 invented
+  figure (old 2), ~$0.0003 a post.
+- Not adopted: claude-sonnet-5.5 (same agreement at 10× the price),
+  gemini-3.8-flash (thinking budget), claude-haiku-4.5 (5 invented figures),
+  deepseek-v4.x (29 providers, schema roulette).
+- Open: the editor rejects many drafts on nitpicks ("market" vs "markets").
+  AI Flow has not been measured on the new models yet.

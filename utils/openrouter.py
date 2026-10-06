@@ -102,6 +102,19 @@ def _extract(data: dict) -> tuple[str, str]:
     return content, reason
 
 
+def with_now(user):
+    """The user message with the current date and time in front, for every node.
+
+    A model's own sense of "now" is its training date; without this, a two-day-old
+    release reads as today's and a 2026 date reads as the future.
+    """
+    from datetime import datetime, timezone
+    stamp = f"Current date and time: {datetime.now(timezone.utc):%A %d %B %Y, %H:%M} UTC"
+    if isinstance(user, list):
+        return [{"type": "text", "text": stamp}, *user]
+    return f"{stamp}\n\n{user}"
+
+
 async def chat_text(
     *, model: str, system: str, user: str,
     temperature: float = 0.3, max_tokens: int = 900,
@@ -111,6 +124,7 @@ async def chat_text(
 
     A cut-off answer is retried once against the same model, then gives up.
     """
+    user = with_now(user)
     chain = [model, *(fallbacks or [])]
     last: Exception | None = None
     for position, candidate in enumerate(chain):
@@ -215,6 +229,7 @@ async def chat_json(
     that means a DIFFERENT lab from the writer, and one that accepts the strict
     schema. See EDITOR_FALLBACK_MODEL in config.py.
     """
+    user = with_now(user)
     chain = [model, *(fallbacks or [])]
     last: Exception | None = None
     for position, candidate in enumerate(chain):

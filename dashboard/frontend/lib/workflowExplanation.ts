@@ -176,6 +176,11 @@ not in the database.
 
 ---
 
+Closed stories remain available to the placer for **60 days** when semantically
+related. Every live thread remains available. The placer reads names, original
+headlines and published posts; a confirmed continuation reopens the existing
+thread. A new thread with related channel coverage must face the gate too.
+
 ### Phase 5: WRITING (Writer Node)
 For items that pass the gate, the writer composes the Telegram post.
 
@@ -231,7 +236,7 @@ The last question before anything is sent: **has the reader already been told th
 
 It stands at the exit, so nothing can route around it — not a new story, not a roundup,
 not a post you forced from this dashboard. And it compares the **finished post** against
-every post of the last 120 hours, which is the only comparison that matches what a
+every visible published post of the last 60 days, without a newest-post count cap, which is the only comparison that matches what a
 reader actually sees. Every other guard compares wire items, and a reader never reads
 wire items.
 
@@ -248,10 +253,14 @@ a new actor.
 Measured on 60 posts, real repeats scored 0.741–0.924 and legitimate posts 0.734–0.776,
 so the number only builds a shortlist and a model rules.
 
-*It fails open,* and the cost of that is worth knowing: a model that cannot answer in
-JSON is indistinguishable from one that says send, and the log reads the same either
-way. That is not hypothetical — one model answered 7 of 8 test pairs in prose and this
-check was dead for days while looking healthy.
+Published embeddings are cached by post ID, model and text fingerprint. Every
+related post above the permissive **0.60** floor reaches the judge, which reads
+combined history; large shortlists use batches. A partial overlap does not hold
+news that adds a meaningful fact. Levels are compared exactly: **5.656% is below 6%**.
+
+Unavailable memory or an invalid model verdict leaves the approved draft queued
+for retry. Send retries also repeat this check. Only embeddings expire after
+**60 days**; published text and story history remain.
 
 ---
 
@@ -376,15 +385,15 @@ will tune a number the running channel never sees.
 - **\`MIN_IMPORTANCE\`** (4): the publishing bar. Raise = fewer posts, lower = more noise.
 - **\`MAX_POSTS_PER_HOUR\`** (**4** — overridden in \`.env\`; the default in \`config.py\` is 12).
 - **\`STORY_MIN_GAP_MINUTES\`** (6) and **\`STORY_MAX_POSTS\`** (12): per story, anti-double-post.
-- **\`STORY_IDLE_HOURS\`** (36) / **\`STORY_MAX_HOURS\`** (168): when a story goes quiet, and its hard end.
+- **\`STORY_IDLE_HOURS\`** (120) / **\`STORY_MAX_HOURS\`** (168): when a story goes quiet, and its hard end.
 - **\`STORY_DIGEST_ITEMS\`** (3) and **\`STORY_DIGEST_MINUTES\`** (180): how many held
   items, waiting how long, before the gate is asked about a roundup.
 - **\`STORY_DIGEST_MAX_QUIET_HOURS\`** (12): past this much silence a story has stopped,
   and no roundup is asked about at all.
-- **\`ECHO_WINDOW_HOURS\`** (120) and **\`ECHO_SHORTLIST\`** (0.72): how far back the exit
+- **\`ECHO_WINDOW_HOURS\`** (1440) and **\`ECHO_SHORTLIST\`** (0.60): how far back the exit
   check looks, and how alike two posts must be to reach its model.
-- **\`ECHO_MODEL\`**: run \`tools/check_echo.py --labelled\` before changing it. This
-  station fails open, so a model that cannot answer looks like one that says send.
+- **\`ECHO_MODEL\`**: run \`tools/check_reader_memory.py --labelled\` before changing it.
+  Unavailable checks defer drafts for retry.
 `;
 
 // The same write-up for the AI news channel (AI Flow, @ai_flow_daily). It shares
@@ -433,6 +442,15 @@ Reads the headline, the feed's summary and the start of the article (and today's
   companies are a 4 even when they are only for developers. Version updates, unknown
   developer repos and third-party guides to someone else's release are a 3.
 
+**Daily limits.** Guides ("resource") and skill packs ("skill") are useful, but a channel full
+of them reads like a list: at most **2 of each a day, at least 3 hours apart**. One that passes
+the sorter but hits a limit waits in the **reserve** (shown as **Daily limit**). When the limit
+allows another, a model picks the most useful waiting one by the rubric and it is written and
+posted; anything that waits more than 3 days is dropped. New models, features and tools are not limited.
+
+**Not for this channel:** AI for fun or looks (beauty, fashion, dating, games), and general advice
+that is not about AI even when it is packaged as an AI skill (marketing-copy methods, sales frameworks).
+
 ## 5. Story organizer — which story is this?
 On this channel **one story is one product or release**: a launch, its rollout, a
 guide to it. Two announcements from the same company on the same day are two stories.
@@ -451,6 +469,10 @@ Its own prompt (writer.md) plus the voice file (persona.md). The shape:
 - two to four short "•" lines, or one or two short paragraphs, with **two or three key
   words in bold** (a name, a price, "free"),
 - the link line last ("Try it here", "Read the guide here").
+
+**It never repeats itself.** The writer sees the channel's last 10 posts as "do not open or
+phrase it like these", and if a post still starts with the same first two words as a recent
+one ("Here's a…"), it is sent back for a different opening once.
 
 **No emoji at all**, only the "•" bullet. No hype words, no capitals for shouting. The
 writer never copies a link: it writes LINK and the publisher fills in the address.

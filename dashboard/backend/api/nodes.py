@@ -89,16 +89,17 @@ DESCRIPTIONS: dict[str, str] = {
               "topic — the only node that decides if something is worth "
               "covering at all.",
     "story_organizer": "Decides which running story a new item joins, or starts a "
-                   "new one.",
+                   "new one. Related closed threads remain available for 60 days "
+                   "and can reopen without losing published history.",
     "gatekeeper": "Decides whether a story has moved enough since its last post to "
             "publish again.",
     "writer": "Rewrites the story into the channel's one house style.",
     "editor": "Reads the finished post against its source and approves or "
               "rejects it before it can be published.",
     "repeat_check": "The last station. Compares the finished post against every "
-                    "post of the last 5 days and asks whether a reader who saw "
-                    "the closest one learns anything new — the only check "
-                    "nothing can route around.",
+                    "visible post of the last 60 days, without a newest-post cap. "
+                    "Cached embeddings retrieve all related posts; the judge reads "
+                    "their combined information. Unavailable checks defer sending.",
     "image_analyst": "Looks at every candidate picture and picks the one that shows "
                      "what the post says, or none.",
     "video_analyst": "Watches candidate clips and keeps the first one that shows what "
@@ -210,22 +211,40 @@ def _extract_prompt(file_path: Path, const_name: str) -> str | None:
 
 
 def _extract_default_model(config_text: str, var_name: str) -> str | None:
-    """Pull the DEFAULT out of `VAR = _get("VAR", "default/value")` in config.py."""
+    """Pull the DEFAULT out of `VAR = _get("VAR", "default/value")` in config.py.
+
+    Also reads `VAR = _get("VAR", getattr(_profile, "VAR", "default/value"))`.
+    """
     pattern = re.compile(
-        rf'^{re.escape(var_name)}\s*=\s*_get\(\s*"{re.escape(var_name)}"\s*,\s*"([^"]*)"\s*\)',
+        rf'^{re.escape(var_name)}\s*=\s*_get\(\s*"{re.escape(var_name)}"\s*,\s*'
+        rf'(?:getattr\(\s*_profile\s*,\s*"{re.escape(var_name)}"\s*,\s*)?"([^"]*)"',
         re.MULTILINE,
     )
     match = pattern.search(config_text)
     return match.group(1) if match else None
 
 
-def _resolve_model(var_name: str, config_text: str, env_overrides: dict[str, str | None]) -> str:
+def _profile_value(channel: str, const_name: str) -> str | None:
+    """A one-line string constant from the channel's profile.py, read as text."""
+    try:
+        text = (paths.channel_dir(channel) / "profile.py").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(rf'^{re.escape(const_name)}\s*=\s*"([^"\n]*)"', text, re.MULTILINE)
+    return match.group(1) if match else None
+
+
+def _resolve_model(var_name: str, config_text: str, env_overrides: dict[str, str | None],
+                   channel: str = "") -> str:
     """The value the running channel actually uses for `var_name`.
 
-    Mirrors config.py's `_get()`: an override in .env or the process
-    environment wins over the default written in config.py's source.
+    Mirrors config.py: the channel's own .env override (MARKETS_SORTER_MODEL), then the
+    shared one, then the channel profile's constant, then config.py's default.
     """
-    value = env_overrides.get(var_name) or os.environ.get(var_name)
+    prefixed = f"{channel.upper()}_{var_name}" if channel else ""
+    value = ((prefixed and (env_overrides.get(prefixed) or os.environ.get(prefixed)))
+             or env_overrides.get(var_name) or os.environ.get(var_name)
+             or (channel and _profile_value(channel, var_name)))
     default = _extract_default_model(config_text, var_name)
     resolved = value if value else default
     return (resolved or "(unknown — not found in config.py)").strip()
@@ -258,11 +277,11 @@ def get_nodes(channel: str | None = Query(default=None, description="Which chann
             # rather than to the machinery, so it lives beside its profile.
             prompt = _channel_rubric(name)
 
-        model = _resolve_model(MODEL_VARS[node_id], config_text, env_overrides)
+        model = _resolve_model(MODEL_VARS[node_id], config_text, env_overrides, name)
 
         fallback_model: str | None = None
         if node_id in FALLBACK_MODEL_VARS:
-            fallback_model = _resolve_model(FALLBACK_MODEL_VARS[node_id], config_text, env_overrides)
+            fallback_model = _resolve_model(FALLBACK_MODEL_VARS[node_id], config_text, env_overrides, name)
             if not fallback_model or fallback_model.startswith("(unknown"):
                 fallback_model = None
 

@@ -131,6 +131,17 @@ STORY_PLACE_NOTES = getattr(_profile, "STORY_PLACE_NOTES", "")
 # The sorter reads the article too (the channel runs fetch_article before it).
 SORTER_READS_ARTICLE = getattr(_profile, "SORTER_READS_ARTICLE", False)
 
+# Show recent posts to the writer as "do not repeat these" rather than "sound like
+# these", and send back a post whose opening words a recent post already used.
+VARY_WRITING = getattr(_profile, "VARY_WRITING", False)
+
+# Per-topic limits: {topic: (max posts in 24 hours, min hours between two)}.
+# Empty = none (Market One).
+TOPIC_LIMITS = getattr(_profile, "TOPIC_LIMITS", {})
+
+# How long an item held back by TOPIC_LIMITS waits for a free slot (nodes/reserve.py).
+RESERVE_DAYS = _get_int("RESERVE_DAYS", 3)
+
 # Put today's date in front of what the sorter reads, so "2026" is not "the future".
 SORTER_SHOWS_DATE = getattr(_profile, "SORTER_SHOWS_DATE", False)
 
@@ -266,14 +277,15 @@ EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 
 # 1. Sorter: scores importance/topic. ~$1.50/mo ($6.53 of $7.40 for gemini-2.5-flash, vs
 # haiku $20 of $23).
-# 88% of bill: 4529-token rubric, 142x/day. Prompt caching measured and REJECTED: cache
+# 88% of bill: 4529-token rubric, 142x/day (markets rubric cut to ~1,900 tokens 2026-10-06). Prompt caching measured and REJECTED: cache
 # read $0.000812 vs uncached $0.005091,
 # but 5m expiry vs 6.5m median gap (only 41% <5m); miss costs $0.009909 → 21% DEARER.
-SORTER_MODEL = _get("SORTER_MODEL", "google/gemini-2.5-flash")
+# A channel profile may name its own (markets does since 2026-10-06; see its profile).
+SORTER_MODEL = _get("SORTER_MODEL", getattr(_profile, "SORTER_MODEL", "google/gemini-2.5-flash"))
 
 # 2. Writer: deepseek-v3.2 $0.40/M vs Gemini $2.50/M; output-heavy, so halves pipeline
 # cost.
-WRITER_MODEL = _get("WRITER_MODEL", "deepseek/deepseek-v3.2")
+WRITER_MODEL = _get("WRITER_MODEL", getattr(_profile, "WRITER_MODEL", "deepseek/deepseek-v3.2"))
 
 # 3. Editor: checks post against source. Tested 7 pairs: MiniMax 7/7 at 2.5s, mistral
 # 7/7, deepseek missed 1, qwen missed 3 at 32s.
@@ -429,15 +441,18 @@ ARTICLE_MAX_CHARS = _get_int("ARTICLE_MAX_CHARS", 6000)
 
 # THE LAST CHECK BEFORE SENDING (see nodes/echo.py). Shortlist wide (no cutoff between
 # repeat and step); judge decides.
-ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.72)
+ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.60)
 
 # Reader memory window. Measured 2026-09-29 on 8 channel posts: deepseek 7/8 prose
 # (fails open), mistral 8/8 schema+verdict,
 # gemini schema ok but 30-year Treasury repeat through. Don't move without re-running
 # this set.
 ECHO_MODEL = _get("ECHO_MODEL", "mistralai/mistral-medium-3.1")
-ECHO_WINDOW_HOURS = _get_int("ECHO_WINDOW_HOURS", 120)
-ECHO_MAX_COMPARED = _get_int("ECHO_MAX_COMPARED", 40)
+MEMORY_RETENTION_DAYS = max(1, _get_int("MEMORY_RETENTION_DAYS", 60))
+ECHO_WINDOW_HOURS = min(max(1, _get_int("ECHO_WINDOW_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)
+ECHO_BATCH_CHARS = max(1000, _get_int("ECHO_BATCH_CHARS", 16000))
+STORY_MEMORY_HOURS = min(max(1, _get_int("STORY_MEMORY_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)
+STORY_MEMORY_SHORTLIST = _get_float("STORY_MEMORY_SHORTLIST", 0.60)
 
 # THE MEDIA ANALYSTS (nodes/image_analyst.py, nodes/video_analyst.py). Measured
 # 2026-10-01: about $0.0007 per image and $0.003 for a 6 MB video on Flash.

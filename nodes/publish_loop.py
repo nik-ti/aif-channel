@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 
 import config
-from brain import graph as brain
+from brain import graph as brain, nodes as brain_nodes
 from nodes import publisher
 from utils import db, logger as log_setup
 
@@ -23,6 +23,7 @@ log = log_setup.get("publish")
 def _expire_stale() -> None:
     """Drop queued items that have waited too long, and end stories that are over."""
     expired = db.expire_stale_items(config.QUEUE_TTL_MINUTES)
+    db.prune_memory_embeddings()
     trimmed = db.trim_queue(config.MAX_QUEUE_SIZE)
 
     for story in db.close_stale_stories(config.STORY_IDLE_HOURS, config.STORY_MAX_HOURS):
@@ -56,7 +57,11 @@ async def process_item(item, place_only: bool = False, sweep: bool = False) -> s
     # That work is paid for, so go straight to sending.
     existing = db.get_post_by_item(item_id)
     if existing is not None and existing["status"] == "approved" and not place_only:
-        log.info("Item %s already has an approved post — retrying the send only", item_id)
+        checked = await brain_nodes.repeat_check_node({"item": dict(item), "post_id": existing["id"],
+                                                     "post_html": existing["post_html"]})
+        if checked.get("outcome"):
+            return checked["outcome"]
+        log.info("Item %s has an approved post — reader memory checked before retry", item_id)
         reply_to = None
         if item["story_id"]:
             earlier = db.get_story_posts(item["story_id"])
@@ -95,6 +100,19 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
     outcomes: dict[str, int] = {}
     published = 0
     placed = 0
+
+    # A guide or skill held back by its daily limit, now that the limit allows one.
+    if allowed and config.TOPIC_LIMITS:
+        from nodes import reserve
+        waiting = await reserve.next_release()
+        if waiting is not None:
+            log.info("Releasing item %s from the reserve: %s", waiting["id"], waiting["title"][:70])
+            state = await brain.run_item(waiting, dry_run=False, released=True)
+            outcome = state.get("outcome", "failed")
+            outcomes[outcome] = outcomes.get(outcome, 0) + 1
+            if outcome == "published":
+                published += 1
+                await publisher.pause_between_sends()
 
     # Look at more than we intend to publish; most get filtered out.
     # Selection is by importance; PROCESSING is chronological, because a story

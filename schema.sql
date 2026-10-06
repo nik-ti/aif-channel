@@ -28,6 +28,18 @@ PRAGMA busy_timeout = 5000;
 -- Make "REFERENCES" actually enforced, so deleting an item also deletes its post.
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS memory_embeddings (
+    kind TEXT NOT NULL CHECK(kind IN ('post', 'story')),
+    entity_id INTEGER NOT NULL,
+    model TEXT NOT NULL,
+    text_hash TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    vector BLOB NOT NULL,
+    activity_at TEXT NOT NULL,
+    PRIMARY KEY(kind, entity_id)
+);
+CREATE INDEX IF NOT EXISTS idx_memory_activity ON memory_embeddings(activity_at);
+
 
 -- ── sources ──────────────────────────────────────────────────────────────────
 -- One row per feed. The real list lives in config.SOURCES, which is what you

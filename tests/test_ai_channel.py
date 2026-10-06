@@ -501,6 +501,122 @@ async def the_article_is_read_before_the_sorter_judges():
     assert "Suno Speech makes voice and music together." in message, message[:300]
     assert "Release date: 2026-10-02" in message
 
+
+
+# ── 2026-10-06: date in every call, daily limits per type, varied openings ──
+
+@test
+async def every_model_call_is_told_the_date_and_time():
+    from utils import openrouter
+    sent = []
+
+    async def fake_post(payload):
+        sent.append(payload["messages"][-1]["content"])
+        return {"choices": [{"message": {"content": '{"ok": true}'}, "finish_reason": "stop"}]}
+    real = openrouter._post
+    openrouter._post = fake_post
+    try:
+        await openrouter.chat_text(model="m", system="s", user="hello")
+        await openrouter.chat_json(model="m", system="s", user="hello")
+        await openrouter.chat_json(model="m", system="s", user=[{"type": "text", "text": "look"}])
+    finally:
+        openrouter._post = real
+    assert sent[0].startswith("Current date and time: ") and sent[0].endswith("hello"), sent[0]
+    assert sent[1].startswith("Current date and time: ")
+    assert sent[2][0]["text"].startswith("Current date and time: ") and sent[2][1]["text"] == "look"
+
+
+def _sent_post(topic: str, minutes_ago: int) -> None:
+    n = db.conn().execute("SELECT COUNT(*) FROM items").fetchone()[0]
+    item_id = db.insert_item(origin="rss", source_name="t", external_id=f"cap{n}",
+                             url=f"https://e.x/{n}", title=f"t{n}", topic_hint=topic)
+    post_id = db.create_post(item_id=item_id, topic=topic, post_html="<b>x</b>",
+                             image_url="", writer_model="t")
+    db.conn().execute("UPDATE posts SET status='sent', sent_at=datetime('now', ?) WHERE id=?",
+                      (f"-{minutes_ago} minutes", post_id))
+    db.conn().commit()
+
+
+@test
+def guides_and_skills_are_capped_per_day_and_spaced_out():
+    from brain import nodes
+    assert "skill" in config.VALID_TOPICS and config.TOPIC_LIMITS["resource"][0] == 2
+    assert config.TOPIC_LIMITS["skill"][0] == 2
+    db.conn().execute("DELETE FROM posts"); db.conn().commit()
+    assert nodes.topic_limit_reason("skill") == ""
+    _sent_post("skill", 30)
+    assert "hours" in nodes.topic_limit_reason("skill")            # too soon after the last one
+    db.conn().execute("UPDATE posts SET sent_at=datetime('now','-5 hours')"); db.conn().commit()
+    assert nodes.topic_limit_reason("skill") == ""                 # spaced enough, 1 of 2 today
+    _sent_post("skill", 300)
+    assert "2 a day" in nodes.topic_limit_reason("skill")          # the day's two are used
+    assert nodes.topic_limit_reason("launch") == ""                # launches are not limited
+
+
+@test
+def an_opening_a_recent_post_already_used_is_caught():
+    from nodes import writer
+    recent = ["Here's a structured way to edit your marketing copy\n\nIt is a framework.",
+              "Suno now makes spoken audio\n\nIt's called Speech."]
+    assert writer.repeated_opening("<b>Here’s a free guide to AI search</b>\n\nText.", recent)
+    assert writer.repeated_opening("<b>Suno now writes lyrics too</b>", recent)
+    assert not writer.repeated_opening("<b>Designers get a free icon pack</b>", recent)
+
+
+
+# ── The reserve: capped guides and skills wait, the best one posts when a slot opens ──
+
+def _capped(title: str, topic: str, importance: int, hours_ago: int) -> int:
+    n = db.conn().execute("SELECT COUNT(*) FROM items").fetchone()[0]
+    item_id = db.insert_item(origin="rss", source_name="skills_trending", external_id=f"res{n}",
+                             url=f"https://skills.sh/a/b/{n}", title=title, body="text",
+                             topic_hint=topic, status="capped", status_reason="daily limit")
+    db.conn().execute("UPDATE items SET topic=?, importance=?, fetched_at=datetime('now', ?) "
+                      "WHERE id=?", (topic, importance, f"-{hours_ago} hours", item_id))
+    db.conn().commit()
+    return item_id
+
+
+@test
+async def the_reserve_drops_old_ones_and_releases_the_best_when_a_slot_opens():
+    from nodes import reserve
+    from utils import openrouter
+    db.conn().execute("DELETE FROM posts"); db.conn().execute("DELETE FROM items WHERE status='capped'")
+    db.conn().commit()
+    old = _capped("Old skill", "skill", 5, 4 * 24)
+    a = _capped("Skill A", "skill", 4, 5)
+    b = _capped("Skill B", "skill", 4, 2)
+    asked = {}
+
+    async def fake(**kwargs):
+        asked["user"] = kwargs["user"]
+        return {"best": 1, "reason": "B is the most useful"}
+    real, openrouter.chat_json = openrouter.chat_json, fake
+    try:
+        chosen = await reserve.next_release()
+    finally:
+        openrouter.chat_json = real
+    assert db.get_item(old)["status"] == "expired"
+    # Listed best score first, then newest: [0] Skill B, [1] Skill A. The model picked 1.
+    assert chosen is not None and chosen["id"] == a, chosen and chosen["id"]
+    assert "[0] Skill B" in asked["user"] and "Old skill" not in asked["user"]
+    assert db.get_item(b)["status"] == "capped"                               # still waiting
+
+    _sent_post("skill", 10)                                                   # slot taken again
+    assert await reserve.next_release() is None
+
+
+@test
+async def a_released_item_skips_the_sorter_and_the_limit():
+    from brain import nodes
+    item_id = _capped("Skill C", "skill", 4, 1)
+    _sent_post("skill", 5)                       # the limit would refuse it now
+    state = await nodes.sorter_node({"item": dict(db.get_item(item_id)), "released": True})
+    assert not state.get("outcome"), state
+    assert state["sorter_verdict"]["topic"] == "skill"
+    from brain import graph
+    assert "released" in graph.BrainState.__annotations__
+
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")
 for line in FAILED:
     print("  FAIL", line[:240])

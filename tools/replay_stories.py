@@ -46,11 +46,10 @@ async def replay(items: list[dict], write: bool) -> tuple[list[stories.Story], l
     for item in items:
         now = stories.parse_time(item["sent_at"])
 
-        # Same cap the live path applies before place() answers with an index
-        # into this list. Without it the replay shows the model a longer list
-        # than production ever would, and stops predicting production.
-        open_now = [s for s in live if s.is_live(now)][:config.STORY_MAX_OPEN]
-        home, _why, _asked = await stories.place(item, open_now, now)
+        # Simulated threads stay available within reader memory, even if idle.
+        open_now = [s for s in live if s.last_item_at and
+                    now - s.last_item_at <= timedelta(hours=config.STORY_MEMORY_HOURS)]
+        home, _why, _asked = await stories.place(item, open_now, now, persist=False)
 
         if home is None:
             home = stories.Story(id=next_id, headline=(item["title"] or "")[:90],
@@ -62,7 +61,7 @@ async def replay(items: list[dict], write: bool) -> tuple[list[stories.Story], l
             joined = True
 
         home.absorb(item, now)
-        verdict = await stories.should_post(home, now)
+        verdict = await stories.should_post(home, now, persist=False)
 
         # The gate is the second opinion on the placement. When it says the item
         # does not belong, the item leaves rather than being silenced inside the
@@ -75,7 +74,7 @@ async def replay(items: list[dict], write: bool) -> tuple[list[stories.Story], l
             live.append(home)
             joined = False
             home.absorb(item, now)
-            verdict = await stories.should_post(home, now)
+            verdict = await stories.should_post(home, now, persist=False)
 
         entry = {
             "at": now, "item": item, "story": home, "joined": joined,

@@ -72,6 +72,8 @@ Simple does NOT mean vague. Keep the names, numbers, prices and conditions that 
 3. Then, after a blank line, the link line, which is ALWAYS the last line: <a href="LINK">Try it here</a>. Write LINK exactly like that; the system replaces it with the real address. Pick the words for what tapping it does: "Try it here", "Download it here", "Read the guide here", "Copy the prompt here", "See it here", "Join the waitlist here".
 4. Optionally, one short friendly line before the link line, if it adds something: who it is perfect for, or a light joke. Most posts do not need it.
 
+**Never open with "Here's a", "Here's how", "It's called", "Meet" or "Say hello to".** Start with the thing itself or with the reader's problem: "Suno can now make spoken audio", "Designers, there's a free pack of 900 icons", "Got a refund a shop won't give you?". The channel's last posts are shown below; open differently from all of them.
+
 **Bold and line breaks do the work emoji would.** Besides the first line, put <b>...</b> around the two or three words the reader's eye should land on: the product name the first time it appears in the body, a price, "free", who gets it, a key number. Never a whole sentence, never more than three bold spots below the first line. Keep a blank line between the first line, the body and the link line, and keep every "• " line on its own line.
 
 Only add what the source supports. If the source has one fact, the post is the first line plus the link line, and that is a success.

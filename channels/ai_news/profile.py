@@ -32,8 +32,16 @@ COLLECT_ARTICLE_MEDIA = True
 MIN_IMPORTANCE = 4
 
 # MUST match rubric.md: the provider enforces these lists.
-TOPICS = ("launch", "tool", "resource", "other")
-VALID_TOPICS = ("launch", "tool", "resource")
+TOPICS = ("launch", "tool", "skill", "resource", "other")
+VALID_TOPICS = ("launch", "tool", "skill", "resource")
+
+# Guides and skill packs: useful, but a channel full of them reads like a list
+# (six skills.sh posts went out in 16 minutes on 2026-10-05). At most 2 of each a
+# day, at least 3 hours apart. Launches and tools are not limited.
+TOPIC_LIMITS = {"resource": (2, 3), "skill": (2, 3)}
+
+# One person writes this channel: no two posts open the same way.
+VARY_WRITING = True
 
 # The sorter's third question here is "who can use this today?". "none" caps the
 # score at 3, exactly like "no market reprices" on Market One.

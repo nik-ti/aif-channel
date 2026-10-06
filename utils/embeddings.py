@@ -81,6 +81,10 @@ async def _embed_batch(batch: list[str]) -> list[list[float]] | None:
 
         # Trust the echoed index, not the arrival order. Same reasoning.
         ordered = sorted(rows, key=lambda row: row.get("index", 0))
+        if (any(type(row.get("index")) is not int for row in ordered)
+                or [row.get("index") for row in ordered] != list(range(len(batch)))):
+            log.warning("Embedding response has duplicate/missing/out-of-range indices — discarding")
+            return None
         return [row["embedding"] for row in ordered]
 
     except Exception as error:  # noqa: BLE001 - this must never break the pipeline

@@ -42,6 +42,8 @@ class BrainState(TypedDict, total=False):
     place_only: bool            # file into a story, but stop before the gate
     forced: bool                # a human overrode a rejection: the sorter and the
                                 # gate step aside, the writer and the editor do not
+    released: bool              # out of the reserve: already sorted and once held
+                                # back by a daily limit; dedup and the sorter step aside
     sweep: bool                 # a roundup: the item was judged once already,
                                 # skip straight to its story and the gate
 
@@ -115,7 +117,7 @@ graph = build_graph()
 
 async def run_item(item_row, *, dry_run: bool = False,
                    place_only: bool = False, sweep: bool = False,
-                   forced: bool = False) -> dict[str, Any]:
+                   forced: bool = False, released: bool = False) -> dict[str, Any]:
     """Run one queued item through the editorial graph.
 
     dry_run makes every decision for real but writes nothing and sends nothing.
@@ -137,6 +139,7 @@ async def run_item(item_row, *, dry_run: bool = False,
         "place_only": place_only,
         "sweep": sweep,
         "forced": forced,
+        "released": released,
         "rewrite_count": 0,
         "editor_feedback": "",
         "outcome": "",

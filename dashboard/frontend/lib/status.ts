@@ -26,6 +26,7 @@ export const STATUS_INFO: Record<string, StatusInfo> = {
   rejected: { label: "Rejected", hint: "Did not go out — filtered, declined, or a duplicate", color: "#DC2626" },
   duplicate: { label: "Duplicate", hint: "Already covered", color: "#2563EB" },
   merged: { label: "Merged", hint: "Folded into another item's story post", color: "#64748B" },
+  capped: { label: "Daily limit", hint: "Good enough, but its type (guide, skill) hit today's limit — waiting in the reserve; the best one posts when a slot opens, dropped after 3 days", color: "#0EA5E9" },
   expired: { label: "Expired", hint: "Sat in the queue too long and went stale", color: "#9CA3AF" },
   failed: { label: "Failed", hint: "Something broke repeatedly — see the reason", color: "#BE123C" },
   skipped_stale: { label: "Skipped · stale", hint: "Already too old when it was read", color: "#A8A29E" },
@@ -60,6 +61,7 @@ export const STATUS_FILTERS: StatusFilter[] = [
   { id: "declined", label: "Declined", statuses: ["declined"], color: STATUS_INFO.declined.color },
   { id: "duplicate", label: "Duplicate", statuses: ["duplicate"], color: STATUS_INFO.duplicate.color },
   { id: "merged", label: "Merged", statuses: ["merged"], color: STATUS_INFO.merged.color },
+  { id: "capped", label: "Daily limit", statuses: ["capped"], color: STATUS_INFO.capped.color },
   { id: "expired", label: "Expired", statuses: ["expired"], color: STATUS_INFO.expired.color },
   {
     id: "skipped",
@@ -80,6 +82,7 @@ export const FORCEABLE = new Set([
   "duplicate",
   "merged",
   "expired",
+  "capped",
   "failed",
   "skipped_stale",
   "skipped_backlog",

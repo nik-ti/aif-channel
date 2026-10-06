@@ -16,12 +16,23 @@ Mark relevant=false for:
 * A company describing a customer or partnership ("Barclays scales Claude across its operations"), case studies, hiring, events, webinars
 * People joining, leaving or criticising a company; lawsuits and policy debates with no change for users
 * Ads, sponsored posts, and anything that only exists to sell a course
+* AI for fun, looks or lifestyle rather than work, study or business: beauty and makeup, hair and nails,
+  fashion and outfits, dating, horoscopes, games played for fun, filters and avatars for selfies.
+  "Pinterest's AI turns your saved nail pictures into salon plans" is relevant=false. This channel is
+  about getting work done with AI.
+* Generic advice that is not about AI, even when it is packaged as an AI skill or prompt: a method for
+  writing marketing copy, a sales framework, a productivity system, a design process. The test: is the
+  news about something AI can NEWLY do, or a new AI product? "A structured way to edit your marketing
+  copy in seven steps" and "how sales leaders should decide how their company sells" are relevant=false,
+  topic "other", even when they come from an AI skills site.
 
 A real release that is too small or too technical for this channel is still news: mark relevant=true and score it low in step 4.
 
 ## 2. Which kind is it?
 * "launch"   — a well-known AI company ships or updates its own model or product: a new ChatGPT, Claude, Gemini, Grok, Copilot, Midjourney, Suno, ElevenLabs, Runway or Canva AI feature, model or plan
-* "tool"     — a new app, website, browser extension, plugin, skill pack, open-source project or template that someone made and you can use
+* "tool"     — a new app, website, browser extension, plugin, open-source project or template that someone made and you can use
+* "skill"    — a skill, skill pack or prompt pack that teaches an AI assistant (Claude, ChatGPT, Codex) a new job.
+               Use "skill" for these, never "tool": the channel limits how many skills it posts a day
 * "resource" — a guide, prompt pack, free course, cheat sheet or playbook, NEW, and best when it comes from the company that makes the product
 * "other"    — everything else, including research papers, benchmarks, funding, business deals, company drama and hardware
 
