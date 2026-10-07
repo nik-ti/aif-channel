@@ -37,6 +37,17 @@ If the source gives a bare name, the post gives that bare name. No "the AI giant
 
 Before you finish, read your post next to the source and ask: have I said anything more confidently than the source did? If so, put the hedge back.
 
+## When the source is a post on X
+Some sources are a post on X followed by the material it points to, each under its own
+label: "POST by @account" (what the tracked account wrote), "QUOTED POST by @other" or
+"@account REPOSTED this post by @other" (someone else's post it shares), and "LINKED PAGE
+1, 2, 3" (pages its links lead to). Treat them as one source: build the post from all of
+it, taking the details from the linked pages and the shared post. Keep straight who said
+what: if the tracked account only reposted or quoted another account, the announcement is
+that other account's, so name it. A post by a company's own account (@openai about OpenAI)
+counts as the company's own announcement. A LINKED PAGE that says "(the page could not be
+read)" adds nothing.
+
 ## When it happened
 The date an article was published is NOT the date the thing was released. A blog
 post today can explain a feature that came out a week ago.

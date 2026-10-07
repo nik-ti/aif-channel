@@ -666,6 +666,118 @@ async def a_released_item_skips_the_sorter_and_the_limit():
     from pipeline import graph
     assert "released" in graph.BrainState.__annotations__
 
+TWEET_NOW = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+
+
+def _relay_entry(**over):
+    data = {"tweet_id": "501", "handle": "OpenAI", "created_at": TWEET_NOW,
+            "url": "https://x.com/OpenAI/status/501",
+            "text": "Codex now reviews your pull requests. Details https://t.co/aaa",
+            "media": ["https://pbs.twimg.com/media/own.jpg"], "video": "", "video_kind": "",
+            "links": [{"url": "https://openai.com/index/codex-review/", "short": "https://t.co/aaa",
+                       "title": "Codex reviews PRs", "description": "Turn on automatic review"}],
+            "shared": None}
+    data.update(over)
+    return {"data": json.dumps(data)}
+
+
+SHARED = {"kind": "quoted", "tweet_id": "99", "handle": "OpenAIDevs", "created_at": TWEET_NOW,
+          "url": "https://x.com/OpenAIDevs/status/99",
+          "text": "Background mode is live in the Responses API https://t.co/ddd",
+          "links": [{"url": "https://platform.openai.com/docs/background", "short": "https://t.co/ddd",
+                     "title": "", "description": ""},
+                    {"url": "https://x.com/OpenAI/status/1", "short": "https://t.co/eee",
+                     "title": "", "description": ""}],
+          "media": ["https://pbs.twimg.com/media/q.jpg"], "video": "https://video.twimg.com/q.mp4",
+          "video_kind": "video"}
+
+
+@test
+def a_tweet_brings_its_links_and_the_post_it_shares():
+    from nodes import fetch_tweets
+    tweet = fetch_tweets._parse_entry(_relay_entry(shared=SHARED))
+    assert tweet.links[0]["url"] == "https://openai.com/index/codex-review/"
+    assert tweet.shared["handle"] == "OpenAIDevs" and tweet.shared["kind"] == "quoted"
+    old = fetch_tweets._parse_entry({"data": json.dumps({"tweet_id": "1", "handle": "openai",
+                                                       "text": "x", "url": "u", "created_at": ""})})
+    assert old.links == () and old.shared is None          # a message from before the change still reads
+
+
+@test
+def a_tweet_is_stored_as_a_labelled_source():
+    from nodes import collect_loop, fetch_tweets
+    tweet = fetch_tweets._parse_entry(_relay_entry(tweet_id="502", shared=SHARED))
+    assert collect_loop._store_tweet(tweet)
+    row = db.conn().execute("SELECT * FROM items WHERE external_id = '502'").fetchone()
+    body = row["body"]
+    assert body.startswith("POST by @openai on X")
+    assert "https://openai.com/index/codex-review/" in body and "t.co" not in body
+    assert "QUOTED POST by @openaidevs" in body and "Background mode is live" in body
+    assert body.index("POST by @openai") < body.index("QUOTED POST")
+    links = json.loads(row["links_json"])
+    assert [l["url"] for l in links] == ["https://openai.com/index/codex-review/",
+                                         "https://platform.openai.com/docs/background"]   # x.com link skipped
+    assert row["link_url"] == "https://openai.com/index/codex-review/"
+    media = json.loads(row["media_json"])
+    assert {"https://pbs.twimg.com/media/own.jpg", "https://pbs.twimg.com/media/q.jpg"} <= set(media["images"])
+    assert any(v["url"] == "https://video.twimg.com/q.mp4" for v in media["videos"])
+
+    retweet = dict(SHARED, kind="retweeted")
+    tweet = fetch_tweets._parse_entry(_relay_entry(tweet_id="503", text="RT @OpenAIDevs: Background mode…",
+                                                   links=[], media=[], shared=retweet))
+    assert collect_loop._store_tweet(tweet)
+    row = db.conn().execute("SELECT * FROM items WHERE external_id = '503'").fetchone()
+    assert row["body"].startswith("@openai REPOSTED this post by @openaidevs")
+    assert "RT @" not in row["body"] and row["title"].startswith("Background mode is live")
+
+
+@test
+async def the_pages_a_tweet_links_to_are_read_into_its_source():
+    from nodes import article, collect_loop, fetch_tweets
+    many = [{"url": f"https://site{i}.dev/page", "short": f"https://t.co/{i}", "title": f"Page {i}",
+             "description": ""} for i in range(5)]
+    tweet = fetch_tweets._parse_entry(_relay_entry(tweet_id="504", links=many, media=[],
+                                                   text="Five new templates for Sora videos"))
+    assert collect_loop._store_tweet(tweet)
+    item = db.conn().execute("SELECT * FROM items WHERE external_id = '504'").fetchone()
+    assert len(json.loads(item["links_json"])) == config.TWEET_MAX_LINKS == 3
+    read = []
+
+    async def plain(url):
+        read.append(url)
+        if "site1" in url:
+            return None, ""                         # one page cannot be read
+        return f"Full article text of {url}. " * 20, f"<html><img src='https://{url[8:13]}.dev/i.png'></html>"
+
+    async def nothing(url):
+        return None, ""
+
+    async def no_reader(url):
+        return None
+    real = article._plain, article._browser, article._reader
+    article._plain, article._browser, article._reader = plain, nothing, no_reader
+    try:
+        text = await article.fetch_for(item)
+    finally:
+        article._plain, article._browser, article._reader = real
+    assert read == ["https://site0.dev/page", "https://site1.dev/page", "https://site2.dev/page"]
+    assert text.startswith("POST by @openai on X")
+    assert "LINKED PAGE 1: https://site0.dev/page" in text and "Full article text of https://site0.dev" in text
+    assert "LINKED PAGE 2: https://site1.dev/page" in text and "Page 1" in text    # X's preview stands in
+    assert text.index("LINKED PAGE 1") < text.index("LINKED PAGE 2") < text.index("LINKED PAGE 3")
+    assert db.get_item(item["id"])["article_text"] == text
+
+
+@test
+def the_sorter_reads_a_tweet_once():
+    from nodes import sorter
+    row = dict(db.conn().execute("SELECT * FROM items WHERE external_id = '504'").fetchone())
+    message = sorter.user_message(row)
+    text = message.split("Text:", 1)[1]
+    assert text.count("Five new templates for Sora videos") == 1, message
+    assert "LINKED PAGE 1" in text
+
+
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")
 for line in FAILED:
     print("  FAIL", line[:240])

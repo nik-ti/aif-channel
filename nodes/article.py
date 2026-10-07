@@ -12,6 +12,7 @@ It fails open: no article means the item keeps its headline.
 from __future__ import annotations
 
 import asyncio
+import json
 
 import httpx
 import trafilatura
@@ -194,6 +195,57 @@ def product_link(html: str, page_url: str) -> str:
     return ""
 
 
+async def _read(url: str) -> tuple[str | None, str, str]:
+    """(text, html, how) for one page: a plain request, then the browser, then the reader."""
+    text, html = await _plain(url)
+    used = "plain"
+    if text is None:
+        text, html = await _browser(url)
+        used = "browser"
+    if text is None:
+        text = await _reader(url)
+        used = "reader"
+        if text and config.COLLECT_ARTICLE_MEDIA:
+            html = await _reader_html(url)
+    return text, html or "", used
+
+
+async def _tweet_pages(item) -> str | None:
+    """A tweet's source with the pages it links to read in, each under its own label.
+
+    The tweet is the trigger; the linked announcement, docs or repo carry the detail.
+    A page that cannot be read is represented by X's own preview of it, if any.
+    """
+    try:
+        links = json.loads(item["links_json"] or "[]") if "links_json" in item.keys() else []
+    except json.JSONDecodeError:
+        links = []
+    if not links:
+        return None
+    budget = config.ARTICLE_MAX_CHARS // len(links)
+    parts, read = [(item["body"] or "").strip()], 0
+    for number, link in enumerate(links, start=1):
+        url = link["url"]
+        text, html, used = await _read(url)
+        if config.COLLECT_ARTICLE_MEDIA and html:
+            from nodes import media
+            images, videos = media.from_article_html(html, url)
+            if images or videos:
+                db.add_item_media(item["id"], images=images, videos=videos)
+        preview = "\n".join(p for p in (link.get("title"), link.get("description")) if p)
+        if text:
+            read += 1
+            content = text.strip()[:budget]
+            log.info("Tweet %s: linked page %d read via %s (%d chars)", item["id"], number, used, len(content))
+        else:
+            content = preview or "(the page could not be read)"
+        parts.append(f"LINKED PAGE {number}: {url}\n{content}")
+    (_record_success if read else _record_failure)()
+    combined = "\n\n".join(parts)
+    db.set_article_text(item["id"], combined)
+    return combined
+
+
 async def fetch_for(item) -> str | None:
     """The article behind this item, cached on the row. None if there is none.
 
@@ -208,24 +260,13 @@ async def fetch_for(item) -> str | None:
         return cached
     if not url or not url.startswith("http"):
         return None
-    # A tweet's link is the tweet itself, and x.com answers a logged-out reader
-    # with its sign-in page. 39 of the first 58 fetches from X stored that page
-    # as "the article" and handed it to the writer and the editor, which is how
-    # a clean post about oil got rejected for containing X formatting it never
-    # had. The tweet text is already the whole source.
+    # A tweet's own link is the tweet itself, and x.com answers a logged-out reader
+    # with its sign-in page (39 of the first 58 fetches stored that page as "the
+    # article"). What a tweet links OUT to is read instead.
     if any(host in url for host in ("x.com/", "twitter.com/")):
-        return None
+        return await _tweet_pages(item)
 
-    text, html = await _plain(url)
-    used = "plain"
-    if text is None:
-        text, html = await _browser(url)
-        used = "browser"
-    if text is None:
-        text = await _reader(url)
-        used = "reader"
-        if text and config.COLLECT_ARTICLE_MEDIA:
-            html = await _reader_html(url)
+    text, html, used = await _read(url)
     known = (item["link_url"] if "link_url" in item.keys() else "") or ""
     if config.PRODUCT_LINK_PAGES and html and not known:
         link = product_link(html, url)

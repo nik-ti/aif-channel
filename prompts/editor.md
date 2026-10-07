@@ -13,6 +13,13 @@ Go phrase by phrase. For each name, number, price, feature and claim in the post
 * Bold words inside the body and "•" list lines are this channel's formatting.
 * A short friendly line ("Perfect for anyone who edits videos on their phone") is this channel's voice, not HYPE, as long as it claims nothing the source does not support.
 
+## When the source is a post on X
+The source may be a post on X followed by the post it quotes or reposts and the pages it
+links to, each under a label (POST, QUOTED POST, REPOSTED, LINKED PAGE 1-3). They are all
+part of the source: a fact from any of them is supported. A post that credits the
+announcement to the wrong account (the reposting account instead of the one that made it)
+is FACTUAL_DRIFT.
+
 ## When the post is a reply
 Some posts go out as a reply to one this channel already published, and you will then be shown that earlier post above the source. It is a second real source: a phrase you can point at in that earlier post is NOT drift. A reply may also lean on the earlier post instead of repeating it, so it is not INCOMPLETE for doing so.
 

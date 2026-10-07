@@ -52,6 +52,8 @@ class Tweet:
     media: tuple[str, ...] = field(default_factory=tuple)   # image addresses
     video: str = ""          # the MP4 behind a clip; media still holds its thumbnail
     video_kind: str = ""     # "video" | "gif" | ""
+    links: tuple[dict, ...] = field(default_factory=tuple)  # {url, short, title, description}
+    shared: dict | None = None   # the post it quotes or reposts, with its own text, links, media
 
     @property
     def image_url(self) -> str:
@@ -83,6 +85,8 @@ def _parse_entry(fields: dict) -> Tweet | None:
         media=tuple(data.get("media", []) or ()),
         video=data.get("video", "") or "",
         video_kind=data.get("video_kind", "") or "",
+        links=tuple(data.get("links") or ()),
+        shared=data.get("shared") or None,
     )
 
 

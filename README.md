@@ -47,7 +47,7 @@ graph LR
 | Step | File | What it decides |
 |---|---|---|
 | dedup | `nodes/dedup.py`, `nodes/judge.py` | Have we seen this? Five checks, cheapest first; the last one is an AI reading both texts. |
-| fetch_article | `nodes/article.py` | Reads the full page *before* the sorter (feeds often give one line). Plain request, then a stealth browser, then a reader service. Collects pictures, video players and the product link. |
+| fetch_article | `nodes/article.py` | Reads the full page *before* the sorter (feeds often give one line). Plain request, then a stealth browser, then a reader service. Collects pictures, video players and the product link. For a tweet it reads up to 3 pages the tweet links to instead (see below). |
 | sorter | `nodes/sorter.py` + `prompts/rubric.md` | Is it worth posting? Kind (launch, tool, skill, resource), who can use it today, usefulness 1-5. 4+ goes on. "Nobody can use it" caps at 3 in code. |
 | story_organizer | `nodes/stories.py` | Which running story does it join? One product or release = one story. |
 | gatekeeper | `nodes/stories.py` | Has the story moved? Post, or hold the item as fuel for the story's next post. |
@@ -127,6 +127,17 @@ then `sudo systemctl restart aif-channel`.
 `/home/nikita/systems/infra/tweet-relay/accounts.txt` (then `sudo systemctl restart tweet-relay`
 and `aif-channel`). A test fails if the two lists differ. Followed now: openai, googledeepmind,
 claudeai, claudedevs, testingcatalog, btibor91.
+
+### Tweets
+
+A tweet is a trigger, not the whole story. The relay sends the full text of long posts, the
+real address and X's preview of every link, and the post it quotes or reposts (retweets are
+included). AI Flow stores one source with labelled parts: `POST by @account`, then
+`QUOTED POST by @other` or `@account REPOSTED this post by @other`, then `LINKED PAGE 1-3`
+(read with the same plain → browser → reader chain; X's preview stands in for a page that
+can't be read). Links back to X are skipped. The first outside link becomes the post's link,
+and the pictures and clips of the tweet, the shared post and the linked pages are all
+candidates for the analysts. `prompts/writer.md` and `prompts/editor.md` explain the labels.
 
 ### Changing a model
 

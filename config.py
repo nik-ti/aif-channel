@@ -146,6 +146,10 @@ X_ACCOUNTS: dict[str, str] = {
 }
 NO_MEDIA_SOURCES: set[str] = set()
 
+# A tweet is a trigger: the post it quotes or reposts and up to this many of the pages it
+# links to are read into its source (nodes/article.py), each part labelled.
+TWEET_MAX_LINKS = _get_int("TWEET_MAX_LINKS", 3)
+
 # AI/TLDR dates its items at midnight, so a day-old cutoff drops most of them.
 ARTICLE_MAX_AGE_HOURS = _get_int("ARTICLE_MAX_AGE_HOURS", 48)
 

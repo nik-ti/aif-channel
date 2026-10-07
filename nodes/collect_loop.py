@@ -11,6 +11,8 @@ This file never writes posts, calls a model, or sends anything — it only turns
 from __future__ import annotations
 
 import asyncio
+import json
+import re
 from datetime import datetime, timedelta, timezone
 
 import config
@@ -79,15 +81,67 @@ def _store_article(article: fetch_rss.Article) -> bool:
     return True
 
 
+_X_HOSTS = ("x.com/", "twitter.com/", "t.co/", "pic.x.com/", "pic.twitter.com/")
+
+
+def _readable(text: str, links: list[dict]) -> str:
+    """The tweet's words with each t.co link replaced by its real address, the rest dropped."""
+    for link in links:
+        if link.get("short") and link.get("url"):
+            text = text.replace(link["short"], textclean.strip_utm(link["url"]))
+    return re.sub(r"https?://t\.co/\S+", "", text).strip()
+
+
+def tweet_source(tweet: fetch_tweets.Tweet) -> tuple[str, str, list[dict]]:
+    """(title, labelled source text, outside links to read) for one tweet.
+
+    The tracked account's post comes first, then the post it quotes or reposts, each
+    under a label, so the models can tell who said what. Links to X itself are left
+    out: the shared post's text already arrives with the tweet.
+    """
+    handle = tweet.handle.lower()
+    own = _readable(tweet.text, list(tweet.links))
+    shared = tweet.shared or {}
+    other = (shared.get("handle") or "unknown").lower()
+    shared_text = _readable(shared.get("text") or "", shared.get("links") or [])
+
+    if shared.get("kind") == "retweeted":
+        title = textclean.tweet_to_title(shared_text)
+        body = f"@{handle} REPOSTED this post by @{other} ({shared.get('url', '')}):\n{shared_text}"
+    else:
+        title = textclean.tweet_to_title(own)
+        body = f"POST by @{handle} on X ({tweet.url}):\n{own}"
+        if shared:
+            body += f"\n\nQUOTED POST by @{other} ({shared.get('url', '')}):\n{shared_text}"
+
+    links, seen = [], set()
+    for link in [*tweet.links, *(shared.get("links") or [])]:
+        url = textclean.strip_utm(link.get("url") or "")
+        if not url.startswith("http") or any(host in url for host in _X_HOSTS) or url in seen:
+            continue
+        seen.add(url)
+        links.append({"url": url, "title": link.get("title") or "",
+                      "description": link.get("description") or ""})
+    return title, body, links[:config.TWEET_MAX_LINKS]
+
+
 def _store_tweet(tweet: fetch_tweets.Tweet) -> bool:
-    """Save a tweet if it is new.
+    """Save a tweet if it is new, as a labelled source with its links and all its media.
 
     Tweets have no headline, so the opening line becomes one — that is what
     lets a tweet be matched against an article about the same event.
     """
-    title = textclean.tweet_to_title(tweet.text)
+    title, body, links = tweet_source(tweet)
     norm_title = textclean.normalise_headline(title)
     fingerprint = textclean.title_hash(title)
+
+    shared = tweet.shared or {}
+    images = [*tweet.media, *(shared.get("media") or [])]
+    videos = [{"url": v, "kind": k or "video"} for v, k in
+              ((tweet.video, tweet.video_kind), (shared.get("video", ""), shared.get("video_kind", "")))
+              if v]
+    if tweet.handle in config.NO_MEDIA_SOURCES:
+        images, videos = [], []
 
     item_id = db.insert_item(
         origin="x",
@@ -95,23 +149,24 @@ def _store_tweet(tweet: fetch_tweets.Tweet) -> bool:
         external_id=tweet.tweet_id,
         url=tweet.url,
         title=title,
-        body=tweet.text,
-        image_url="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.image_url,
-        video_url="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.video,
-        video_kind="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.video_kind,
+        body=body,
+        image_url=images[0] if images else "",
+        video_url=videos[0]["url"] if videos else "",
+        video_kind=videos[0]["kind"] if videos else "",
         published_at=None,   # X's own timestamp format differs; fetched_at is enough
         norm_title=norm_title,
         title_hash=fingerprint,
         topic_hint=config.X_ACCOUNTS.get(tweet.handle, ""),
+        # The page the post is about is the link readers want, not the tweet.
+        link_url=links[0]["url"] if links else "",
+        links_json=json.dumps(links) if links else "",
     )
 
     if item_id is None:
         return False
-    if tweet.handle not in config.NO_MEDIA_SOURCES:
-        # All of the tweet's pictures, not only the first; the image analyst chooses.
-        db.add_item_media(item_id, images=list(tweet.media),
-                          videos=[{"url": tweet.video, "kind": tweet.video_kind or "video"}]
-                          if tweet.video else [])
+    if images or videos:
+        # Every picture and clip, the shared post's too; the analysts choose.
+        db.add_item_media(item_id, images=images, videos=videos)
 
     if dedup.check_headline(item_id, title, fingerprint):
         db.set_item_status(item_id, "duplicate", "same headline already seen")

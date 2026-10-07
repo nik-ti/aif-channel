@@ -50,7 +50,10 @@ def user_message(item) -> str:
     title = item["title"] or ""
     body = (item["body"] or "")[:600]
     article = (item["article_text"] if "article_text" in item.keys() else "") or ""
-    if config.SORTER_READS_ARTICLE and article:
+    if config.SORTER_READS_ARTICLE and article and item["origin"] == "x":
+        # A tweet's article already starts with the post, then the pages it links to.
+        body = article[:2100]
+    elif config.SORTER_READS_ARTICLE and article:
         # The feed's snippet (often just "Source: x | Release date: y") plus the article.
         body = f"{body}\n\n{article[:1500]}".strip()
     hint = item["topic_hint"] or "unknown"

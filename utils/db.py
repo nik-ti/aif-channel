@@ -61,7 +61,8 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),  # Human override from dashboard; graph skips gate stations.
         ("sorter_reason", "ALTER TABLE items ADD COLUMN sorter_reason TEXT DEFAULT ''"),  # Why the sorter scored it so. status_reason only keeps this for items it REJECTED.
         ("media_json", "ALTER TABLE items ADD COLUMN media_json TEXT DEFAULT ''"),  # Every candidate image and video — see nodes/media.py.
-        ("link_url", "ALTER TABLE items ADD COLUMN link_url TEXT DEFAULT ''"),  # The thing itself (repo, product page) when url is an aggregator's page.
+        ("link_url", "ALTER TABLE items ADD COLUMN link_url TEXT DEFAULT ''"),
+        ("links_json", "ALTER TABLE items ADD COLUMN links_json TEXT DEFAULT ''"),  # A tweet's outside links, read by nodes/article.py.  # The thing itself (repo, product page) when url is an aggregator's page.
     ],
     "posts": [
         ("source_context", "ALTER TABLE posts ADD COLUMN source_context TEXT DEFAULT ''"),
@@ -247,6 +248,7 @@ def insert_item(
     status: str = "queued",
     status_reason: str = "",
     link_url: str = "",
+    links_json: str = "",
 ) -> int | None:
     """Store item; return its id or None if already exists (duplicate check 1)."""
     try:
@@ -256,15 +258,15 @@ def insert_item(
                 origin, source_name, external_id, url, title, body, image_url,
                 video_url, video_kind,
                 published_at, norm_title, title_hash, topic_hint,
-                status, status_reason, fetched_at, updated_at, link_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, status_reason, fetched_at, updated_at, link_url, links_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 origin, source_name, external_id, url, title,
                 body[: config.MAX_BODY_CHARS], image_url, video_url, video_kind,
                 published_at,
                 norm_title, title_hash, topic_hint,
-                status, status_reason, now_iso(), now_iso(), link_url,
+                status, status_reason, now_iso(), now_iso(), link_url, links_json,
             ),
         )
         conn().commit()
