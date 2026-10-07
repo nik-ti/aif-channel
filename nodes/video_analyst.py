@@ -37,13 +37,8 @@ SCHEMA = {
 }
 
 
-async def _download(video: dict) -> tuple[Path, int] | None:
-    """Save the clip to a temporary file. None if it fails or passes MAX_VIDEO_MB."""
-    url = video["url"]
-    if video.get("kind") == "embed":
-        from utils import embeds
-        path = await asyncio.to_thread(embeds.download, url, config.MAX_VIDEO_MB)
-        return (path, path.stat().st_size) if path else None
+async def _save(url: str) -> tuple[Path, int]:
+    """Save one clip to a temporary file; raises if it fails or passes MAX_VIDEO_MB."""
     limit = config.MAX_VIDEO_MB * 1_000_000
     handle, name = tempfile.mkstemp(suffix=Path(url.split("?")[0]).suffix or ".mp4")
     path, size = Path(name), 0
@@ -59,10 +54,28 @@ async def _download(video: dict) -> tuple[Path, int] | None:
                             raise ValueError(f"over {config.MAX_VIDEO_MB} MB")
                         out.write(chunk)
         return path, size
-    except Exception as error:  # noqa: BLE001
-        log.info("Video not usable (%s): %s", error, url[:80])
+    except Exception:
         path.unlink(missing_ok=True)
-        return None
+        raise
+
+
+async def _download(video: dict) -> tuple[Path, int, str] | None:
+    """(file, size, address used) for the clip, or None. X gives every clip in several
+    sizes ("variants", largest first): a 1080p one over Telegram's limit falls back to 720p."""
+    url = video["url"]
+    if video.get("kind") == "embed":
+        from utils import embeds
+        path = await asyncio.to_thread(embeds.download, url, config.MAX_VIDEO_MB)
+        return (path, path.stat().st_size, url) if path else None
+    for candidate in dict.fromkeys([url, *video.get("variants", [])]):
+        try:
+            path, size = await _save(candidate)
+            return path, size, candidate
+        except Exception as error:  # noqa: BLE001
+            log.info("Video not usable (%s): %s", error, candidate[:80])
+            if "MB" not in str(error):
+                return None          # a broken link: smaller versions of it will not help
+    return None
 
 
 def _duration(path: Path) -> float | None:
@@ -99,28 +112,28 @@ async def _judge(post_text: str, path: Path, kind: str) -> dict:
     )
 
 
-async def _judge_one(post_text: str, video: dict) -> tuple[str, str, bool]:
-    """(verdict, reason, failed) for one clip, with its file always cleaned up."""
+async def _judge_one(post_text: str, video: dict) -> tuple[str, str, bool, str]:
+    """(verdict, reason, failed, address used) for one clip, its file always cleaned up."""
     saved = await _download(video)
     if saved is None:
-        return "reject", "could not be downloaded, or too large to send", False
-    path, _ = saved
+        return "reject", "could not be downloaded, or too large to send", False, ""
+    path, _, used = saved
     try:
         seconds = await asyncio.to_thread(_duration, path)
         if seconds is None:
-            return "reject", "length could not be read", False
+            return "reject", "length could not be read", False, used
         if seconds > config.MAX_VIDEO_SECONDS:
-            return "reject", f"{seconds:.0f}s, over the {config.MAX_VIDEO_SECONDS}s limit", False
+            return "reject", f"{seconds:.0f}s, over the {config.MAX_VIDEO_SECONDS}s limit", False, used
         try:
             answer = await _judge(post_text, path, video.get("kind", "video"))
         except Exception as error:  # noqa: BLE001 - fail closed
             db.bump_counter("media_error")
             log.warning("Video check failed (%s) — sending without it", error)
-            return "reject", f"check failed: {error}"[:200], True
+            return "reject", f"check failed: {error}"[:200], True, used
         verdict = answer.get("verdict")
         if verdict not in ("accept", "reject"):
-            return "reject", f"unexpected verdict {verdict!r}", True
-        return verdict, str(answer.get("reason", ""))[:150], False
+            return "reject", f"unexpected verdict {verdict!r}", True, used
+        return verdict, str(answer.get("reason", ""))[:150], False, used
     finally:
         path.unlink(missing_ok=True)
 
@@ -129,13 +142,13 @@ async def choose(post_text: str, videos: list[dict]) -> Choice:
     """The first clip that shows what the post says, or an empty Choice."""
     notes, broke = [], False
     for video in videos[:_MAX_JUDGED]:
-        verdict, reason, failed = await _judge_one(post_text, video)
+        verdict, reason, failed, used = await _judge_one(post_text, video)
         broke = broke or failed
         notes.append(f"{verdict} — {reason}")
         if verdict == "accept":
             log.info("Video chosen: %s", reason[:100])
             db.bump_counter("media_video_chosen")
-            return Choice(url=video["url"], kind=video.get("kind") or "video",
+            return Choice(url=used or video["url"], kind=video.get("kind") or "video",
                           reason="; ".join(notes))
     if videos:
         log.info("No video fits the post: %s", "; ".join(notes)[:160])

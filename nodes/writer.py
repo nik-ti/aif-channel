@@ -272,6 +272,31 @@ def figures_lost_by_cut(item, post: str) -> set[str]:
     return (_figures(post) - _figures(headline_only(post))) & source
 
 
+def _stems(text: str) -> set[str]:
+    """Content words cut to five letters, so "plans" matches "plan" and "games" "game"."""
+    return {w[:5] for w in re.findall(r"[a-z]{4,}", re.sub(r"<[^>]+>", " ", text.lower()))
+            if w not in _COMMON}
+
+
+_COMMON = {"that", "this", "with", "from", "your", "their", "they", "there", "then", "than",
+           "what", "when", "will", "have", "been", "were", "also", "into", "more", "most",
+           "while", "which", "about", "just", "only", "here", "read", "link", "href"}
+
+
+def lost_by_cut(item, post: str) -> set[str]:
+    """What cutting to the headline would throw away that came from the source: its figures,
+    and any body sentence whose words are mostly the source's ("Users on paid plans can
+    generate" went with the Playground post's headline-only cut). Padding still goes."""
+    lost = figures_lost_by_cut(item, post)
+    source = _stems(f"{item['title'] or ''} {item['body'] or ''}")
+    body = post.strip().split("\n", 1)[1] if "\n" in post.strip() else ""
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
+        words = _stems(sentence)
+        if len(words) >= 4 and len(words & source) / len(words) >= 0.6:
+            lost.add(sentence.strip()[:60])
+    return lost
+
+
 def has_thin_source(item) -> bool:
     """True if barely any source material; decides post length (can't write 90w from 150c
     summary).
@@ -391,10 +416,10 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     # One-fact source = one-line post (prompt says so, model adds body anyway, editor
     # waves it). Guaranteed, not requested.
     if is_one_line_source(item) and "\n" in post.strip():
-        lost = figures_lost_by_cut(item, post)
+        lost = lost_by_cut(item, post)
         if lost:
-            log.info("Item %s has a one-line source, but the body carries source figures "
-                     "the headline lacks (%s) — kept it", item["id"], ", ".join(sorted(lost)))
+            log.info("Item %s has a one-line source, but the body carries source facts "
+                     "the headline lacks (%s) — kept it", item["id"], " | ".join(sorted(lost)))
         else:
             post = headline_only(post)
             log.info("Item %s has a one-line source — kept the headline only", item["id"])

@@ -601,11 +601,16 @@ def as_source(story: Story) -> dict:
     parts = []
     for item in pending:
         head = (item["title"] or "").strip()
-        # The article we read beats the wire stub it came from: that is the
-        # whole point of reading it. See nodes/article.py.
+        # The article we read beats the wire stub it came from (nodes/article.py), but a
+        # short stub stays on top: Future Tools' "Source: blog.google | Release date: ..."
+        # is the only place the release date and the real publisher are stated.
         keys = item.keys() if hasattr(item, "keys") else ()
-        body = ((item["article_text"] if "article_text" in keys else "") or
-                (item["body"] or "")).strip()
+        article = ((item["article_text"] if "article_text" in keys else "") or "").strip()
+        stub = (item["body"] or "").strip()
+        if article and stub and len(stub) < 400 and not article.startswith(stub):
+            body = f"{stub}\n\n{article}"
+        else:
+            body = article or stub
         parts.append(f"[{item['source_name']}] {head}\n{body}".strip())
 
     return {

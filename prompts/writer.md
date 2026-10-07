@@ -48,6 +48,14 @@ that other account's, so name it. A post by a company's own account (@openai abo
 counts as the company's own announcement. A LINKED PAGE that says "(the page could not be
 read)" adds nothing.
 
+## When the source is a roundup
+Some sources are a brief or roundup listing many separate news items ("DAILY AI BRIEF", "This week in
+AI"). Write about ONE item only: the single most important one for this channel's readers (a big
+company's new model, app or feature they can use). Leave all the others out, and do not mention that it
+came from a roundup. Pick it from the main post, never from an older roundup it quotes or reposts.
+Take every fact from that one item's own line or lines, and nothing from its neighbours: the company
+named on that line is the subject of your headline.
+
 ## When it happened
 The date an article was published is NOT the date the thing was released. A blog
 post today can explain a feature that came out a week ago.

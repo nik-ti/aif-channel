@@ -105,6 +105,9 @@ These are 3 or below no matter how impressive they sound:
 * A release you can only use through an API from a company that is NOT a major AI company
 * A numbered version update ("2.1.288", "v4.2") of anything, unless it adds a big new ability for ordinary users
 * Anything a reader would need a terminal to install, unless the payoff is big and the company is well-known
+* Too thin to make a useful post: the source is a headline and a line or two, and does not say what the
+  thing does for the reader, how to get it, or who can use it ("A new Playground experiment is now
+  available in the US" with nothing about what it is). A post can only say what the source says.
 
 If you are hesitating between 3 and 4, it is a 3.
 

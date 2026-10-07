@@ -26,6 +26,8 @@ try:
 except ImportError as missing:
     print(f"0 passed — the analysts do not exist yet ({missing})")
     sys.exit(1)
+
+REAL_DOWNLOAD = video_analyst._download     # later tests replace it with fakes
 PASSED: list[str] = []
 FAILED: list[str] = []
 
@@ -196,7 +198,7 @@ def fake_video(duration: float, size_mb: float, verdict: str = "accept"):
         if size_mb > 20:
             return None
         path = Path(tempfile.mkstemp(suffix=".mp4")[1])
-        return path, int(size_mb * 1_000_000)
+        return path, int(size_mb * 1_000_000), url["url"] if isinstance(url, dict) else url
 
     async def judge(post_text, path, kind):
         calls.append(path)
@@ -394,6 +396,28 @@ async def a_clip_telegram_cannot_fetch_is_uploaded_as_a_video():
     client, bot = with_fake_bot()
     assert await client.send_clip("https://video.twimg.com/v.mp4", "video", "<b>Post</b>") == 77
     assert bot.calls == [("send_video", "str"), ("send_video", "bytes")]
+
+
+@test
+async def a_clip_too_big_for_telegram_falls_back_to_a_smaller_version():
+    tried = []
+
+    async def save(url):
+        tried.append(url)
+        if "1080" in url:
+            raise ValueError(f"over {config.MAX_VIDEO_MB} MB")
+        path = Path(tempfile.mkstemp(suffix=".mp4")[1])
+        return path, 9_000_000
+    real_save = video_analyst._save
+    video_analyst._save = save
+    try:
+        video = {"url": "https://v/1080.mp4", "kind": "video",
+                 "variants": ["https://v/1080.mp4", "https://v/720.mp4", "https://v/480.mp4"]}
+        path, size, used = await REAL_DOWNLOAD(video)
+        path.unlink(missing_ok=True)
+    finally:
+        video_analyst._save = real_save
+    assert used == "https://v/720.mp4" and tried == ["https://v/1080.mp4", "https://v/720.mp4"]
 
 
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")

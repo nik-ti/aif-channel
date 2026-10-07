@@ -421,7 +421,7 @@ async def a_player_clip_is_fetched_with_the_downloader():
         saved = await video_analyst._download({"url": "https://player.vimeo.com/video/1?h=a", "kind": "embed"})
     finally:
         embeds.download = real
-    assert asked == ["https://player.vimeo.com/video/1?h=a"] and saved == (tmp, 1000)
+    assert asked == ["https://player.vimeo.com/video/1?h=a"] and saved == (tmp, 1000, "https://player.vimeo.com/video/1?h=a")
 
 
 @test
@@ -776,6 +776,51 @@ def the_sorter_reads_a_tweet_once():
     text = message.split("Text:", 1)[1]
     assert text.count("Five new templates for Sora videos") == 1, message
     assert "LINKED PAGE 1" in text
+
+
+@test
+def a_bare_website_name_is_not_a_source_link():
+    from nodes import collect_loop, fetch_tweets
+    links = [{"url": "http://Z.ai", "short": "https://t.co/z", "title": "", "description": ""},
+             {"url": "https://mistral.ai/", "short": "https://t.co/m", "title": "", "description": ""},
+             {"url": "https://mistral.ai/news/large-4", "short": "https://t.co/n", "title": "", "description": ""}]
+    tweet = fetch_tweets._parse_entry(_relay_entry(tweet_id="505", links=links, text="Mistral Large 4 is out"))
+    _title, _body, kept = collect_loop.tweet_source(tweet)
+    assert [l["url"] for l in kept] == ["https://mistral.ai/news/large-4"], kept
+
+
+@test
+def the_headline_cut_keeps_sentences_that_come_from_the_source():
+    from nodes import writer
+    item = {"title": "GOOGLE: A new Playground experiment is now available in the US.",
+            "body": "Users on paid plans can generate, while everyone can play games available in the gallery."}
+    post = ("<b>A new Google Playground experiment is out in the US</b>\n\n"
+            "People on paid plans can generate, and everyone can play the games in the gallery.")
+    assert writer.lost_by_cut(item, post), "a sentence built from the source must survive"
+    padded = "<b>A new Google Playground experiment is out in the US</b>\n\nIt is a great way to explore creativity."
+    assert not writer.lost_by_cut(item, padded), "padding the source never said is still cut"
+
+
+@test
+async def a_source_too_thin_to_write_from_is_capped_below_the_bar():
+    from nodes import sorter
+    from utils import openrouter
+
+    async def fake(**kwargs):
+        return {"relevant": True, "topic": "launch", config.SORTER_AXIS: "everyone",
+                "importance": 4, "reason": "new feature"}
+    thin = {"id": 1, "title": "A new Playground experiment is now available in the US.", "origin": "x",
+            "source_name": "testingcatalog", "topic_hint": "launch", "article_text": "",
+            "body": "POST by @testingcatalog on X (https://x.com/t/status/1):\nGOOGLE: A new Playground "
+                    "experiment is now available in the US. https://x.com/GoogleLabs/status/2/video/1"}
+    rich = {**thin, "article_text": thin["body"] + "\n\nLINKED PAGE 1: https://labs.google/x\n" + "It lets you make games. " * 20}
+    real = openrouter.chat_json
+    openrouter.chat_json = fake
+    try:
+        assert (await sorter.execute(thin))["importance"] == 3
+        assert (await sorter.execute(rich))["importance"] == 4
+    finally:
+        openrouter.chat_json = real
 
 
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")

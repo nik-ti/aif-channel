@@ -54,6 +54,7 @@ class Tweet:
     video_kind: str = ""     # "video" | "gif" | ""
     links: tuple[dict, ...] = field(default_factory=tuple)  # {url, short, title, description}
     shared: dict | None = None   # the post it quotes or reposts, with its own text, links, media
+    video_variants: tuple[str, ...] = field(default_factory=tuple)   # every mp4 size, largest first
 
     @property
     def image_url(self) -> str:
@@ -87,6 +88,7 @@ def _parse_entry(fields: dict) -> Tweet | None:
         video_kind=data.get("video_kind", "") or "",
         links=tuple(data.get("links") or ()),
         shared=data.get("shared") or None,
+        video_variants=tuple(data.get("video_variants") or ()),
     )
 
 

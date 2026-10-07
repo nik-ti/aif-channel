@@ -257,11 +257,14 @@ EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 SORTER_MODEL = _get("SORTER_MODEL", "google/gemini-2.5-flash")
 WRITER_MODEL = _get("WRITER_MODEL", "deepseek/deepseek-v3.2")
 
-# The editor checks a post against its source and fails CLOSED. It must be a
-# different lab from the writer. Don't move it without pairs containing known
-# falsehoods. MiniMax failed 28 times in one week, so it is the fallback ("" = none).
-EDITOR_MODEL = _get("EDITOR_MODEL", "mistralai/mistral-medium-3.1")
-EDITOR_FALLBACK_MODEL = _get("EDITOR_FALLBACK_MODEL", "minimax/minimax-m2.7")
+# The editor checks a post against its source and fails CLOSED. It must be a different
+# lab from the writer. Never move it without running tools/check_editor.py (faithful
+# rewrites it must approve, planted falsehoods it must reject). 2026-10-07, 22 cases x5:
+# haiku-4.5 105/110 (its one miss rejects an explained word: a rewrite, not a lost post),
+# gemini-3.5-flash-lite 105/110 (its miss lets an invented feature through), the old
+# mistral-medium-3.1 38/42 on the first 14 cases, rejecting faithful rewording.
+EDITOR_MODEL = _get("EDITOR_MODEL", "anthropic/claude-haiku-4.5")
+EDITOR_FALLBACK_MODEL = _get("EDITOR_FALLBACK_MODEL", "google/gemini-3.5-flash-lite")
 EDITOR_TIMEOUT_SECONDS = _get_int("EDITOR_TIMEOUT_SECONDS", 60)
 
 # Alerts you if the editor starts rejecting an unusual share of posts.

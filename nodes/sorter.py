@@ -8,6 +8,7 @@ On a model failure the item goes back to the queue rather than being guessed.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 import config
@@ -23,6 +24,13 @@ TEMPERATURE = 0.0          # consistent judgements, not creative ones
 MAX_TOKENS = 800
 
 PROMPT = config.RUBRIC_PATH.read_text()
+
+# What an item scores at most when its source is too thin to write a useful post from:
+# under this many characters of real text (labels and links removed) and no page read.
+# The rubric asks for this too, but "A new Playground experiment is now available in the
+# US" (172 characters) scored 4 twice with the rule in front of it.
+THIN_SOURCE_CHARS = 250
+THIN_CAP = 3
 
 # What an item scores at most when nobody can use it. One below the publishing
 # bar on purpose, and enforced here in code: a model that says "none" and then
@@ -43,6 +51,15 @@ SCHEMA = {
         "reason": {"type": "string"},
     },
 }
+
+
+def source_chars(item) -> int:
+    """How much real text the item carries: body and article, minus labels and links."""
+    keys = item.keys()
+    text = f"{item['body'] or ''} {(item['article_text'] if 'article_text' in keys else '') or ''}"
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"(?m)^(POST by|QUOTED POST by|@\S+ REPOSTED|LINKED PAGE \d+:|Source:).*$", "", text)
+    return len(" ".join(text.split()))
 
 
 def user_message(item) -> str:
@@ -95,6 +112,12 @@ async def execute(item) -> dict:
         # "other" is the topic that means "not ours", so it doubles as the filter.
         if topic == "other":
             relevant = False
+
+        if importance > THIN_CAP and source_chars(item) < THIN_SOURCE_CHARS:
+            log.info("Capping item %s from %d to %d — only %d characters of source to write "
+                     "from (%s)", item["id"], importance, THIN_CAP, source_chars(item), title[:60])
+            importance = THIN_CAP
+            reason = f"too little in the source to write a useful post; {reason}"[:300]
 
         if market == "none" and importance > NO_USE_CAP:
             log.info("Capping item %s from %d to %d — the model named nobody who "

@@ -1,0 +1,234 @@
+{
+ "made": "2026-10-07",
+ "note": "Editor calibration: faithful rewrites must be approved, planted falsehoods rejected. Run tools/check_editor.py before changing the editor's prompt or model.",
+ "sources": {
+  "746": {
+   "title": "Google Launches EmbeddingGemma 2: 740M-Param Multimodal On-Device Embedding Model",
+   "source_name": "futuretools",
+   "topic": "launch",
+   "body": "[futuretools] Google Launches EmbeddingGemma 2: 740M-Param Multimodal On-Device Embedding Model\nSource: blog.google | Added to Future Tools: 2026-10-06T16:49:31.488Z | Release date: 2026-10-06 | Paywalled: no\n\nEmbeddingGemma 2: an open, lightweight multimodal embedding model\nWe introduced EmbeddingGemma last year to provide a lightweight option for high-quality text embeddings, to help your apps organize, search, and connect information directly on consumer hardware. The developer community’s response blew past our expectations. With more than 20 million downloads, builders have used it to power smarter on-device search tools and privacy-first retrieval augmented generation (RAG) pipelines.\nToday, we’re launching EmbeddingGemma 2, expanding beyond text to unify code, images, video, and audio in a shared embedding space. Built on the Gemma 4 architecture and released under a commercially permissive Apache 2.0 license, EmbeddingGemma 2 has 740 million parameters, making it optimal for on-device inference. It can help find a specific video clip from a voice memo, or search through hours of audio recordings based on a text query, all processed by a single, natively multimodal model.\nBuilt from the same technology as Gemini Embedding models, EmbeddingGemma 2 is:\n- Best-in-class for its size: Achieves leading scores among sub-1B multimodal embedders for its size across benchmarks like MTEB (Massive Text Embedding Benchmark) Code and MAEB (Massive Audio Embedding Benchmark), while matching or outperforming many larger models across text, vision, and audio tasks.\n- Modular by design: Requires as little as 270M parameters for text-only workloads with optional vision (170M) and audio (300M) encoders for full multimodal support.\n- Storage-efficient: Using Matryoshka Representation Learning (MRL), developers can dynamically truncate output vectors from 768 dimensions down to 512, 256, or 128 dimensions. This provides up to 6x storage reduction for local vector databases and memory usage.\n- Optimized for on-device performance: Runs efficiently within tight resource constraints. With quantization, on a Google Pixel 11 Pro, EmbeddingGemma 2 requires as little as ~191MB active RAM for text-only weights and ~567MB for the full multimodal model.\n- Extended context ready: Features an 8K token context window (4x larger than EmbeddingGemma 1), allowing it to process up to 5.5 minutes of audio, 29 images, 58 video frames, or interleaved combinations thereof directly on local hardware.\nAchieving top-tier quality for code, vision, and audio\nEmbeddingGemma 2 matches the strong multilingual text performance of EmbeddingGemma while delivering a significant 9.92-point improvement on code performance (in MTEB Code, from 68.76 to 78.68), making it well-suited for local codebase indexing, semantic code search, and coding agent retrieval. Across image, video, documents, and audio, it sets a new standard in quality-per-parameter for sub-1B models and even outperforms some specialist models more than twice its size.\nEnabling semantic search, routing, and retrieval, fully on-device\nEmbeddingGemma 2 brings robust capabilities directly to edge hardware. Generating embeddings locally helps ensure data privacy, reduces pipeline latency, and empowers developers to build cross-modal search and retrieval that works entirely offline.\nWhen paired with generative models such as Gemma 4, EmbeddingGemma 2 enables on-device RAG pipelines that understand complex multimodal data. Because EmbeddingGemma 2 is built on Gemma 4 and shares its text tokenizer and audio encoder, developers can run both models together in a unified pipeline with a lower combined total memory footprint.\nGetting started with EmbeddingGemma 2\nWe worked closely with the following partners to ensure EmbeddingGemma 2 works immediately where you build:\n- Download the models: Find the model weights on Hugging Face and Kaggle, with Gemini Enterprise Agent Platform Model Garden availability coming soon. Visit "
+  },
+  "750": {
+   "title": "Pinterest AI Beauty Guides Turn Hair and Nail Pins Into Salon-Ready Action Plans",
+   "source_name": "futuretools",
+   "topic": "launch",
+   "body": "[futuretools] Pinterest AI Beauty Guides Turn Hair and Nail Pins Into Salon-Ready Action Plans\nSource: techcrunch.com | Added to Future Tools: 2026-10-06T16:54:28.384Z | Release date: 2026-10-06 | Paywalled: no\n\nPinterest on Tuesday showed off a new feature that will leverage AI to take action on your saved inspiration from beauty-related Pins, like hair and nail ideas, and turn them into actionable plans you can take with you to the salon.\n“Beauty Guides,” which are powered by the company’s visual intelligence and generative AI technology, Pinterest Intelligence, will translate Pins into terms and phrases used by stylists and nail artists that everyday users may not know, like “balayage,” “root melt,” or “almond nails.”\nThe feature is a small but practical way to introduce AI into users’ everyday lives, as it slots into something that people are already doing: bringing a photo of their inspiration to the salon. That’s useful to a large extent, but having the right terminology at hand while you discuss what parts of the look you want to edit or change can be useful as well.\nPlus, the guides offer the sort of information that can help users plan for their visit, like the time each part of the process may take and the cost. (Balayage goes into the hundreds of dollars, so that’s information you might like to have up front!)\nThe action guides will show up when you tap on the “Get the Guide” button within the app, and will then offer details about what, specifically, you should ask for to achieve the same look, the time it takes, price range, and maintenance requirements, like how often you’ll need to trim, tone, or touch up, for instance.\nAt launch, the feature will work across Pins related to hairstyle, color, nail shape, and finish."
+  },
+  "696": {
+   "title": "Google Gemini Restricts Model Access for Free Users Starting October 2026",
+   "source_name": "futuretools",
+   "topic": "launch",
+   "body": "[futuretools] Google Gemini Restricts Model Access for Free Users Starting October 2026\nSource: support.google.com | Added to Future Tools: 2026-10-05T18:45:55.786Z | Release date: 2026-10-04 | Paywalled: no\n\nImportant:\n- For the best experience, make sure you've updated to the latest version of the Gemini mobile app.\nStarting in October 2026, there will be changes to model availability for Gemini Apps when you use a personal account.\nThese changes will start to take effect for users without an AI subscription on October 9th. For users with an AI Plus subscription, you should receive an email that explains when these changes will take effect for you.\nModel availability after these changes take effect:\nTips:\n- For each available model, you can also select the model’s effort level from low, medium, and high. This will increase the model’s ability to complete tasks and provide more thorough answers to queries, but will also use more of your limit.\n- If you have an AI Pro or AI Ultra subscription you’ll also have access to the Deep Think option for maximum parallel reasoning.\nManage your Google AI plan\nYou can subscribe to a Google AI plan, upgrade your current plan, change your plan, or cancel your plan at any time. Learn how to manage your Google AI plan from Gemini Apps.\nPrevious changes\nStarting on May 17, 2026 there were changes to usage limits and model availability for Gemini Apps for users over 18. These changes took effect for users under 18 on July 24, 2026.\nUsage limits for Gemini Apps\nGemini will move to compute-based usage limits that will refresh every 5 hours until you reach your weekly limit. Calculation of your usage will factor in the complexity of your prompt, the features you use, and the length of your chat. Paid users have higher limits than users without a Google AI subscription.\nPremium models and features require more usage and may cause you to reach your limit faster. This would include things like:\n- Media generation\n    \n  - Images, videos and music\n- Deep Research\n- Pro Model\n- Extended thinking and Deep Think"
+  },
+  "697": {
+   "title": "TikTok Launches AI Ad Tools, Agentic Commerce & Ad Network at Advertising Week 2026",
+   "source_name": "futuretools",
+   "topic": "launch",
+   "body": "[futuretools] TikTok Launches AI Ad Tools, Agentic Commerce & Ad Network at Advertising Week 2026\nSource: newsroom.tiktok.com | Added to Future Tools: 2026-10-05T18:42:49.478Z | Release date: 2026-10-05 | Paywalled: no\n\nPeople come to TikTok to watch their favorite creators, discover fresh ideas and connect with their communities. We've built a full-funnel platform that enables brands to show up in those moments. At Advertising Week New York 2026, we're unveiling agentic solutions across every stage of the customer journey and expanding creative potential both on-and-off the platform.\nThe opportunity is significant: PF Global's TikTok's Economic Impact Report published last week found that economic activity on TikTok helped generate $81 billion in GDP for US businesses [1], with 54 million Americans purchasing a product after watching a TikTok video [2]. When content is culturally relevant, audiences connect, explore, and take action – turning attention into scalable business growth, increasingly powered by AI. That momentum is reflected in the latest findings from Kantar's Media Reactions 2026 report, which ranked TikTok as the #1 platform where marketers plan to increase ad spend in 2027 [3], with 84% of marketers placing advertising on TikTok [4].\n\"AI is transforming how advertiser content is created and scaled,\" says David Kaufman, Global Head of Monetization Product Partnerships at TikTok. \"With our suite of solutions, we bringing together AI, automation, and creativity to help advertisers improve performance while reducing effort. We are enabling advertisers to create work that feels relevant, move at the speed of culture, and drive meaningful business impact.\"\nTurning Discovery into Action\nTikTok is where discovery starts. It takes people from their first scroll to a spark of curiosity to an active search for a product or inspiration. Now more than ever, discovery drives action.\nTikTok is building new Agentic Commerce shopping experiences that support easy product discovery and frictionless transactions on the platform, starting with Buy Direct and Shopping Assistant. To help fuel these experiences, we are building with trusted commerce platforms and payment providers including Salesforce, Shopify, Shoplazza, Stripe, and more.\n- Buy Direct is a seamless in-app checkout solution that allows users to make purchases directly from a brand, without leaving TikTok. The solution simplifies the purchase journey, allowing users to make purchases directly from the For You feed with just one click.\n- Shopping Assistant is a conversational AI agent that guides users through their shopping journey. It understands context, remembers user needs, and finds the right products just for them, faster. Built into several TikTok touchpoints, Shopping Assistant provides realtime AI-powered shopping guidance like product details, shipping, sizing, availability and purchasing all within one conversation.\nWe are also introducing Agentic Leads, an AI Agent for lead generation that, via AI-guided conversations, enables businesses to capture, qualify and convert high-intent, actionable consumer prospects. The solution will be available across multiple surfaces including Lead Agent in TikTok Direct Message and Lead Agent in lead form on advertiser-owned websites.\nExtending Campaign Reach\nTikTok gives brands new ways to connect with audiences through storytelling, creators and culture, driving performance beyond the core TikTok experience. We are excited to introduce TikTok Ad Network (TTAN) to US advertisers, enabling them to seamlessly extend their campaigns beyond TikTok and reach audiences across a premium network of nearly 400,000 apps worldwide. Fully integrated into TikTok Ads Manager, TTAN has built-in brand safety and placement controls to help brands safely extend campaigns, connect with the right audiences and drive measurable business outcomes.\nExtending Campaign Reach\nTikTok gives brands new ways to connect with audiences through storyte"
+  },
+  "609": {
+   "title": "45 grilling mattpocock/skills 6.1K",
+   "source_name": "skills_trending",
+   "topic": "tool",
+   "body": "[skills_trending] 45 grilling mattpocock/skills 6.1K\ngrilling\nInterview the user relentlessly until you reach a shared understanding. Map this as a design tree: every decision branches into the decisions that hang off it.\nWork the tree in rounds. The frontier is every decision whose prerequisites are already settled: the questions you can ask now without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.\nFormat a round like so:\n❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>\n➡️ <your recommended answer>\n---\n❓ **Q2** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>\n➡️ <your recommended answer>\nEach round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a later round, not this one."
+  },
+  "658": {
+   "title": "341 sales-hiring mbfinotti/sales-skills 858",
+   "source_name": "skills_trending",
+   "topic": "tool",
+   "body": "[skills_trending] 341 sales-hiring mbfinotti/sales-skills 858\nsales-hiring\nSales Hiring\nBuild the four artifacts a hiring manager needs to recruit an SDR/BDR or AE with evidence-backed rigor: a role scorecard, a structured interview loop with question bank, a scored mock-call work sample, and a 30-60-90 ramp plan. Structure beats intuition at every stage - the whole skill exists to enforce that.\nLabel every benchmark output with a short parenthetical naming its source - peer-reviewed, survey, crowdsourced, vendor data, or a named practitioner - and never present a lower tier as a higher one, or a vendor claim as fact.\nIf the user turns out to be a candidate preparing for a sales interview rather than a hiring manager running one, stop and point them to mbfinotti/sales-skills@sales-career - this skill never coaches the candidate.\nOut of scope, do not drift into:\n- sourcing candidates\n- writing or distributing job ads\n- running an applicant tracking system\n- designing the commission plan as a strategy exercise\n- SDR-to-AE promotion mechanics\nCompensation appears here only as the published range and the base/variable split and ramp draw that shape the candidate funnel and the ramp."
+  },
+  "661": {
+   "title": "Our approach to EU text provenance rules",
+   "source_name": "openai",
+   "topic": "launch",
+   "body": "[openai] Our approach to EU text provenance rules\nHow OpenAI is approaching text watermarking under EU rules. Learn where watermarks apply, how detection works, and why access starts with researchers.\n\n[Content provenance](https://openai.com/index/advancing-content-provenance/) helps people understand where content came from, how it was created or edited, and whether it contains signals associated with our models. We’ve already made tools publicly available to identify images and audio generated by our models. Today, we’re sharing our approach to text watermarking in response to the EU AI Act, and how it fits into our broader work.\n\nThe EU AI Act requires generative AI providers to make generated text identifiable in a machine-readable way. Text watermarking and detection remain early technologies with significant limitations, and views about their benefits and responsible uses are still developing. Our phased approach reflects both the EU AI Act requirements as well as the technology’s limitations, with an emphasis on transparency about what a text watermark can and cannot tell people:\n\n*   Starting today, API customers globally will be able to opt in to text watermarking for select models. Text watermarking will remain off by default in the API.\n\n*   Over the coming weeks, we will add an invisible watermark to eligible ChatGPT and Codex text output in the European Union.\n\n*   We’re opening applications to access our text watermark detector. Access will initially be limited to approved researchers and expert organizations that can help us evaluate and improve the technology.\n\n    *   The above only applies to text provenance—our verification tools for audio and images, including our [openai.com/verify⁠](https://openai.com/verify) web tool and our [Content Provenance API⁠(opens in a new window)](https://developers.openai.com/api/docs/guides/content-provenance), will continue to be publicly accessible to organizations looking to understand whether an image or audio file was generated by one of our systems.\n\n## How our watermarking works and performs\n\nOur text watermarking technology, textGrain, adds an invisible statistical signal to the model’s word choices. Our detector looks for that signal to assess whether a passage contains an OpenAI watermark. More details about how textGrain works can be found in our [technical report⁠(opens in a new window)](https://cdn.openai.com/pdf/e9508624-d767-41b6-a26d-e34ca798ada6/textgrain-entropy-calibrated-watermarking-for-language-model-text.pdf), which will be updated with additional details in the coming weeks. We also plan to make the technology available in open source so that others can build on it.\n\nIn our evaluations, textGrain matched or exceeded the performance of other approaches we tested, including SynthID for text. Even so, strong performance under ideal conditions does not guarantee reliable detection in everyday use.\n\nDetectors can make two kinds of errors: they can report a watermark where none is present—a false positive—or miss a watermark that is present—a false negative. Our evaluations below illustrate some of the challenges:\n\n*   **Shorter or more constrained text is harder to detect.** At a target false positive rate of 1%, our detector identified watermarks in about 80% of 200-token passages, compared with about 95% of 400-token passages, for content such as psychology. Detection rates were substantially lower for content such as mathematics, where there is less flexibility in word choice.\n\n*   **Editing can weaken the watermark.** In an evaluation of 400-token passages, replacing 10% of words with synonyms reduced detection from about 92% to 66%. Replacing 25% of words reduced it to 17%.\n\nThese limitations contribute to our decision to provide initial detector access only to approved researchers and expert organizations, who can help us evaluate reliability and responsible uses.\n\nThis chart shows results for watermarked responses to mathematics and psychology questio"
+  },
+  "769": {
+   "title": "OpenAI Makes Auto-Review Feature Free for All ChatGPT Users",
+   "source_name": "futuretools",
+   "topic": "launch",
+   "body": "[futuretools] OpenAI Makes Auto-Review Feature Free for All ChatGPT Users\nSource: Tibo on X | Added to Future Tools: 2026-10-06T22:13:38.010Z | Release date: 2026-10-06 | Paywalled: no"
+  },
+  "542": {
+   "title": "Show HN: Audionaut – an open-source cross-platform multitrack audio editor",
+   "source_name": "show_hn",
+   "topic": "tool",
+   "body": "[show_hn] Show HN: Audionaut – an open-source cross-platform multitrack audio editor\nArticle URL: https://github.com/kvoltmer/Audionaut Comments URL: https://news.ycombinator.com/item?id=49931031 Points: 148 # Comments: 47\n\nA free, open-source multitrack audio editor that AI agents can drive over MCP.\naudionaut.app · Features · Discussions · Sponsor\nAudionaut is a free, open-source desktop application for effortless audio editing and recording. Whether you're working on music, podcasts, or multitrack recordings, it gives you precise cutting, per-track playlists, flexible multi-channel support, and clean exports — without the weight and complexity of a full DAW. Audionaut is written in modern C++ on the JUCE framework and runs natively on Windows, macOS, and Linux.\nAudionaut speaks MCP, so Claude and other agents can edit your sessions. With the app and Node.js 18+ installed:\nclaude mcp add audionaut -- npx -y audionaut-mcp\nKeep the project open in Audionaut and each edit arrives as one undo step. On macOS, keep projects in your Music folder. Claude Desktop setup and details: manual, chapter 11.\nMake sure to clone with submodules:\ngit clone --recursive https://github.com/kvoltmer/Audionaut.git\nor once cloned do:\ngit submodule update --init --recursive\nThe analysis features (BIC segmentation, onset detection, beat tracking) link against a static build of the Essentia submodule. Build it once after checking out the submodules:\n./Audionaut/Builds/build_essentia.sh\nThe script builds Essentia's 3rd-party dependencies statically (slow, skipped on re-runs; force with FORCE_3RDPARTY=1), then configures and builds Essentia itself with its waf build system into Submodules/essentia/build. It patches Essentia's Linux-oriented 3rd-party build scripts in the working tree as needed for macOS/Apple Silicon, so the essentia submodule will show as dirty afterwards — don't commit those changes.\nPrerequisites:\n- Python ≤ 3.11 — Essentia's bundled waf needs distutils , removed in Python 3.12. The script picks a suitable interpreter automatically; override withPYTHON=... ./Audionaut/Builds/build_essentia.sh .\n- pkg-config (e.g. brew install pkg-config )\n- CMake 3.x recommended — some 3rd-party deps ship very old CMakeLists that CMake 4.x refuses (e.g. pip install \"cmake~=3.31.0\" ).\nBuilding Essentia is optional: without it, ESSENTIA_ENABLED auto-detects off and the app and tests compile with the analysis features disabled.\nStem separation runs demucs.cpp, a C++ port of Meta's Demucs, compiled straight from the Submodules/demucs.cpp submodule — no separate build step. It needs the submodule's vendored Eigen (Submodules/demucs.cpp/vendor/eigen, a nested submodule that --recursive fetches); the CMake build detects it and sets AUDIONAUT_ENABLE_DEMUCS accordingly. The model weights are not in the repository: the app downloads them on first use into its Models folder, or point the CLI at a copy with --model.\nXcode — open the Xcode project located here:\nAudionaut/Builds/MacOSX/Audionaut.xcodeproj\nVisual Studio 2026 — open the Visual Studio solution located here:\nAudionaut/Builds/VisualStudio2026/Audionaut.sln\nLinux Makefile — install dependencies:\nsudo apt install libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype-dev libfontconfig1-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev mesa-common-dev libxi-dev libegl-dev\nthen compile:\ncd Audionaut/Builds/LinuxMakefile/\nmake CONFIG=Release -j8\nSee the Catch2 tests README.\naudionaut-cli gives scripts, CI and AI agents headless access to .audium\nprojects — no GUI, no audio device. It builds alongside the tests:\ncmake -B build -S Audionaut/Catch2Tests\ncmake --build build -j8 --target AudionautCli\n./build/AudionautCli_artefacts/AudionautCli --help\nEvery command takes --json to emit exactly one machine-readable result\nenvelope on stdout ({\"ok\": true, \"result\": ...} or {\"ok\": false, \"error\": ...})"
+  },
+  "744": {
+   "title": "Mistral Large 4 — a 1T multimodal MoE with 49B active and 1M context",
+   "source_name": "ai_tldr",
+   "topic": "launch",
+   "body": "[ai_tldr] Mistral Large 4 — a 1T multimodal MoE with 49B active and 1M context\nMistral's biggest model yet: a 1T-parameter multimodal MoE for coding, agents and security work.\n\nMistral AI · 2026-10-06 · seismic\nMistral Large 4 — a 1T multimodal MoE with 49B active and 1M context\nMistral Large 4 is Mistral AI's new 1T-parameter multimodal MoE flagship with 49B active parameters. It is in public preview on Mistral Studio today, scores 61.7% on DeepSWE v1.1, and its open weights are due at the end of October.\nMistral's biggest model yet: a 1T-parameter multimodal MoE for coding, agents and security work.\nKey specs\nQuick facts\nBenchmarks\nPricing\nsource ↗\nWhat is it?\nMistral Large 4 is the new flagship from Mistral AI, released as a public preview on October 6, 2026. It reads text and images, handles a 1M-token context, and is aimed at coding, agentic workflows and security, finance and legal work in more than 160 languages. Mistral calls it \"ML4\" unofficially and \"le Chonk\" very officially.\nHow does it work?\nUnder the hood, Large 4 is a sparse mixture-of-experts: only 49B of its 1.05T parameters run for each token, and a 1.6B vision encoder handles images. Mistral trained it on 3,800 NVIDIA Grace Blackwell GPUs in its European datacenters. During reinforcement learning the pipeline generated 33 billion tokens a day, of which 16 billion were kept as trainable completions after filtering.\nWhy does it matter?\nMistral now has a trillion-parameter model in the same race as the top US and Chinese labs, and it plans to publish the weights. For security teams, a 93% Cybench score and 82% on the AA Cyber Index vulnerability-reproduction test put it among the strongest open-weight options. European companies also get a frontier model trained and served in Europe.\nWho is it for?\ndevelopers building coding and security agents, European enterprises\nFrequently asked questions\n- When will Mistral Large 4 weights be released?\n- Mistral's launch post for Mistral Large 4 says the weights drop at the end of October 2026. At launch on October 6, 2026, only the preview API on Mistral Studio was live, and Mistral had not yet published the license that will apply to the downloadable weights.\n- How much does Mistral Large 4 cost on the API?\n- Mistral Large 4 lists at $1.36 per million input tokens and $4.18 per million output tokens, with cached input at $0.14. Mistral's docs page currently shows a discounted preview rate of $0.68 input, $0.07 cached input and $2.09 output per million tokens.\n- How does Mistral Large 4 compare with Claude Opus 5 on coding?\n- In a Surge AI human evaluation of coding quality published by Mistral, the Mistral Large 4 preview scored 3.74 out of 5, second behind Claude Opus 5 at 4.22 and ahead of GLM-5.3 (3.60), Kimi K3 (3.59) and GLM-5.2 (3.40). Mistral also says its Coding Agent Index score of 49.8% beats DeepSeek V4 Pro 0813 and Qwen3.8 Max.\n- How is Mistral Large 4 different from Mistral Large 3?\n- Mistral Large 4 is a bigger mixture-of-experts model than Mistral Large 3: 1.05 trillion total and 49 billion active parameters, against 675 billion and 41 billion. The context window grows from 256K to 1M tokens, and the vision encoder is 1.6B parameters. Large 4 launched as a paid preview first, with weights to follow.\nTry it\nCall model id mistral-large-4 on Mistral Studio (console.mistral.ai)"
+  },
+  "803": {
+   "title": "Introducing Falcon ASR",
+   "source_name": "hf_blog",
+   "topic": "launch",
+   "body": "[hf_blog] Introducing Falcon ASR\nEnglish · العربية\nArabic WER: 20.92% · Parameters: 1.6B · Emirati WER (TII evaluation): 22.73%\nWe’re introducing Falcon-ASR, our 1.6 billion parameter speech recognition model for Arabic, with a particular focus on the Emirati dialect. Developed at the Technology Innovation Institute (TII) in Abu Dhabi, it also supports English, French, Spanish and Portuguese.\nIn our evaluation, Falcon-ASR achieved an average word error rate of 20.92% across six Arabic test sets, compared with the best published result of 23.17% in the leaderboard snapshot we used. On our internal Emirati evaluation, it recorded the lowest word and character error rates among the systems we compared.\nWe also support word-level timestamps for transcriptions, linking each transcribed word to its position in the audio.\nYou can try Falcon-ASR in our Hugging Face Demo.\nRecognising spoken Arabic\nArabic speech varies by region, speaker and setting. A model that handles a formal news broadcast may still struggle with a conversation in Emirati or with speech recorded over a phone line. Dialectal Arabic also has fewer transcribed resources than Modern Standard Arabic (MSA), which makes training and evaluation harder.\nWe trained Falcon-ASR on Emirati, MSA, other Gulf and Arabic dialects, and English. Our aim is to transcribe the words people use in everyday speech, including dialectal forms and changes between languages.\nArabic benchmark results\nThe Open Universal Arabic ASR Leaderboard, maintained by the ELM Research Center, ranks systems by the equal-weight average WER across six test sets. It also reports character error rate (CER). Lower values are better for both metrics. Our Falcon-ASR evaluation follows this protocol.\nWER = Word Error Rate; CER = Character Error Rate. A lower value indicates better performance.\nWe evaluated Falcon-ASR on the same six benchmarks using the leaderboard’s pinned manifests. Competitor figures are the published leaderboard averages checked on 30 September 2026. Falcon-ASR’s average WER is 2.25 percentage points better than the best published result in that snapshot.\nEvaluating Emirati speech\nPublic evaluation data already includes Emirati: Casablanca has a UAE subset. We complement that coverage with an internal evaluation of additional Emirati and Gulf speech, using held-out recordings and human-validated transcripts to assess transcription accuracy beyond the public UAE subset.\nIn our internal Emirati evaluation, Falcon-ASR achieved 22.73% WER and 10.19% CER:\nFalcon-ASR has the lowest WER and CER among the systems compared here. Its WER is 4.07 percentage points below Qwen3-Omni, the next best result. The results show improved transcription accuracy at both the word and character level on this evaluation.\nTraining for different recording conditions\nWe included background noise, overlapping speech, music, room reverberation and telephony effects, as well as variations in speed and pitch. We applied the same treatment to Emirati recordings, exposing the model to a range of conditions it may encounter in meetings, calls and other everyday recordings.\nEnglish and other languages\nFalcon-ASR also transcribes English with the same model weights. In our evaluation on the seven public English test sets used by the Hugging Face Open ASR Leaderboard, it achieved a mean WER of 5.74%.\nThe model also supports French, Spanish and Portuguese. All five languages use the same weights, without requiring a language flag. The output is a transcript in the language spoken.\nModel foundation\nFalcon-ASR builds on our Falcon3-Audio work. The architecture and training approach for Falcon3-Audio are described in Competitive Audio-Language Models with Data-Efficient Single-Stage Training on Public Data.\nTry Falcon ASR\nOur Hugging Face Demo Space lets you try Falcon-ASR and explore its transcription capabilities. API access and native applications are planned. We invite you to try the Demo with your own recordings.\nنقدّم Falcon ASR"
+  },
+  "806": {
+   "title": "ICYMI 👀: Google released a new Google AI Edge Foresight app for macOS, powered by Gemma 4 and EmbeddingGemma2 for recording voice notes.",
+   "source_name": "testingcatalog",
+   "topic": "launch",
+   "body": "[testingcatalog] ICYMI 👀: Google released a new Google AI Edge Foresight app for macOS, powered by Gemma 4 and EmbeddingGemma2 for recording voice notes.\nPOST by @testingcatalog on X (https://x.com/testingcatalog/status/2107853628656496657):\nICYMI 👀: Google released a new Google AI Edge Foresight app for macOS, powered by Gemma 4 and EmbeddingGemma2 for recording voice notes. \n\n> The app can connect to your Google Drive in order to build a knowledge graph. \n\n> When transcription is active, it uses local models, Gemma 4 E4B or Gemma 4 12B, to transcribe voice notes and convert them into a new document.\n\nQUOTED POST by @testingcatalog (https://x.com/testingcatalog/status/2107522559109476786):\nGoogle released EmbeddingGemma 2 open  weight model under Apache 2 license! \n\n> “Our lightweight, multimodal embedding model maps text, code, images, video, and audio into a single, unified embedding space.“\n\n> 740M parameter form factor with modular encoders and 8K context window.\n\nEmbedded testing time 👀 https://x.com/googledevs/status/2107502392250183720/video/1"
+  }
+ },
+ "cases": [
+  {
+   "id": "gemma-real-rejected",
+   "source": "746",
+   "expect": "approve",
+   "why": "the post nikita flagged: small=lightweight, pictures=images, sound=audio, 'the company says' kept",
+   "post": "<b>Google's new EmbeddingGemma 2 helps apps search text, images, and audio directly on your phone</b>\n\nIt’s a small, open AI that can find a video clip from a voice note or search audio with a text query, all without sending data to the cloud. The company says it’s the best at its size for mixing text, code, pictures, and sound.\n\nBuilt to run on devices like phones, it helps keep your data private and cuts down wait times. Developers can download it from Hugging Face.\n\n<a href=\"LINK\">See it here</a>"
+  },
+  {
+   "id": "gemma-paraphrase",
+   "source": "746",
+   "expect": "approve",
+   "why": "Google's own 'Today, we're launching' + release date: 'just launched' is allowed; synonyms throughout",
+   "post": "<b>Google just launched EmbeddingGemma 2, a small open AI that can search pictures, video and sound on your phone</b>\n\nIt can find a video clip from a voice note, or search hours of audio recordings by typing what you're looking for. Everything runs on the device, so your files stay private.\n\n• Google says it's the best in its size class\n• Developers can download it from Hugging Face and Kaggle\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "pinterest-real-approved",
+   "source": "750",
+   "expect": "approve",
+   "why": "approved live",
+   "post": "<b>Pinterest's new AI Beauty Guides turn your saved nail and hair pictures into salon plans</b>\n\nIt works with hairstyle, colour, nail shape and finish Pins you've saved.\n\nTap \"Get the Guide\" and it gives you the professional terms to ask for (like \"balayage\" or \"almond nails\"), an estimated cost and time, and tips on maintenance.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "pinterest-paraphrase",
+   "source": "750",
+   "expect": "approve",
+   "why": "stylist=salon pro, 'rough cost'=estimated cost, simpler words",
+   "post": "<b>Pinterest's new AI turns your saved hair and nail Pins into a plan for your stylist</b>\n\nIt's called Beauty Guides. Tap \"Get the Guide\" and it tells you the words salon pros use, like \"balayage\", plus a rough cost, how long it takes and how often you'll need a touch-up.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "gemini-real-approved",
+   "source": "696",
+   "expect": "approve",
+   "why": "approved live",
+   "post": "<b>Google Gemini will start limiting which AI models free users can access next week</b>\n\nThe change begins on <b>October 9</b> for people who don't pay for a Google AI subscription. Paid users will get an email about when it affects them.\n\nFree users will see fewer models available. The company says your usage will now be tracked by a \"compute\" limit that refreshes every five hours until you hit a weekly cap.\n\nComplex tasks like making images or using the Pro model will use up your limit faster.\n\n<a href=\"LINK\">Read the details here</a>"
+  },
+  {
+   "id": "tiktok-real-approved",
+   "source": "697",
+   "expect": "approve",
+   "why": "approved live",
+   "post": "<b>TikTok is launching AI shopping assistants and a new ad network for businesses</b>\n\nThe company announced a set of AI tools for advertisers at a conference this week.\n\n• <b>Shopping Assistant</b>: an AI chatbot that helps users find products, check details, and buy things without leaving the app\n• <b>Buy Direct</b>: a one-click checkout that lets people buy from a video in their feed\n• <b>TikTok Ad Network</b>: lets US advertisers run their TikTok ads on nearly 400,000 other apps\n\nThe new shopping features are built with partners like Shopify and Stripe.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "gemma-invented-price",
+   "source": "746",
+   "expect": "reject",
+   "why": "price invented",
+   "post": "<b>Google's EmbeddingGemma 2 is a small AI that can search pictures, video and sound on your phone</b>\n\nIt can find a video clip from a voice note, and everything runs on the device. It costs <b>$9 a month</b> for developers.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "gemma-wrong-number",
+   "source": "746",
+   "expect": "reject",
+   "why": "191MB became 19MB",
+   "post": "<b>Google's EmbeddingGemma 2 can search pictures, video and sound right on your phone</b>\n\nIt is so light that on a Pixel 11 Pro it needs only about <b>19MB of memory</b> for text, so it runs on almost any phone.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "pinterest-invented-feature",
+   "source": "750",
+   "expect": "reject",
+   "why": "booking feature invented",
+   "post": "<b>Pinterest's new AI turns your saved hair and nail Pins into a salon plan</b>\n\nIt tells you the words stylists use, the rough cost and the time, and it <b>books the salon appointment for you</b>.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "pinterest-widened-availability",
+   "source": "750",
+   "expect": "reject",
+   "why": "source: showed off / will; post: available to everyone now",
+   "post": "<b>Pinterest's AI Beauty Guides are now available to everyone, everywhere</b>\n\nTap \"Get the Guide\" on a saved hair or nail Pin to get the words stylists use and a rough cost.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "gemini-wrong-date",
+   "source": "696",
+   "expect": "reject",
+   "why": "October 9 became October 19",
+   "post": "<b>Google Gemini will limit which AI models free users can access</b>\n\nThe change starts on <b>October 19</b> for people who don't pay for a Google AI subscription.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "gemini-paid-users-too",
+   "source": "696",
+   "expect": "reject",
+   "why": "invented: paid users also lose access",
+   "post": "<b>Google Gemini is cutting which AI models people can use</b>\n\nFrom October 9, both free users and paying AI Plus subscribers lose access to the most advanced models.\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "tiktok-wrong-company",
+   "source": "697",
+   "expect": "reject",
+   "why": "TikTok became Instagram",
+   "post": "<b>Instagram is launching AI shopping assistants and a new ad network for businesses</b>\n\n• <b>Shopping Assistant</b>: an AI chatbot that helps people find and buy products\n• <b>Buy Direct</b>: buy straight from a video in your feed\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "tiktok-invented-free",
+   "source": "697",
+   "expect": "reject",
+   "why": "price claim invented",
+   "post": "<b>TikTok is launching AI shopping tools for advertisers, free for every business</b>\n\n• <b>Shopping Assistant</b>: an AI chatbot that helps people find and buy products\n• <b>Buy Direct</b>: buy straight from a video in your feed\n\n<a href=\"LINK\">Read more here</a>"
+  },
+  {
+   "id": "real-18-reject",
+   "source": "609",
+   "expect": "reject",
+   "why": "source never mentions ChatGPT or a price: 'free prompt that turns ChatGPT into…' invents both",
+   "post": "<b>A free prompt that turns ChatGPT into a relentless interviewer to help you think through any problem</b>\n\nIt’s called the Grilling prompt. You give it a topic, and it interviews you in rounds, mapping every decision as a branching tree. Each round, it asks every question it can based on what you’ve already answered, pushing you to a complete, shared understanding.\n\nThe prompt is designed for planning, design, or any complex decision where you need to see all the options and their consequences.\n\n<a href=\"LINK\">Copy the prompt here</a>"
+  },
+  {
+   "id": "real-19-reject",
+   "source": "658",
+   "expect": "reject",
+   "why": "source never says free",
+   "post": "<b>Hiring salespeople? A free AI skill builds the four documents you need</b>\n\nIt’s called Sales Hiring, and it creates a complete hiring kit for sales roles like SDRs or Account Executives. You get a <b>role scorecard</b>, a structured interview with questions, a scored mock-call test, and a 30-60-90 day ramp plan.\n\nThe skill labels every piece of advice with its source, so you know if it’s from research, surveys, or a practitioner. It’s designed for hiring managers, not for candidates preparing for interviews.\n\n<a href=\"LINK\">Try it here</a>"
+  },
+  {
+   "id": "real-53-reject",
+   "source": "769",
+   "expect": "reject",
+   "why": "Codex auto-review reviews CODE; 'checks your writing' changes what it does",
+   "post": "<b>OpenAI's ChatGPT now checks your writing for free, for every user</b>"
+  },
+  {
+   "id": "real-4-approve",
+   "source": "542",
+   "expect": "approve",
+   "why": "MCP is explained in the same sentence",
+   "post": "<b>A free, open-source audio editor you can control with an AI like Claude</b>\n\nIt’s a desktop app for editing music, podcasts, or any multi-track recording. It works on <b>Windows, macOS, and Linux</b>.\n\nThe key feature: it speaks a protocol called <b>MCP</b>, which lets AI assistants like Claude edit your audio sessions for you. You keep the project open, and each AI edit becomes one undo step.\n\n<a href=\"LINK\">Download it here</a>"
+  },
+  {
+   "id": "real-47-reject",
+   "source": "744",
+   "expect": "reject",
+   "why": "source says 'open weights due at the end of October'; 'free download' is a price claim the source never makes",
+   "post": "<b>Mistral just launched a new top AI model for coding and security work</b>\n\nIt's called <b>Mistral Large 4</b> and is available to try now in a public preview. The company says it's built for developers making coding assistants and for security, finance, and legal teams.\n\nIt can read text and images, understands over 160 languages, and can work with a <b>1 million token</b> context, which is a lot of text at once. The company plans to release the model's weights for free download at the end of October.\n\n<a href=\"LINK\">Try it here</a>"
+  },
+  {
+   "id": "real-64-approve",
+   "source": "803",
+   "expect": "approve",
+   "why": "'speech recognition model' with plain explanation; facts all in source",
+   "post": "<b>A new AI is better at understanding spoken Arabic, especially Emirati dialect</b>\n\nIt's a speech recognition model from the Technology Innovation Institute in Abu Dhabi. It transcribes Arabic speech more accurately than the best published results, and it's focused on everyday Emirati conversations.\n\nIt also works for English, French, Spanish and Portuguese. You can try it with your own audio files in a demo.\n\n<a href=\"LINK\">Try it here</a>"
+  },
+  {
+   "id": "real-68-approve",
+   "source": "806",
+   "expect": "approve",
+   "why": "faithful rewording of Google's Mac notes app",
+   "post": "<b>Google's new macOS app records and transcribes your voice notes on your computer</b>\n\nIt uses a local version of Google's Gemma 4 AI, so your recordings stay private. You can connect it to Google Drive to organise your notes.\n\nThe app is powered by EmbeddingGemma 2, an open model that can understand text, pictures, audio and video together.\n\n<a href=\"LINK\">See it here</a>"
+  },
+  {
+   "id": "real-54-approve",
+   "source": "769",
+   "expect": "approve",
+   "why": "source: 'Auto-Review Feature Free for All ChatGPT Users' with today's release date",
+   "post": "<b>OpenAI's Auto-Review feature is now free for all ChatGPT users</b>"
+  }
+ ]
+}

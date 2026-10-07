@@ -15,6 +15,8 @@ import json
 import re
 from datetime import datetime, timedelta, timezone
 
+from urllib.parse import urlparse
+
 import config
 from nodes import dedup, fetch_pages, fetch_rss, fetch_tweets
 from utils import db, logger as log_setup, textclean
@@ -119,6 +121,9 @@ def tweet_source(tweet: fetch_tweets.Tweet) -> tuple[str, str, list[dict]]:
         url = textclean.strip_utm(link.get("url") or "")
         if not url.startswith("http") or any(host in url for host in _X_HOSTS) or url in seen:
             continue
+        # A bare website ("Z.ai", "mistral.ai/") is a name X turned into a link, not a source.
+        if urlparse(url).path.strip("/") == "":
+            continue
         seen.add(url)
         links.append({"url": url, "title": link.get("title") or "",
                       "description": link.get("description") or ""})
@@ -137,8 +142,9 @@ def _store_tweet(tweet: fetch_tweets.Tweet) -> bool:
 
     shared = tweet.shared or {}
     images = [*tweet.media, *(shared.get("media") or [])]
-    videos = [{"url": v, "kind": k or "video"} for v, k in
-              ((tweet.video, tweet.video_kind), (shared.get("video", ""), shared.get("video_kind", "")))
+    videos = [{"url": v, "kind": k or "video", "variants": list(sizes)} for v, k, sizes in
+              ((tweet.video, tweet.video_kind, tweet.video_variants),
+               (shared.get("video", ""), shared.get("video_kind", ""), shared.get("video_variants") or []))
               if v]
     if tweet.handle in config.NO_MEDIA_SOURCES:
         images, videos = [], []

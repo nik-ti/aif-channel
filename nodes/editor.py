@@ -42,9 +42,9 @@ MAX_TOKENS = 1200
 # Complete rejection rule list (model FORCED to pick one from RULES; adding new rules is
 # deliberate).
 RULES = {
-    "FACTUAL_DRIFT": "states something the source text does not say — added "
-                     "background, an added or altered title, or a claim whose "
-                     "wording no longer matches the source",
+    "FACTUAL_DRIFT": "states a fact the source does not support or changes one — "
+                     "a number, price, name, availability, timing or what it does; "
+                     "the same fact in other words is not drift",
     "OVERCLAIM":     "turns 'proposed' or 'could' into 'launched' or 'will'",
     "NO_NEWS":       "no actual event — opinion, promotion, or pure commentary",
     "WRONG_TOPIC":   config.WRONG_TOPIC_RULE,

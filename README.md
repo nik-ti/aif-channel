@@ -177,8 +177,12 @@ last 60 days that looks related (embeddings ≥ 0.60, cached per post) and asks 
 question: "does this tell someone who saw those posts anything new?". Every "send" must quote
 the new information. Nothing routes around it, and if it can't run, the post waits.
 
-**Editor.** Can only reject by naming a rule from a fixed list (plus JARGON on this
-channel). Every decision is logged; rejecting more than half of the last 20 sends an
+**Editor.** Checks FACTS, not wording: the writer is told to rewrite simply, so "lightweight"
+→ "small" or "images" → "pictures" must pass, while an invented "free", a product the source never
+names, a changed date or a changed "what it does" must not. Before changing its prompt or model run
+`python3 tools/check_editor.py` (22 cases: faithful rewrites to approve, planted and real falsehoods
+to reject, in `tests/fixtures/editor_cases.json`). Can only reject by naming a rule from a fixed list
+(plus JARGON on this channel). Every decision is logged; rejecting more than half of the last 20 sends an
 alert. On a rewrite it is shown its own earlier reason, so it can't ask for the opposite.
 
 **Writer.** No emoji at all, only the "•" bullet. Bold first line, bold key words, the link
@@ -186,6 +190,12 @@ last. It never copies a link: it writes `LINK` and the publisher fills in the pr
 address. Every link in a post loses its `utm_` tracking parameters (`textclean.strip_utm`). Code guarantees what the prompt asks: a one-line source stays one line unless the
 extra lines carry a figure from the source, and a post that opens like a recent one is
 written again once.
+
+**Too thin to post.** A source with under 250 characters of real text and no page read is capped at
+3 in code (`sorter.THIN_SOURCE_CHARS`): a headline-only post tells the reader nothing. A one-line
+source that is posted keeps any body sentence built from the source's own words.
+
+**Roundups.** From a daily brief listing many items the writer picks the single most important one.
 
 **Daily limits.** Guides ("resource") and skill packs ("skill") are capped at 2 a day, 3 hours
 apart. One that passes but hits the cap waits in the reserve (`nodes/reserve.py`), and the best
@@ -199,7 +209,7 @@ waiting one is posted when a slot frees up.
 |---|---|
 | Sorter, dedup judge, story placement and gate, image and video analysts | `google/gemini-2.5-flash` |
 | Writer | `deepseek/deepseek-v3.2` |
-| Editor | `mistralai/mistral-medium-3.1`, fallback `minimax/minimax-m2.7` |
+| Editor | `anthropic/claude-haiku-4.5`, fallback `google/gemini-3.5-flash-lite` (chosen 2026-10-07 with `tools/check_editor.py`) |
 | Repeat check | `mistralai/mistral-medium-3.1` |
 | Embeddings | `openai/text-embedding-3-small` |
 
