@@ -46,7 +46,7 @@ def _expire_stale() -> None:
 
 
 async def process_item(item, place_only: bool = False, sweep: bool = False) -> str:
-    """Run one item through the brain graph.
+    """Run one item through the graph.
 
     Returns one word: published | duplicate | irrelevant | low_impact | held |
     placed | declined | retry | failed.

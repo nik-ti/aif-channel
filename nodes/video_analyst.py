@@ -2,7 +2,7 @@
 
 Each clip is downloaded, its length read with ffprobe, and anything over
 MAX_VIDEO_SECONDS or MAX_VIDEO_MB is refused before a model sees it. The rest
-go to Gemini with channels/<name>/video_rubric.md. The first one accepted wins.
+go to Gemini with prompts/video_rubric.md. The first one accepted wins.
 Any failure means no video.
 """
 

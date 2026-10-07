@@ -48,7 +48,7 @@ def send_error(message: str, node_name: str = "unknown", quiet: bool = True) -> 
         # escape() so that an error message containing "<" can't break the
         # message formatting — errors often contain HTML fragments.
         text = (
-            "🚨 <b>Market One Channel error</b>\n"
+            "🚨 <b>AI Flow error</b>\n"
             f"📍 Node: <code>{html.escape(node_name)}</code>\n"
             f"❌ {html.escape(message[:1500])}"
         )

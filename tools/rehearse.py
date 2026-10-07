@@ -1,13 +1,8 @@
-"""Runs real queued items through the brain (brain/graph.py) and prints every
-decision. Publishes nothing, stores nothing, records no verdicts.
+"""Runs real queued items through the graph (pipeline/graph.py) and prints every
+decision. Publishes nothing, stores nothing, records no verdicts. The one place to
+see what the channel would post before it posts it. About $0.002 an item.
 
-    python tools/test_brain.py [--limit 25] [--topic crypto]
-
-dry_run.py exercises the old hand-written pipeline; this exercises the graph.
-It is the place to rehearse graph-only features — story placement, the
-rewrite loop, persona memory — that dry_run.py knows nothing about.
-
-About $0.002 an item.
+    python3 tools/rehearse.py [--limit 25] [--topic tool]
 """
 
 from __future__ import annotations
@@ -38,7 +33,7 @@ def _render(post_html: str, topic: str, url: str, brief: bool = False) -> str:
 
 
 async def _process(item, index: int, total: int, args) -> str:
-    """Run one item through the brain graph and print the trace it left behind."""
+    """Run one item through the graph and print the trace it left behind."""
     title = (item["title"] or "")[:70]
     header = f"[{index}/{total}] {item['source_name']} · {item['origin']}"
 
@@ -125,7 +120,7 @@ async def _process(item, index: int, total: int, args) -> str:
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Rehearse the brain graph without sending.")
+    parser = argparse.ArgumentParser(description="Rehearse the graph without sending.")
     parser.add_argument("--limit", type=int, default=10, help="how many items (default 10)")
     parser.add_argument("--topic", choices=list(config.VALID_TOPICS),
                         help="only show one topic")
@@ -142,7 +137,7 @@ async def main() -> None:
 
     # A rehearsal reads real stories but writes none, so two rehearsed items
     # about the same new situation each show as "would open a story". That is
-    # the tool being honest, not a bug — replay_stories.py is what shows how
+    # the tool being honest, not a bug — a full replay is what would show how
     # items behave ACROSS each other.
     db.init_db()
 

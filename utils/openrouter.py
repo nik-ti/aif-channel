@@ -206,7 +206,7 @@ def _record_schema_answer(model: str, usable: bool) -> None:
         f"fails open, so those calls were treated as approvals and nothing "
         f"else will look wrong: duplicates get published and the log still "
         f"says the check ran.\n\n"
-        f"Run: python3 tools/check_echo.py --labelled --model <candidate>",
+        f"Test a replacement on real items before switching (README: Changing a model).",
         node_name="openrouter_schema",
     )
 

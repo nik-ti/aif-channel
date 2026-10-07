@@ -1,7 +1,7 @@
 """Chooses the one picture that goes out with a post, or none.
 
 Every candidate is downloaded and shown to a vision model with the channel's
-rubric (channels/<name>/image_rubric.md). The model judges each one and names
+rubric (prompts/image_rubric.md). The model judges each one and names
 the best it accepted. "None of these" is a normal answer. Any failure means no
 picture: an unchecked image never goes out.
 """

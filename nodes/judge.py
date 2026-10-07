@@ -60,7 +60,7 @@ SCHEMA = {
 }
 
 
-# Three-way prompt (brain detects continuations): also distinguishes new developments
+# Three-way prompt (the graph uses continuations): also distinguishes new developments
 # from different stories (thread events, not drop all).
 
 SYSTEM_THREE_WAY = """You classify the relationship between two news items.
@@ -174,7 +174,7 @@ async def _judge(item, candidate, *, system: str, schema: dict,
 async def execute(item, candidate) -> tuple[bool | None, str]:
     """Rule on one pair. Returns (same_event, reason); None means no answer.
 
-    "continuation" counts as NOT a duplicate here — the brain picks those up
+    "continuation" counts as NOT a duplicate here — the graph picks those up
     via execute_three_way.
     """
     answer = await _judge(item, candidate, system=SYSTEM, schema=SCHEMA,
@@ -196,7 +196,7 @@ async def execute(item, candidate) -> tuple[bool | None, str]:
 
 
 async def execute_three_way(item, candidate) -> tuple[str | None, str]:
-    """Classify a pair for the brain: same_event | continuation | different.
+    """Classify a pair for the graph: same_event | continuation | different.
 
     (None, reason) when the judge cannot be reached — callers must fail open.
     """

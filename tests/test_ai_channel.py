@@ -2,7 +2,7 @@
 
 They check the SPEC.md rules that do not depend on a model's judgement: the AI
 prompts are its own, links and the signature are added in code, the sources
-parse, and the channel stays out of Market One's tweets.
+parse, and the channel reads only its own tweet-stream group.
 Run: /usr/bin/python3 tests/test_ai_channel.py
 """
 

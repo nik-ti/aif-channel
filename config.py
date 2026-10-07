@@ -299,7 +299,7 @@ ARTICLE_MAX_CHARS = _get_int("ARTICLE_MAX_CHARS", 6000)
 # THE LAST CHECK BEFORE SENDING (nodes/echo.py): reader memory over 60 days.
 
 ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.60)
-# 8/8 on schema and verdict; don't move it without re-running tools/check_reader_memory.py.
+# 8/8 on schema and verdict on 2026-09-29; re-test on known repeats before moving it.
 ECHO_MODEL = _get("ECHO_MODEL", "mistralai/mistral-medium-3.1")
 MEMORY_RETENTION_DAYS = max(1, _get_int("MEMORY_RETENTION_DAYS", 60))
 ECHO_WINDOW_HOURS = min(max(1, _get_int("ECHO_WINDOW_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)

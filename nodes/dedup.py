@@ -285,7 +285,7 @@ async def classify(item, *, with_meaning: bool = True,
                    persist: bool = True) -> tuple[str, int | None, float]:
     """Run checks 3 and 4 and return the verdict, without setting statuses.
 
-    What the brain's dedup node calls. Two answers: duplicate, or not.
+    What the graph's dedup station calls. Two answers: duplicate, or not.
     """
     wording_id, _ = check_wording(item["id"], item["title"] or "", item.get("norm_title") or "")
     if wording_id is not None:
@@ -304,7 +304,7 @@ async def execute(item, *, with_meaning: bool = True) -> bool:
     Checks 1-2 already ran at storage time. These two are deferred to posting
     time so we only pay for items that are real publication candidates.
 
-    The OLD binary API: it treats continuations as NOT duplicates. The brain
+    The OLD binary API: it treats continuations as NOT duplicates. The graph
     uses classify() instead.
     """
     item_id = item["id"]

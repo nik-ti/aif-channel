@@ -289,7 +289,7 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
                   brief: str = "") -> str:
     """Write post; return Telegram HTML or "" (never "publish nothing"). editor_feedback:
     rewrite reason; recent_posts: channel history; brief: what's new/known; persona:
-    channels/<name>/persona.md.
+    prompts/persona.md.
     """
 
     title = item["title"] or ""
