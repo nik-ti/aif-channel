@@ -71,9 +71,11 @@ Cost at pause: about $7/month at ~200 items per weekday.
 - **.env keys** it used: `TELEGRAM_BOT_TOKEN`, `CHANNEL_ID` (@market_one_news),
   `ERROR_CHAT_ID`, `OPENROUTER_API_KEY`, `MAX_POSTS_PER_HOUR=4`. The bot token was not
   copied anywhere; reuse the Market One bot from BotFather.
-- **X accounts** come from the shared tweet relay (`/home/nikita/trading/infra/tweet-relay/`).
-  The accounts in `settings.py` must also be in the relay's `accounts.txt`. Market One read the
-  Redis stream `tweets:stream` with the consumer group `news-channel`, which still exists.
+- **X accounts** came from the tweet relay. On 2026-10-07 the relay was rebuilt at
+  `/home/nikita/systems/infra/tweet-relay/` and now tracks only AI Flow's accounts, so Market One's
+  eight accounts in `settings.py` must be added back to its `accounts.txt` (and X stream rules
+  then cover both lists). Market One read the Redis stream `tweets:stream` with the consumer
+  group `news-channel`.
 - **systemd unit** `market-one-channel` is stopped and disabled. Its unit file still points at
   the old folder `/home/nikita/systems/news-channels`, which no longer exists.
 
