@@ -2,7 +2,7 @@
 
 They check the rules in SPEC.md that do not depend on a model's judgement: what
 counts as a candidate, what happens on failure, what the publisher is allowed to
-send. Run: CHANNEL=markets /usr/bin/python3 tests/test_media.py
+send. Run: /usr/bin/python3 tests/test_media.py
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def new_item(**fields) -> dict:
 
 
 def new_post(item: dict) -> int:
-    return db.create_post(item_id=item["id"], topic="markets", post_html="<b>Post</b>",
+    return db.create_post(item_id=item["id"], topic="tool", post_html="<b>Post</b>",
                           image_url="", writer_model="test")
 
 
@@ -258,7 +258,7 @@ def sends():
 
 
 async def run_stations(item: dict, post_id: int, check_videos: bool):
-    from brain import nodes as stations
+    from pipeline import stations
     config.CHECK_VIDEOS = check_videos
     state = {"item": item, "post_id": post_id, "post_html": "<b>Post</b>"}
     await stations.image_analyst_node(state)
@@ -267,7 +267,7 @@ async def run_stations(item: dict, post_id: int, check_videos: bool):
 
 
 @test
-async def markets_videos_go_out_unchecked_as_today():
+async def with_video_checks_off_clips_go_out_unchecked():
     item = new_item(image_url="https://a/thumb.jpg", video_url="https://v/m.mp4", video_kind="video")
     post_id = new_post(item)
     calls = fake_video(duration=30, size_mb=5, verdict="reject")

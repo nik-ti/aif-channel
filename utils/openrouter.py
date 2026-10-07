@@ -45,7 +45,7 @@ async def _post(payload: dict) -> dict:
         "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         # Separates this project's spend on the OpenRouter dashboard.
-        "X-Title": "market-one-channel",
+        "X-Title": "aif-channel",
     }
 
     last = ""

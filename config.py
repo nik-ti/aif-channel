@@ -1,8 +1,6 @@
-# Every setting for the channel. Secrets live in .env; everything else has a
-# sensible default here and can be overridden in .env.
-#
-# Any name can be prefixed with the channel's own name to override it for that
-# channel alone, for example AI_NEWS_MAX_POSTS_PER_HOUR.
+# Every setting for AI Flow (@ai_flow_daily). Secrets live in .env; everything else
+# has a default here that a line in .env can override (same name).
+# The prompts are text files in prompts/; this file only points at them.
 
 from __future__ import annotations
 
@@ -13,23 +11,15 @@ from dotenv import dotenv_values
 
 HERE = Path(__file__).resolve().parent
 SCHEMA_PATH = HERE / "schema.sql"
+PROMPTS = HERE / "prompts"
 
 _ENV = dotenv_values(HERE / ".env")
 
 
-# Set once CHANNEL is known; initially unprefixed so CHANNEL itself can be read.
-_PREFIX = ""
-
-
 def _get(name: str, default: str = "") -> str:
-    """Read setting, preferring this channel's own value (shared vs. per-channel)."""
-    for key in ((_PREFIX + name) if _PREFIX else "", name):
-        if not key:
-            continue
-        value = _ENV.get(key) or os.environ.get(key)
-        if value is not None:
-            return value.strip()
-    return default.strip()
+    """Read a setting from .env (or the environment), else the default."""
+    value = _ENV.get(name) or os.environ.get(name)
+    return (value if value is not None else default).strip()
 
 
 def _get_int(name: str, default: int) -> int:
@@ -48,196 +38,176 @@ def _get_float(name: str, default: float) -> float:
         return default
 
 
-def _get_bool(name: str, default: bool) -> bool:
-    """Read an on/off setting. Anything but a recognised word keeps the default."""
-    value = _get(name, "").lower()
-    if value in {"1", "true", "yes", "on"}:
-        return True
-    if value in {"0", "false", "no", "off"}:
-        return False
-    return default
+CHANNEL_NAME = "AI Flow"
+DB_PATH = HERE / "data" / "aif-channel.db"
+LOG_PATH = HERE / "logs" / "aif-channel.log"
 
 
-# CHANNEL SELECTION: two channels run from same code, told apart by CHANNEL in .env/unit
-# file.
+# SECRETS (from .env)
 
-CHANNEL = _get("CHANNEL", "markets")
-_PREFIX = CHANNEL.upper() + "_"
-
-try:
-    _profile = __import__(f"channels.{CHANNEL}.profile", fromlist=["profile"])
-except ImportError as error:  # pragma: no cover - a typo here must be loud
-    raise SystemExit(
-        f"CHANNEL is '{CHANNEL}' but channels/{CHANNEL}/profile.py could not be "
-        f"loaded: {error}\nChannels available: "
-        f"{', '.join(sorted(p.parent.name for p in HERE.glob('channels/*/profile.py')))}"
-    ) from error
-
-CHANNEL_NAME = _profile.NAME
-
-# Each channel has separate DB (avoid cross-channel duplicate checks and story layer).
-DB_PATH = HERE / "data" / _profile.DB_FILENAME
-LOG_PATH = HERE / "logs" / _profile.LOG_FILENAME
-
-SOURCES = _profile.SOURCES
-X_ACCOUNTS = _profile.X_ACCOUNTS
-NO_MEDIA_SOURCES = _profile.NO_MEDIA_SOURCES
-VALID_TOPICS = _profile.VALID_TOPICS
-PERSONA_PATH = _profile.PERSONA_PATH
-TOPICS = _profile.TOPICS
-MARKETS = _profile.MARKETS
-RUBRIC_PATH = _profile.RUBRIC_PATH
-PIPELINE = _profile.PIPELINE
-# Media analysts (SPEC.md). A channel without CHECK_VIDEOS sends its clips unchecked.
-IMAGE_RUBRIC_PATH = _profile.IMAGE_RUBRIC_PATH
-VIDEO_RUBRIC_PATH = getattr(_profile, "VIDEO_RUBRIC_PATH", None)
-CHECK_VIDEOS = getattr(_profile, "CHECK_VIDEOS", False)
-COLLECT_ARTICLE_MEDIA = getattr(_profile, "COLLECT_ARTICLE_MEDIA", False)
-USE_ECONOMIC_CALENDAR = getattr(_profile, "USE_ECONOMIC_CALENDAR", False)
-
-# A channel's own writer and editor prompts. None means the built-in Market One
-# prompts in nodes/writer.py and nodes/editor.py.
-WRITER_PROMPT_PATH = getattr(_profile, "WRITER_PROMPT_PATH", None)
-EDITOR_PROMPT_PATH = getattr(_profile, "EDITOR_PROMPT_PATH", None)
-
-# The sorter's third answer, by the name the model sees: "which market reprices"
-# on Market One. Stored in the items.market column whatever it is called.
-SORTER_AXIS = getattr(_profile, "SORTER_AXIS", "market")
-
-# Extra editor rules for this channel, the subset of them a rewrite can fix, and
-# its own wording of WRONG_TOPIC ("" keeps Market One's).
-EXTRA_EDITOR_RULES = getattr(_profile, "EXTRA_EDITOR_RULES", {})
-EXTRA_FIXABLE_RULES = frozenset(getattr(_profile, "EXTRA_FIXABLE_RULES", ()))
-WRONG_TOPIC_RULE = getattr(_profile, "WRONG_TOPIC_RULE", "")
-
-# The product link: the writer leaves href="LINK" and the publisher fills it in
-# (nodes/publisher.py). PRODUCT_LINK_PAGES are aggregator sites whose pages link
-# to the real thing (nodes/article.py).
-LINK_TO_PRODUCT = getattr(_profile, "LINK_TO_PRODUCT", False)
-PRODUCT_LINK_PAGES = tuple(getattr(_profile, "PRODUCT_LINK_PAGES", ()))
-LINK_FALLBACK_TEXT = getattr(_profile, "LINK_FALLBACK_TEXT", "Link")
-
-# A reader service tried after the plain request and the browser both fail, e.g.
-# "https://r.jina.ai/" (the page address is appended). "" = none (Market One).
-READER_FALLBACK_URL = getattr(_profile, "READER_FALLBACK_URL", "")
-
-# On a rewrite, show the editor its own earlier rejection so it cannot reverse
-# itself ("say units of text" → "say tokens"). Off = Market One as before.
-EDITOR_REMEMBERS_REWRITES = getattr(_profile, "EDITOR_REMEMBERS_REWRITES", False)
-
-# Extra guidance for the story placer, added after its built-in prompt ("" = none).
-STORY_PLACE_NOTES = getattr(_profile, "STORY_PLACE_NOTES", "")
-
-# The sorter reads the article too (the channel runs fetch_article before it).
-SORTER_READS_ARTICLE = getattr(_profile, "SORTER_READS_ARTICLE", False)
-
-# Show recent posts to the writer as "do not repeat these" rather than "sound like
-# these", and send back a post whose opening words a recent post already used.
-VARY_WRITING = getattr(_profile, "VARY_WRITING", False)
-
-# Per-topic limits: {topic: (max posts in 24 hours, min hours between two)}.
-# Empty = none (Market One).
-TOPIC_LIMITS = getattr(_profile, "TOPIC_LIMITS", {})
-
-# How long an item held back by TOPIC_LIMITS waits for a free slot (nodes/reserve.py).
-RESERVE_DAYS = _get_int("RESERVE_DAYS", 3)
-
-# Put today's date in front of what the sorter reads, so "2026" is not "the future".
-SORTER_SHOWS_DATE = getattr(_profile, "SORTER_SHOWS_DATE", False)
-
-
-# SECRETS (from .env); key names are per-channel.
-
-TELEGRAM_BOT_TOKEN = _get(_profile.BOT_TOKEN_KEY)
-CHANNEL_ID = _get(_profile.CHANNEL_ID_KEY)   # "@name" or "-100..."
+TELEGRAM_BOT_TOKEN = _get("TELEGRAM_BOT_TOKEN")
+CHANNEL_ID = _get("CHANNEL_ID")          # "@name" or "-100..."
 ERROR_CHAT_ID = _get("ERROR_CHAT_ID")    # your DM, for error alerts
 OPENROUTER_API_KEY = _get("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = _get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 
+# Every post is signed, e.g. <a href="https://t.me/ai_flow_daily">AI Flow | Subscribe</a>
+SIGNATURE_HTML = _get("SIGNATURE_HTML")
 
 
+# PROMPTS
+
+RUBRIC_PATH = PROMPTS / "rubric.md"          # what is worth posting (the sorter)
+PERSONA_PATH = PROMPTS / "persona.md"        # the voice, in front of the writer's prompt
+WRITER_PROMPT_PATH = PROMPTS / "writer.md"
+EDITOR_PROMPT_PATH = PROMPTS / "editor.md"
+IMAGE_RUBRIC_PATH = PROMPTS / "image_rubric.md"
+VIDEO_RUBRIC_PATH = PROMPTS / "video_rubric.md"
 
 
+# WHAT GETS PUBLISHED
 
-# A line added under every post, e.g. the channel name and a subscribe link.
-SIGNATURE_HTML = _get("SIGNATURE_HTML", getattr(_profile, "SIGNATURE_HTML", ""))
+# The sorter scores 1-5; only items at or above this are posted.
+MIN_IMPORTANCE = _get_int("MIN_IMPORTANCE", 4)
+
+# MUST match rubric.md: the provider enforces these lists.
+TOPICS = ("launch", "tool", "skill", "resource", "other")
+VALID_TOPICS = ("launch", "tool", "skill", "resource")
+
+# The sorter's third question, "who can use this today?". "none" caps the score at 3.
+# Stored in the items.market column.
+SORTER_AXIS = "who_can_use"
+SORTER_AXIS_VALUES = ("everyone", "creators", "business", "students", "developers", "none")
+
+# Guides and skill packs: useful, but a channel full of them reads like a list
+# (six skills.sh posts went out in 16 minutes on 2026-10-05). At most 2 of each a
+# day, at least 3 hours apart: {topic: (max posts in 24 hours, min hours between)}.
+TOPIC_LIMITS = {"resource": (2, 3), "skill": (2, 3)}
+
+# How long an item held back by TOPIC_LIMITS waits for a free slot (nodes/reserve.py).
+RESERVE_DAYS = _get_int("RESERVE_DAYS", 3)
+
+# Feeds like Future Tools give only "Source: x | Release date: y", so the article is
+# read before the sorter judges it.
+SORTER_READS_ARTICLE = True
+
+# "DevDay 2026" was dropped as "a hypothetical future event" without this.
+SORTER_SHOWS_DATE = True
 
 
-# POST APPEARANCE: one mark per post at front (WRITER picks from list or flag).
-# Fixed list prevents emoji misuse (🔥 on drone strike); marks signal what, not how to
-# feel.
-# No hashtags: two would sort posts by desk, not reader.
+# SOURCES
 
-_MARKETS_POST_MARKS = {
-    # a number moving — the short, specific posts
-    "🔺": "a price, yield or figure rising — the number is the news",
-    "🔻": "a price, yield or figure falling — the number is the news",
-    "📈": "a market or trend moving up over a period, or an expected rise",
-    "📉": "a market or trend moving down over a period, or an expected fall",
-    "📍": "a SCHEDULED economic release from the calendar (CPI, PPI, jobs, GDP, a "
-          "rate decision) — always this one, set in code",
-    "📊": "official statistics or data that is NOT a scheduled calendar release",
-    # institutions
-    "🏛️": "a central bank, government or regulator deciding or projecting",
-    "🏦": "a commercial bank, or the banking system",
-    "⚖️": "a court ruling, charge, lawsuit or enforcement action",
-    "📝": "a tax, a bill, a law — legislation moving",
-    # money and markets
-    "💵": "the dollar, dollar liquidity, or money in general; crypto too",
-    "💴": "the yen or Japan's money",
-    "💶": "the euro or the eurozone's money",
-    "💱": "forex: exchange rates, one currency against another",
-    "🛢️": "oil, gas, refining, pipelines",
-    "💎": "diamonds and precious stones — never gold or silver",
-    "🏠": "housing: home prices, sales, mortgages, rents, builders",
-    "🔬": "research: a study, a paper, a scientific or technical finding",
-    "🫆": "fingerprints, biometrics, identity checks",
-    # risk
-    "⚠️": "a hack, exploit, breach or security vulnerability",
-    "🔒": "safety, custody, a freeze or a lock-up of funds or assets",
-}
+SOURCES = [
+    # Lab announcements. Anthropic has no feed of its own; this one is rebuilt
+    # from its news page by a community project on GitHub.
+    {"name": "openai",     "topic": "launch", "url": "https://openai.com/news/rss.xml"},
+    {"name": "anthropic",  "topic": "launch",
+     "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml"},
+    {"name": "hf_blog",    "topic": "launch", "url": "https://huggingface.co/blog/feed.xml"},
 
-# A channel may bring its own marks; these are Market One's.
-POST_MARKS = getattr(_profile, "POST_MARKS", _MARKETS_POST_MARKS)
+    # New tools and releases, already sorted by someone.
+    {"name": "ai_tldr",    "topic": "tool",   "url": "https://ai-tldr.dev/feed.xml"},
+    # 33 MB in full; the newest entries are all in the first megabyte.
+    {"name": "tom_doerr",  "topic": "tool",
+     "url": "https://tom-doerr.github.io/repo_posts/feed.xml", "max_bytes": 1_000_000},
 
-# Bullet for lists (only emoji allowed in body; strip_emojis protects it).
-BULLET = getattr(_profile, "BULLET", "▪️")
+    # Future Tools (Matt Wolfe's AI news list). Links go to the original article and
+    # each item states its release date. 1000 items; the newest are at the top.
+    {"name": "futuretools", "topic": "launch",
+     "url": "https://www.futuretools.io/news/rss.xml", "max_bytes": 150_000},
 
-# Whether a country flag counts as a mark (Market One: "🇯🇵 Japan's 10-year...").
-ALLOW_FLAG_MARKS = getattr(_profile, "ALLOW_FLAG_MARKS", True)
+    # MindStudio removed 2026-10-04: its explainers of releases from days earlier
+    # were posted as "just launched".
 
-# Country flags are valid marks when country is the story (250 of them; accept any
-# flag).
+    # Pages with no feed, watched by nodes/fetch_pages.py: plain request first,
+    # stealth browser if that fails. A link matching link_pattern that was not
+    # there last time is a new story.
+    {"name": "xai", "kind": "page", "topic": "launch", "every_minutes": 60,
+     "url": "https://x.ai/news", "link_pattern": r"^https://x\.ai/news/[a-z0-9-]+$"},
+    # Skills climbing the chart, and companies newly publishing official skills.
+    {"name": "skills_trending", "kind": "page", "topic": "tool", "every_minutes": 360,
+     "url": "https://www.skills.sh/trending",
+     "link_pattern": r"^https://www\.skills\.sh/[a-z0-9][\w.-]*/[\w.-]+/[\w.-]+$"},
+    {"name": "skills_official", "kind": "page", "topic": "tool", "every_minutes": 720,
+     "url": "https://skills.sh/official",
+     "link_pattern": r"^https://skills\.sh/(?!(packs|topic|official|audits|docs|agent)$)[a-z0-9-]+$"},
+]
 
-# "markets" topic added 2026-08-28; bar unchanged in nodes/sorter.py.
+# X accounts read from the shared tweet relay (/home/nikita/trading/infra/tweet-relay).
+# None yet. Adding one also needs the relay's accounts.txt and a relay restart.
+X_ACCOUNTS: dict[str, str] = {}
+NO_MEDIA_SOURCES: set[str] = set()
+
+# AI/TLDR dates its items at midnight, so a day-old cutoff drops most of them.
+ARTICLE_MAX_AGE_HOURS = _get_int("ARTICLE_MAX_AGE_HOURS", 48)
+
+# OpenAI's pages sit behind a JavaScript challenge that even the stealth browser
+# cannot pass; this free reader service can. Only used when both fail.
+READER_FALLBACK_URL = "https://r.jina.ai/"
+
+# Article pages are searched for pictures and clips too, and clips are watched.
+COLLECT_ARTICLE_MEDIA = True
+CHECK_VIDEOS = True
+
+
+# HOW POSTS LOOK
+
+# No emoji at all (nikita, 2026-10-04): emphasis comes from bold words and line
+# breaks. The bullet is the one symbol a post may use.
+POST_MARKS: dict[str, str] = {}
+BULLET = "•"
+ALLOW_FLAG_MARKS = False
+
+# The writer ends the post with <a href="LINK">Try it here</a>; the publisher fills
+# in the thing itself. AI/TLDR pages list the official link first.
+LINK_TO_PRODUCT = True
+PRODUCT_LINK_PAGES = ("ai-tldr.dev",)
+LINK_FALLBACK_TEXT = "Link"
+
+# One person writes this channel: no two posts open the same way.
+VARY_WRITING = True
+
 # Short sources (X posts) become BRIEF posts to avoid invention.
 BRIEF_SOURCE_CHARS = _get_int("BRIEF_SOURCE_CHARS", 400)
 
 
-# WHAT GETS PUBLISHED: sorter scores 1-5 for impact; only >= MIN_IMPORTANCE published.
-# Scale: 5=biggest events, 4=market-moving (recommended), 3=ordinary news, 1=everything.
-# See nodes/sorter.py.
-MIN_IMPORTANCE = _get_int("MIN_IMPORTANCE", _profile.MIN_IMPORTANCE)
+# THE EDITOR'S CHANNEL RULES
+
+WRONG_TOPIC_RULE = "not about AI tools, AI products or AI models that people can use"
+EXTRA_EDITOR_RULES = {
+    "JARGON": "uses a technical word a 12-year-old would not know, without explaining it",
+}
+EXTRA_FIXABLE_RULES = frozenset({"JARGON"})
+
+# On a rewrite the editor sees its own earlier rejection, so it cannot reverse
+# itself ("say units of text" → "say tokens").
+EDITOR_REMEMBERS_REWRITES = True
+
+# The placer's built-in examples are about markets. On this channel a story is one product.
+STORY_PLACE_NOTES = """ON THIS CHANNEL A STORY IS ONE PRODUCT OR ONE RELEASE. The examples above are
+from a markets channel; here the rule is simpler. Two items belong together only
+when they are about the SAME product, model or tool: its launch, its rollout to
+more users, a guide to it, a price change for it.
+
+  - "Introducing dots" and "Dots rolls out to Plus users"           -> ONE story.
+  - "Introducing dots" and "Introducing GPT-6.1 Sol"               -> TWO stories.
+  - "Claude Code adds mods" and "Claude gets a new Opus model"     -> TWO stories.
+
+Being from the same COMPANY is not enough. Being announced at the same EVENT is
+not enough."""
 
 
 # TIMING AND LIMITS
 
 POLL_MINUTES = _get_int("POLL_MINUTES", 10)
 
-# Tweet relay: TWEET_STREAM_GROUP must stay fixed (new name skips/re-reads); different
-# from "sniper-ingest".
+# Tweet relay. TWEET_STREAM_GROUP must stay fixed (a new name skips or re-reads).
 REDIS_URL = _get("REDIS_URL", "redis://localhost:6379/0")
 TWEET_STREAM_KEY = _get("TWEET_STREAM_KEY", "tweets:stream")
-TWEET_STREAM_GROUP = _get("TWEET_STREAM_GROUP",
-                          getattr(_profile, "TWEET_STREAM_GROUP", "news-channel"))
+TWEET_STREAM_GROUP = _get("TWEET_STREAM_GROUP", "news-channel-ai_news")
 X_MAX_AGE_MINUTES = _get_int("X_MAX_AGE_MINUTES", 45)  # Stop restart floods.
 X_MAX_BURST = _get_int("X_MAX_BURST", 25)
 
-# Stop old feeds replaying back catalogue on next poll.
-ARTICLE_MAX_AGE_HOURS = _get_int("ARTICLE_MAX_AGE_HOURS",
-                                 getattr(_profile, "ARTICLE_MAX_AGE_HOURS", 24))
-
-# Publishing pace
 PUBLISH_TICK_SECONDS = _get_int("PUBLISH_TICK_SECONDS", 120)
 MAX_POSTS_PER_TICK = _get_int("MAX_POSTS_PER_TICK", 2)
 SECONDS_BETWEEN_SENDS = _get_int("SECONDS_BETWEEN_SENDS", 3)
@@ -258,134 +228,97 @@ FUZZY_THRESHOLD = _get_int("FUZZY_THRESHOLD", 92)
 FUZZY_WINDOW_HOURS = _get_int("FUZZY_WINDOW_HOURS", 24)
 
 # Check 4: semantic similarity (0.0-1.0). Measured on 19 pairs: duplicates 0.738-0.993,
-# different 0.785-0.900 (overlap).
-# 0.72 caught 100% of duplicates; 0.75 missed some.
-COSINE_SHORTLIST = _get_float("COSINE_SHORTLIST", 0.72)  # Check 5 decides between SHORTLIST and different stories.
+# different 0.785-0.900 (overlap), so it only shortlists; check 5 decides.
+COSINE_SHORTLIST = _get_float("COSINE_SHORTLIST", 0.72)
 COSINE_CERTAIN = _get_float("COSINE_CERTAIN", 0.95)  # Near-verbatim; merge without check 5.
 COSINE_WINDOW_HOURS = _get_int("COSINE_WINDOW_HOURS", 48)
-
-# How many candidates to compare (was 1, lost burst dedup).
 DEDUP_TOP_K = _get_int("DEDUP_TOP_K", 3)
 
-# TIME GATE: duplicates in sample landed within 10.1h; false merges 24h apart (recurring
-# reports). Removes for free, before model runs.
+# Duplicates in a sample landed within 10.1h; false merges were 24h apart (recurring reports).
 DUPLICATE_MAX_GAP_HOURS = _get_int("DUPLICATE_MAX_GAP_HOURS", 12)
 
 EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 
-# AI MODELS: prompts live in node files, not here.
 
-# 1. Sorter: scores importance/topic. ~$1.50/mo ($6.53 of $7.40 for gemini-2.5-flash, vs
-# haiku $20 of $23).
-# 88% of bill: 4529-token rubric, 142x/day (markets rubric cut to ~1,900 tokens 2026-10-06). Prompt caching measured and REJECTED: cache
-# read $0.000812 vs uncached $0.005091,
-# but 5m expiry vs 6.5m median gap (only 41% <5m); miss costs $0.009909 → 21% DEARER.
-# A channel profile may name its own (markets does since 2026-10-06; see its profile).
-SORTER_MODEL = _get("SORTER_MODEL", getattr(_profile, "SORTER_MODEL", "google/gemini-2.5-flash"))
+# AI MODELS (all through OpenRouter)
 
-# 2. Writer: deepseek-v3.2 $0.40/M vs Gemini $2.50/M; output-heavy, so halves pipeline
-# cost.
-WRITER_MODEL = _get("WRITER_MODEL", getattr(_profile, "WRITER_MODEL", "deepseek/deepseek-v3.2"))
+SORTER_MODEL = _get("SORTER_MODEL", "google/gemini-2.5-flash")
+WRITER_MODEL = _get("WRITER_MODEL", "deepseek/deepseek-v3.2")
 
-# 3. Editor: checks post against source. Tested 7 pairs: MiniMax 7/7 at 2.5s, mistral
-# 7/7, deepseek missed 1, qwen missed 3 at 32s.
-# SWAPPED 2026-09-30: MiniMax failed 28/week (16 "ran out of room", 429/502/522);
-# mistral fallback passed 7/7 instead.
-# Claude-haiku-4.5 not used: accepts schema (4/4), but this node fails CLOSED catching
-# falsehoods—need test pairs with known falsehoods.
+# The editor checks a post against its source and fails CLOSED. It must be a
+# different lab from the writer. Don't move it without pairs containing known
+# falsehoods. MiniMax failed 28 times in one week, so it is the fallback ("" = none).
 EDITOR_MODEL = _get("EDITOR_MODEL", "mistralai/mistral-medium-3.1")
-
-# Fallback when EDITOR unreachable (fails closed). MiniMax unreliable: 15 failures/2wks
-# (10×429), cost 4 stories including BLS payrolls.
-# Fallback must clear same bar: rubber-stamp worse than losing story. Tested 3 cases:
-# mistral 1-2s all 3; qwen waved through falsehoods.
-# Set "" to disable.
 EDITOR_FALLBACK_MODEL = _get("EDITOR_FALLBACK_MODEL", "minimax/minimax-m2.7")
-
-# Ceiling on editor call (retries+fallback). Worst: 3 retries × 2 models = 368s (3×
-# publish tick). Normal: 2-4s.
 EDITOR_TIMEOUT_SECONDS = _get_int("EDITOR_TIMEOUT_SECONDS", 60)
 
 # Alerts you if the editor starts rejecting an unusual share of posts.
 EDITOR_DECLINE_ALERT_RATE = _get_float("EDITOR_DECLINE_ALERT_RATE", 0.5)
 EDITOR_DECLINE_WINDOW = _get_int("EDITOR_DECLINE_WINDOW", 20)
 
-# A post rejected for a FIXABLE rule (see FIXABLE_RULES in brain/nodes.py) goes
-# back to the writer with the reason instead of being dropped. Capped low: each
-# loop costs another writer + editor call, and a third draft never makes it.
+# A post rejected for a FIXABLE rule goes back to the writer once with the reason.
 MAX_REWRITES = _get_int("MAX_REWRITES", 1)
 
-
-# 4. Judge (dedup check 5): only step that tells "inflows" from "outflows". STABILITY >
-# ACCURACY.
-# Test 20 pairs: deepseek 80% (0 wrong merges, order-stable 6/6), gemini 75% (0 wrong,
-# order-flips 3/6), minimax 13/20 failed concurrency.
-# Measured 2026-09-30 on 40 real pairs: haiku 38/40, gemini 39/40, all 40/40 shape.
-# Disagreements: haiku right (Kalshi 2 posts = 1 event).
-# Deepseek off: unpinned answers prose (12/327 live failures, 2/14 bench to DeepInfra).
+# Dedup check 5: same event, different, or a continuation. 39/40 on real pairs.
 JUDGE_MODEL = _get("JUDGE_MODEL", "google/gemini-2.5-flash")
-
-# Timeout: treat as new item and post. 25s normal, but 20 at once hit it; timeout =
-# duplicate published. Headroom in 120s tick.
 JUDGE_TIMEOUT_SECONDS = _get_int("JUDGE_TIMEOUT_SECONDS", 40)
 
-
-# BRAIN / PERSONA: channel voice prepended to writer's prompt. Recent posts as voice
-# examples (enough rhythm, minimal bloat).
+# Recent posts shown to the writer.
 PERSONA_RECENT_POSTS = _get_int("PERSONA_RECENT_POSTS", 15)
 
 
-# STORIES: unit of work; items join, story posts when it moves.
+# STORIES: items join a story; a story posts when it has moved.
 
-# Story model: placement and gate (reading comprehension). Both fail open → duplicate
-# story if timeout.
-# Deepseek failed placement 7/week (4× spent 200-token thinking budget, returned
-# nothing).
-# Timeout raised 30→45 after measuring: 20 calls, slowest 22.2s. Placement timeout used
-# to open duplicate story.
 STORY_MODEL = _get("STORY_MODEL", "google/gemini-2.5-flash")
 STORY_TIMEOUT_SECONDS = _get_int("STORY_TIMEOUT_SECONDS", 45)
 
-# How many open stories shown to placement (index numbering error risk). Raised with
-# STORY_IDLE_HOURS.
-# Must stay >= actual open stories or hidden ones open duplicates (Apple news published
-# twice).
+# Must stay >= the real number of open stories, or hidden ones open duplicates.
 STORY_MAX_OPEN = _get_int("STORY_MAX_OPEN", 30)
-
-# How many unposted items shown to gate/writer from one story (keeps prompts bounded;
-# all marked covered on post).
+# Unposted items shown to the gate and writer from one story.
 STORY_MAX_PENDING = _get_int("STORY_MAX_PENDING", 12)
-
-# Story with no activity this long closes (new item cannot reopen). Measured: 12h split
-# war into 8 stories in 6-day replay;
-# 36h too short (Apple $5T cap: closed, returned 3 days later as new). 5 days = reader
-# memory.
 STORY_IDLE_HOURS = _get_int("STORY_IDLE_HOURS", 120)
-
-# Hard end: stops broad situations staying live indefinitely (absorbing 1 item/11h).
 STORY_MAX_HOURS = _get_int("STORY_MAX_HOURS", 168)
-
-# Anti-double-post floor (was 25m, silenced Iran retaliation 2026-09-01). Gate now
-# judges based on time elapsed.
+# Floor against two wires seconds apart becoming two posts; the gate weighs the rest.
 STORY_MIN_GAP_MINUTES = _get_int("STORY_MIN_GAP_MINUTES", 6)
+STORY_MAX_POSTS = _get_int("STORY_MAX_POSTS", 12)  # runaway stop
 
-# Runaway stop (not editorial rule; gate weighs it). At 6 was a rule, silenced war's
-# second half.
-STORY_MAX_POSTS = _get_int("STORY_MAX_POSTS", 12)
-
-# ROUNDUP: when items waiting >= ITEMS and >= MINUTES passed, the gate is asked ONCE
-# whether together they say something new. Until 2026-10-01 this posted without asking.
+# Roundup: when ITEMS have waited MINUTES, the gate is asked once whether together
+# they say something new; past MAX_QUIET_HOURS the story is over.
 STORY_DIGEST_ITEMS = _get_int("STORY_DIGEST_ITEMS", 3)
 STORY_DIGEST_MINUTES = _get_int("STORY_DIGEST_MINUTES", 180)
-
-# Past MAX_QUIET_HOURS the story is over: no roundup is asked about at all.
-# 30-year Treasury out twice 2026-09-29 in 7h: 3 items over 37h silence + rule fired.
 STORY_DIGEST_MAX_QUIET_HOURS = _get_int("STORY_DIGEST_MAX_QUIET_HOURS", 12)
 
 
-# =============================================================================
-# MISC
-# =============================================================================
+# READING LINKED ARTICLES (nodes/article.py)
+
+ARTICLE_TIMEOUT_SECONDS = _get_int("ARTICLE_TIMEOUT_SECONDS", 15)
+ARTICLE_BROWSER_TIMEOUT_SECONDS = _get_int("ARTICLE_BROWSER_TIMEOUT_SECONDS", 60)
+ARTICLE_MAX_CHARS = _get_int("ARTICLE_MAX_CHARS", 6000)
+
+
+# THE LAST CHECK BEFORE SENDING (nodes/echo.py): reader memory over 60 days.
+
+ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.60)
+# 8/8 on schema and verdict; don't move it without re-running tools/check_reader_memory.py.
+ECHO_MODEL = _get("ECHO_MODEL", "mistralai/mistral-medium-3.1")
+MEMORY_RETENTION_DAYS = max(1, _get_int("MEMORY_RETENTION_DAYS", 60))
+ECHO_WINDOW_HOURS = min(max(1, _get_int("ECHO_WINDOW_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)
+ECHO_BATCH_CHARS = max(1000, _get_int("ECHO_BATCH_CHARS", 16000))
+STORY_MEMORY_HOURS = min(max(1, _get_int("STORY_MEMORY_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)
+STORY_MEMORY_SHORTLIST = _get_float("STORY_MEMORY_SHORTLIST", 0.60)
+
+
+# THE MEDIA ANALYSTS. Measured 2026-10-01: about $0.0007 per image and $0.003 for a
+# 6 MB video on Flash.
+
+IMAGE_MODEL = _get("IMAGE_MODEL", "google/gemini-2.5-flash")
+VIDEO_MODEL = _get("VIDEO_MODEL", "google/gemini-2.5-flash")
+MEDIA_TIMEOUT_SECONDS = _get_int("MEDIA_TIMEOUT_SECONDS", 60)
+MAX_IMAGES_JUDGED = _get_int("MAX_IMAGES_JUDGED", 6)
+MAX_VIDEO_SECONDS = _get_int("MAX_VIDEO_SECONDS", 120)
+# Telegram's limit for sending a file by its address; bigger could not go out anyway.
+MAX_VIDEO_MB = _get_int("MAX_VIDEO_MB", 20)
+
 
 LOG_LEVEL = _get("LOG_LEVEL", "INFO")
 MAX_BODY_CHARS = _get_int("MAX_BODY_CHARS", 5000)
@@ -400,9 +333,8 @@ def check(require_telegram: bool = False, require_openrouter: bool = False) -> l
             problems.append("TELEGRAM_BOT_TOKEN is missing from .env")
         if not CHANNEL_ID:
             problems.append("CHANNEL_ID is missing from .env — nowhere to post")
-        if getattr(_profile, "REQUIRES_SIGNATURE", False) and not SIGNATURE_HTML:
-            problems.append(f"{_PREFIX}SIGNATURE_HTML is missing from .env — every "
-                            f"post on this channel is signed")
+        if not SIGNATURE_HTML:
+            problems.append("SIGNATURE_HTML is missing from .env — every post is signed")
 
     if require_openrouter and not OPENROUTER_API_KEY:
         problems.append("OPENROUTER_API_KEY is missing from .env")
@@ -425,41 +357,3 @@ def check(require_telegram: bool = False, require_openrouter: bool = False) -> l
         problems.append(f"MIN_IMPORTANCE must be between 1 and 5, not {MIN_IMPORTANCE}")
 
     return problems
-
-# READING LINKED ARTICLES: 59% arrive with <120 chars body (reason posts restate first
-# line). See nodes/article.py.
-
-# Plain request then extraction (generous for slow sites, short enough not to stall).
-ARTICLE_TIMEOUT_SECONDS = _get_int("ARTICLE_TIMEOUT_SECONDS", 15)
-
-# Browser attempt (launch included); only for sites refusing plain request; mustn't hang
-# round.
-ARTICLE_BROWSER_TIMEOUT_SECONDS = _get_int("ARTICLE_BROWSER_TIMEOUT_SECONDS", 60)
-
-# What's kept (writer sees full source; long-read would crowd wire items).
-ARTICLE_MAX_CHARS = _get_int("ARTICLE_MAX_CHARS", 6000)
-
-# THE LAST CHECK BEFORE SENDING (see nodes/echo.py). Shortlist wide (no cutoff between
-# repeat and step); judge decides.
-ECHO_SHORTLIST = _get_float("ECHO_SHORTLIST", 0.60)
-
-# Reader memory window. Measured 2026-09-29 on 8 channel posts: deepseek 7/8 prose
-# (fails open), mistral 8/8 schema+verdict,
-# gemini schema ok but 30-year Treasury repeat through. Don't move without re-running
-# this set.
-ECHO_MODEL = _get("ECHO_MODEL", "mistralai/mistral-medium-3.1")
-MEMORY_RETENTION_DAYS = max(1, _get_int("MEMORY_RETENTION_DAYS", 60))
-ECHO_WINDOW_HOURS = min(max(1, _get_int("ECHO_WINDOW_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)
-ECHO_BATCH_CHARS = max(1000, _get_int("ECHO_BATCH_CHARS", 16000))
-STORY_MEMORY_HOURS = min(max(1, _get_int("STORY_MEMORY_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)
-STORY_MEMORY_SHORTLIST = _get_float("STORY_MEMORY_SHORTLIST", 0.60)
-
-# THE MEDIA ANALYSTS (nodes/image_analyst.py, nodes/video_analyst.py). Measured
-# 2026-10-01: about $0.0007 per image and $0.003 for a 6 MB video on Flash.
-IMAGE_MODEL = _get("IMAGE_MODEL", "google/gemini-2.5-flash")
-VIDEO_MODEL = _get("VIDEO_MODEL", "google/gemini-2.5-flash")
-MEDIA_TIMEOUT_SECONDS = _get_int("MEDIA_TIMEOUT_SECONDS", 60)
-MAX_IMAGES_JUDGED = _get_int("MAX_IMAGES_JUDGED", 6)
-MAX_VIDEO_SECONDS = _get_int("MAX_VIDEO_SECONDS", 120)
-# Telegram's limit for sending a file by its address; bigger could not go out anyway.
-MAX_VIDEO_MB = _get_int("MAX_VIDEO_MB", 20)

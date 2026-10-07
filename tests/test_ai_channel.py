@@ -3,7 +3,7 @@
 They check the SPEC.md rules that do not depend on a model's judgement: the AI
 prompts are its own, links and the signature are added in code, the sources
 parse, and the channel stays out of Market One's tweets.
-Run: CHANNEL=ai_news /usr/bin/python3 tests/test_ai_channel.py
+Run: /usr/bin/python3 tests/test_ai_channel.py
 """
 
 from __future__ import annotations
@@ -18,10 +18,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import config  # noqa: E402
-
-if config.CHANNEL != "ai_news":
-    print("run with CHANNEL=ai_news")
-    sys.exit(1)
 
 config.DB_PATH = Path(tempfile.mkdtemp()) / "test.db"
 
@@ -52,9 +48,10 @@ MARKETS_WORDS = re.compile(r"crypto|geopolit|scheduled release|forecast:|central
 @test
 def settings_are_complete_and_the_graph_compiles():
     assert config.check() == [], config.check()
-    from brain import graph
+    from pipeline import graph
     assert "video_analyst" in graph.graph.get_graph().nodes
-    assert config.PIPELINE.index("video_analyst") > config.PIPELINE.index("repeat_check")
+    edges = {(e.source, e.target) for e in graph.graph.get_graph().edges}
+    assert ("repeat_check", "image_analyst") in edges and ("image_analyst", "video_analyst") in edges
 
 
 @test
@@ -76,8 +73,8 @@ def the_editor_prompt_and_rules_are_this_channels_own():
     assert not MARKETS_WORDS.search(editor.RULES["WRONG_TOPIC"])
     assert "JARGON" in editor.SCHEMA["properties"]["rules_broken"]["items"]["enum"]
     assert "JARGON" in prompt
-    from brain import nodes
-    assert "JARGON" in nodes.FIXABLE_RULES
+    from pipeline import stations
+    assert "JARGON" in stations.FIXABLE_RULES
 
 
 @test
@@ -109,7 +106,7 @@ async def the_sorter_asks_who_can_use_it_and_none_caps_at_three():
     from utils import openrouter
     assert config.SORTER_AXIS in sorter.SCHEMA["properties"]
     assert "market" not in sorter.SCHEMA["properties"]
-    assert "none" in config.MARKETS
+    assert "none" in config.SORTER_AXIS_VALUES
 
     async def fake(**kwargs):
         return {"relevant": True, "topic": config.VALID_TOPICS[0],
@@ -430,7 +427,7 @@ async def on_a_rewrite_the_editor_sees_its_own_earlier_reason():
 
 @test
 def the_graph_carries_the_earlier_reason_to_the_second_check():
-    from brain import graph
+    from pipeline import graph
     assert "previous_editor_reason" in graph.BrainState.__annotations__
     assert config.EDITOR_REMEMBERS_REWRITES
 
@@ -481,8 +478,8 @@ def a_third_partys_article_is_never_written_as_just_released():
 
 @test
 async def the_article_is_read_before_the_sorter_judges():
-    assert config.PIPELINE.index("fetch_article") < config.PIPELINE.index("sorter")
-    from brain import nodes
+    from pipeline import graph, stations
+    assert ("fetch_article", "sorter") in {(e.source, e.target) for e in graph.graph.get_graph().edges}
     from nodes import article, sorter
 
     async def fetched(item):
@@ -494,7 +491,7 @@ async def the_article_is_read_before_the_sorter_judges():
                              url="https://suno.com/blog/speech", title="Suno Launches Speech Beta",
                              body="Source: suno.com | Release date: 2026-10-02")
     try:
-        state = await nodes.fetch_article_node({"item": dict(db.get_item(item_id))})
+        state = await stations.fetch_article_node({"item": dict(db.get_item(item_id))})
     finally:
         article.fetch_for = real
     message = sorter.user_message(state["item"])
@@ -539,18 +536,18 @@ def _sent_post(topic: str, minutes_ago: int) -> None:
 
 @test
 def guides_and_skills_are_capped_per_day_and_spaced_out():
-    from brain import nodes
+    from pipeline import stations
     assert "skill" in config.VALID_TOPICS and config.TOPIC_LIMITS["resource"][0] == 2
     assert config.TOPIC_LIMITS["skill"][0] == 2
     db.conn().execute("DELETE FROM posts"); db.conn().commit()
-    assert nodes.topic_limit_reason("skill") == ""
+    assert stations.topic_limit_reason("skill") == ""
     _sent_post("skill", 30)
-    assert "hours" in nodes.topic_limit_reason("skill")            # too soon after the last one
+    assert "hours" in stations.topic_limit_reason("skill")            # too soon after the last one
     db.conn().execute("UPDATE posts SET sent_at=datetime('now','-5 hours')"); db.conn().commit()
-    assert nodes.topic_limit_reason("skill") == ""                 # spaced enough, 1 of 2 today
+    assert stations.topic_limit_reason("skill") == ""                 # spaced enough, 1 of 2 today
     _sent_post("skill", 300)
-    assert "2 a day" in nodes.topic_limit_reason("skill")          # the day's two are used
-    assert nodes.topic_limit_reason("launch") == ""                # launches are not limited
+    assert "2 a day" in stations.topic_limit_reason("skill")          # the day's two are used
+    assert stations.topic_limit_reason("launch") == ""                # launches are not limited
 
 
 @test
@@ -608,13 +605,13 @@ async def the_reserve_drops_old_ones_and_releases_the_best_when_a_slot_opens():
 
 @test
 async def a_released_item_skips_the_sorter_and_the_limit():
-    from brain import nodes
+    from pipeline import stations
     item_id = _capped("Skill C", "skill", 4, 1)
     _sent_post("skill", 5)                       # the limit would refuse it now
-    state = await nodes.sorter_node({"item": dict(db.get_item(item_id)), "released": True})
+    state = await stations.sorter_node({"item": dict(db.get_item(item_id)), "released": True})
     assert not state.get("outcome"), state
     assert state["sorter_verdict"]["topic"] == "skill"
-    from brain import graph
+    from pipeline import graph
     assert "released" in graph.BrainState.__annotations__
 
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")

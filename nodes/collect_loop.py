@@ -14,7 +14,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 import config
-from nodes import calendar, dedup, fetch_pages, fetch_rss, fetch_tweets
+from nodes import dedup, fetch_pages, fetch_rss, fetch_tweets
 from utils import db, logger as log_setup, textclean
 
 log = log_setup.get("collect")
@@ -57,9 +57,6 @@ def _store_article(article: fetch_rss.Article) -> bool:
         url=article.url,
         title=article.title,
         body=article.summary,
-        calendar=calendar.match(f"{article.title} {article.summary}",
-                                datetime.now(timezone.utc),
-                                headline=article.title),
         published_at=(article.published.strftime("%Y-%m-%d %H:%M:%S")
                       if article.published else None),
         norm_title=norm_title,
@@ -102,9 +99,6 @@ def _store_tweet(tweet: fetch_tweets.Tweet) -> bool:
         image_url="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.image_url,
         video_url="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.video,
         video_kind="" if tweet.handle in config.NO_MEDIA_SOURCES else tweet.video_kind,
-        # A tweet has no separate headline, but its first line acts as one.
-        calendar=calendar.match(tweet.text, datetime.now(timezone.utc),
-                                headline=tweet.text.split("\n")[0]),
         published_at=None,   # X's own timestamp format differs; fetched_at is enough
         norm_title=norm_title,
         title_hash=fingerprint,
@@ -130,16 +124,6 @@ def _store_tweet(tweet: fetch_tweets.Tweet) -> bool:
 
 async def collect_feeds_once() -> int:
     """Read every feed once and store what's new. Returns how many were new."""
-    # The calendar rides along with the feed poll. Six hours is plenty: the
-    # week's schedule does not change, only which day we are on.
-    age = db.calendar_age_minutes()
-    if config.USE_ECONOMIC_CALENDAR and (age is None or age > 6 * 60):
-        # The feed rate-limits at a few requests a minute, so a failed refresh
-        # still counts as the attempt — otherwise every ten-minute poll retries.
-        if not await calendar.refresh():
-            log.info("Calendar refresh failed — next attempt in 6 hours")
-        db.meta_set("calendar_refreshed_at", db.now_iso())
-
     articles = await fetch_rss.execute() + await fetch_pages.execute()
     stale = sum(1 for article in articles if _is_stale(article))
     new_count = sum(1 for article in articles if _store_article(article))

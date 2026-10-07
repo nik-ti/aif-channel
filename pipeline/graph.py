@@ -1,17 +1,13 @@
-"""Wires the editorial stations from brain/nodes.py into one state machine and says
-where an item can go next.
-
-The order is the channel's, not this file's: it comes from PIPELINE in
-channels/<name>/profile.py, so a channel can add a station without the shared
-machinery growing a flag for it.
+"""The LangGraph state machine: which station runs after which, and where an item
+can go next. The work of each station is in pipeline/stations.py.
 
 The unit of work is the story, not the item. An item the gate holds does not
 become a post; it stays attached to its story as fuel for that story's next one.
 Placement runs every round even when the pacing limits forbid posting, because an
 item that expires before it is filed takes its content out of the story with it.
 
-State is passed as a plain dict rather than a database row, so it stays
-serialisable and a checkpointer can be added later.
+State is a plain dict rather than a database row, so it stays serialisable and a
+checkpointer can be added later.
 """
 
 from __future__ import annotations
@@ -20,15 +16,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-import config
-from brain import nodes
-
-# A channel may ship stations of its own. Most do not, so this is optional.
-try:
-    channel_nodes = __import__(f"channels.{config.CHANNEL}.nodes",
-                               fromlist=["nodes"])
-except ImportError:
-    channel_nodes = None
+from pipeline import stations as s
 
 
 class BrainState(TypedDict, total=False):
@@ -70,45 +58,39 @@ class BrainState(TypedDict, total=False):
 
 
 def build_graph():
-    """Wire this channel's stations together and compile the graph.
+    """Wire the stations together and compile the graph."""
+    g = StateGraph(BrainState)
+    for name, node in (
+        ("dedup", s.dedup_node),
+        ("fetch_article", s.fetch_article_node),   # before the sorter: feeds give thin snippets
+        ("sorter", s.sorter_node),
+        ("story_organizer", s.story_organizer_node),
+        ("gatekeeper", s.gatekeeper_node),
+        ("writer", s.writer_node),
+        ("editor", s.editor_node),
+        ("repeat_check", s.repeat_check_node),
+        ("image_analyst", s.image_analyst_node),
+        ("video_analyst", s.video_analyst_node),
+        ("publish", s.publish_node),
+    ):
+        g.add_node(name, node)
 
-    The order comes from the channel's PIPELINE, so a channel can add a station
-    of its own — one that reads the images a post carries, say — without the
-    shared machinery growing a flag for it.
-    """
-    builder = StateGraph(BrainState)
-    pipeline = list(config.PIPELINE)
-    stages = dict(nodes.STAGES)
-    stages.update(getattr(channel_nodes, "STAGES", {}))
-
-    unknown = [s for s in pipeline if s not in stages]
-    if unknown:
-        raise SystemExit(f"{config.CHANNEL}'s PIPELINE names stations that do not "
-                         f"exist: {unknown}. Known: {sorted(stages)}")
-
-    for name in pipeline:
-        builder.add_node(name, stages[name][0])
-    builder.add_edge(START, pipeline[0])
-
-    for position, name in enumerate(pipeline):
-        _, router, routes = stages[name]
-        following = pipeline[position + 1] if position + 1 < len(pipeline) else None
-
-        if router is None:
-            builder.add_edge(name, following or END)
-            continue
-
-        targets = {}
-        for answer, destination in routes.items():
-            if destination == "end":
-                targets[answer] = END
-            elif destination == "next":
-                targets[answer] = following or END
-            else:
-                targets[answer] = destination
-        builder.add_conditional_edges(name, router, targets)
-
-    return builder.compile()
+    g.add_edge(START, "dedup")
+    g.add_conditional_edges("dedup", s.route_after_dedup, {"drop": END, "sort": "fetch_article"})
+    g.add_edge("fetch_article", "sorter")
+    g.add_conditional_edges("sorter", s.route_after_sorter, {"place": "story_organizer", "end": END})
+    g.add_conditional_edges("story_organizer", s.route_after_story_organizer,
+                            {"gate": "gatekeeper", "end": END})
+    g.add_conditional_edges("gatekeeper", s.route_after_gatekeeper, {"write": "writer", "end": END})
+    g.add_conditional_edges("writer", s.route_after_writer, {"edit": "editor", "end": END})
+    g.add_conditional_edges("editor", s.route_after_editor,
+                            {"publish": "repeat_check", "rewrite": "writer", "end": END})
+    g.add_conditional_edges("repeat_check", s.route_after_repeat_check,
+                            {"send": "image_analyst", "end": END})
+    g.add_edge("image_analyst", "video_analyst")
+    g.add_edge("video_analyst", "publish")
+    g.add_edge("publish", END)
+    return g.compile()
 
 
 # Compiling is wiring, not work, so doing it at import time is fine.

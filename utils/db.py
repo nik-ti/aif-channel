@@ -14,7 +14,7 @@ from typing import Any, Iterable
 
 import config
 
-logger = logging.getLogger("market-one-channel.db")
+logger = logging.getLogger("aif-channel.db")
 
 # Shared connection, created on first use (opening files costs more than queries).
 _conn: sqlite3.Connection | None = None
@@ -51,18 +51,14 @@ def init_db() -> None:
 # Add columns here instead of schema.sql; existing DBs gain them on next start.
 _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
     "items": [
-        # Which market the sorter said has to reprice—see nodes/sorter.py.
+        # The sorter's third answer (who can use it)—see nodes/sorter.py.
         ("market", "ALTER TABLE items ADD COLUMN market TEXT DEFAULT ''"),
         ("continuation_of", "ALTER TABLE items ADD COLUMN continuation_of INTEGER DEFAULT NULL"),  # Dead since stories replaced it.
         ("story_id", "ALTER TABLE items ADD COLUMN story_id INTEGER DEFAULT NULL"),  # Not REFERENCES: no CASCADE with ALTER.
         ("video_url", "ALTER TABLE items ADD COLUMN video_url TEXT DEFAULT ''"),  # MP4 URL; image_url holds fallback thumbnail.
         ("video_kind", "ALTER TABLE items ADD COLUMN video_kind TEXT DEFAULT ''"),
-        ("calendar_title", "ALTER TABLE items ADD COLUMN calendar_title TEXT DEFAULT ''"),  # Scheduled release data—see nodes/calendar.py.
-        ("calendar_forecast", "ALTER TABLE items ADD COLUMN calendar_forecast TEXT DEFAULT ''"),
-        ("calendar_previous", "ALTER TABLE items ADD COLUMN calendar_previous TEXT DEFAULT ''"),
         ("article_text", "ALTER TABLE items ADD COLUMN article_text TEXT DEFAULT ''"),  # Cached to avoid fetching URL twice—see nodes/article.py.
         ("forced", "ALTER TABLE items ADD COLUMN forced INTEGER DEFAULT 0"),  # Human override from dashboard; graph skips gate stations.
-        ("calendar_key", "ALTER TABLE items ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Stable name of the scheduled release—see calendar.key_for.
         ("sorter_reason", "ALTER TABLE items ADD COLUMN sorter_reason TEXT DEFAULT ''"),  # Why the sorter scored it so. status_reason only keeps this for items it REJECTED.
         ("media_json", "ALTER TABLE items ADD COLUMN media_json TEXT DEFAULT ''"),  # Every candidate image and video — see nodes/media.py.
         ("link_url", "ALTER TABLE items ADD COLUMN link_url TEXT DEFAULT ''"),  # The thing itself (repo, product page) when url is an aggregator's page.
@@ -79,7 +75,6 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
     "stories": [
         ("reopened_at", "ALTER TABLE stories ADD COLUMN reopened_at TEXT"),
         ("name", "ALTER TABLE stories ADD COLUMN name TEXT DEFAULT ''"),  # Short name for dashboard/list (not headline/summary).
-        ("calendar_key", "ALTER TABLE stories ADD COLUMN calendar_key TEXT DEFAULT ''"),  # Set when the story IS one scheduled release; placement then needs no model.
         ("roundup_asked_item_id", "ALTER TABLE stories ADD COLUMN roundup_asked_item_id INTEGER DEFAULT 0"),  # Newest held item the last roundup asked about; asked again only once a newer one joins.
     ],
 }
@@ -234,15 +229,6 @@ def record_source_failure(name: str, error: str) -> int:
 
 # ITEMS
 
-def _calendar_key(match: dict | None) -> str:
-    """The scheduled release an item belongs to, as a name that survives a feed
-    refresh. Duplicated from nodes/calendar.key_for to keep utils/ free of a
-    nodes/ import."""
-    if not match:
-        return ""
-    return f"{match.get('country','')}|{match.get('title','')}|{match.get('at_utc','')}"
-
-
 def insert_item(
     *,
     origin: str,
@@ -254,7 +240,6 @@ def insert_item(
     image_url: str = "",
     video_url: str = "",
     video_kind: str = "",
-    calendar: dict | None = None,
     published_at: str | None = None,
     norm_title: str = "",
     title_hash: str = "",
@@ -270,16 +255,13 @@ def insert_item(
             INSERT INTO items (
                 origin, source_name, external_id, url, title, body, image_url,
                 video_url, video_kind,
-                calendar_title, calendar_forecast, calendar_previous, calendar_key,
                 published_at, norm_title, title_hash, topic_hint,
                 status, status_reason, fetched_at, updated_at, link_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 origin, source_name, external_id, url, title,
                 body[: config.MAX_BODY_CHARS], image_url, video_url, video_kind,
-                (calendar or {}).get("title", ""), (calendar or {}).get("forecast", ""),
-                (calendar or {}).get("previous", ""), _calendar_key(calendar),
                 published_at,
                 norm_title, title_hash, topic_hint,
                 status, status_reason, now_iso(), now_iso(), link_url,
@@ -789,7 +771,7 @@ def mark_message_deleted(message_id: int) -> int | None:
             (row["story_id"],),
         ).fetchone()
         if newest:
-            from brain import persona_loader
+            from utils import persona_loader
             conn().execute(
                 "UPDATE stories SET summary = ?, last_post_at = ? WHERE id = ?",
                 (persona_loader.visible_text(newest["post_html"])[:300],
@@ -866,31 +848,14 @@ def story_of_item(item_id: int) -> sqlite3.Row | None:
     ).fetchone()
 
 
-def story_for_calendar_key(key: str) -> sqlite3.Row | None:
-    """The live story that IS this scheduled release, if one is already open.
-
-    One release, one story, decided without a model. Placement used to ask a
-    model which open story a data print joined, and on 30 September it put the
-    month's PCE figure into a story about Fed officials talking about rate hikes.
-    """
-    if not key:
-        return None
-    return conn().execute(
-        "SELECT * FROM stories WHERE calendar_key = ? AND status = 'live' "
-        "ORDER BY id DESC LIMIT 1",
-        (key,),
-    ).fetchone()
-
-
-def create_story(*, headline: str, summary: str, item_id: int, at: str,
-                 calendar_key: str = "") -> int:
+def create_story(*, headline: str, summary: str, item_id: int, at: str) -> int:
     """Create story and attach first item (single transaction); crash between risks empty
     story.
     """
     cursor = conn().execute(
-        "INSERT INTO stories (headline, summary, first_at, last_item_at, calendar_key) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (headline[:200], summary[:300], at, at, calendar_key),
+        "INSERT INTO stories (headline, summary, first_at, last_item_at) "
+        "VALUES (?, ?, ?, ?)",
+        (headline[:200], summary[:300], at, at),
     )
     story_id = int(cursor.lastrowid)
     conn().execute(
@@ -1108,33 +1073,6 @@ def newest_held_item(story_id: int) -> sqlite3.Row | None:
         "ORDER BY id DESC LIMIT 1",
         (story_id,),
     ).fetchone()
-
-
-def replace_calendar(rows: list[tuple]) -> None:
-    """Swap in this week's releases. One transaction, so a reader never sees half."""
-    conn().execute("DELETE FROM calendar")
-    conn().executemany(
-        "INSERT OR IGNORE INTO calendar (country, title, at_utc, impact, forecast, previous) "
-        "VALUES (?, ?, ?, ?, ?, ?)", rows,
-    )
-    conn().commit()
-
-
-def calendar_between(since: str, until: str) -> list[sqlite3.Row]:
-    """Scheduled releases in a window, for matching an item that just arrived."""
-    return list(conn().execute(
-        "SELECT * FROM calendar WHERE at_utc BETWEEN ? AND ? ORDER BY at_utc",
-        (since, until),
-    ))
-
-
-def calendar_age_minutes() -> float | None:
-    """How stale the stored calendar is, or None if there is none."""
-    row = conn().execute("SELECT value FROM meta WHERE key = 'calendar_refreshed_at'").fetchone()
-    if row is None:
-        return None
-    then = datetime.strptime(row["value"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-    return (datetime.now(timezone.utc) - then).total_seconds() / 60
 
 
 def recent_held(limit: int) -> list[sqlite3.Row]:

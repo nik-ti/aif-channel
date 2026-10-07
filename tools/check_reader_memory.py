@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
-from brain import persona_loader
+from utils import persona_loader
 from nodes import echo, stories
 from tools.check_echo import PAIRS
 from utils import db, semantic_memory, logger

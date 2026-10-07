@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import config  # noqa: E402
-from brain import graph as brain  # noqa: E402
+from pipeline import graph  # noqa: E402
 from nodes import editor, sorter, writer  # noqa: E402
 from utils import db, logger as log_setup  # noqa: E402
 
@@ -42,7 +42,7 @@ async def _process(item, index: int, total: int, args) -> str:
     title = (item["title"] or "")[:70]
     header = f"[{index}/{total}] {item['source_name']} · {item['origin']}"
 
-    state = await brain.run_item(item, dry_run=True)
+    state = await graph.run_item(item, dry_run=True)
     outcome = state.get("outcome", "?")
     verdict = state.get("sorter_verdict") or {}
     decision = state.get("editor_verdict") or {}

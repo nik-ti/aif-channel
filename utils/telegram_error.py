@@ -11,7 +11,7 @@ import httpx
 
 import config
 
-logger = logging.getLogger("market-one-channel.alert")
+logger = logging.getLogger("aif-channel.alert")
 
 # Don't send the same message over and over. If a feed is broken and the loop
 # retries every 10 minutes, one alert an hour is plenty — otherwise a single

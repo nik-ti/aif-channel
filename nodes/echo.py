@@ -11,7 +11,7 @@ import re
 from decimal import Decimal, InvalidOperation
 
 import config
-from brain import persona_loader
+from utils import persona_loader
 from utils import db, logger as log_setup, openrouter
 
 log = log_setup.get("echo")

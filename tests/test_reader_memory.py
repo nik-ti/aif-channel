@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
-from brain import nodes as brain_nodes
+from pipeline import stations
 from nodes import echo, stories, publish_loop
 from utils import db, embeddings
 
@@ -59,7 +59,7 @@ class ReaderMemory(unittest.IsolatedAsyncioTestCase):
         item = self.item(text, at)
         if story_id:
             db.attach_item_to_story(item["id"], story_id)
-        ident = db.create_post(item_id=item["id"], topic="markets", post_html=text,
+        ident = db.create_post(item_id=item["id"], topic="tool", post_html=text,
                                image_url="", writer_model="test")
         db.conn().execute("UPDATE posts SET status=?,sent_at=?,telegram_message_id=? WHERE id=?",
                           (status, stamp(at), ident, ident))
@@ -167,12 +167,12 @@ class ReaderMemory(unittest.IsolatedAsyncioTestCase):
     async def test_unavailable_exit_defers_graph_and_approved_retry(self):
         from utils import semantic_memory as memory
         item = self.item()
-        post = db.create_post(item_id=item["id"], topic="markets", post_html=NEW,
+        post = db.create_post(item_id=item["id"], topic="tool", post_html=NEW,
                               image_url="", writer_model="test")
         db.set_post_status(post, "approved")
         with patch.object(echo, "repeats_something_published", side_effect=memory.Unavailable("offline")), \
              patch.object(publish_loop.publisher, "execute") as send:
-            state = await brain_nodes.repeat_check_node({"item": item, "post_id": post, "post_html": NEW})
+            state = await stations.repeat_check_node({"item": item, "post_id": post, "post_html": NEW})
             self.assertEqual(state["outcome"], "retry")
             self.assertEqual(await publish_loop.process_item(dict(db.get_item(item["id"]))), "retry")
             send.assert_not_called()

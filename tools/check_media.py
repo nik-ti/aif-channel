@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import config  # noqa: E402
-from brain import persona_loader  # noqa: E402
+from utils import persona_loader  # noqa: E402
 from nodes import image_analyst, video_analyst  # noqa: E402
 from utils import db  # noqa: E402
 

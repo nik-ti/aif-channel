@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 import config
-from brain import persona_loader
+from utils import persona_loader
 from nodes import media
 from utils import db, semantic_memory, logger as log_setup, openrouter, textclean
 
@@ -625,9 +625,6 @@ def as_source(story: Story) -> dict:
         "image_url": newest.get("image_url") or "",
         "video_url": newest.get("video_url") or "",
         "video_kind": newest.get("video_kind") or "",
-        "calendar_title": newest.get("calendar_title") or "",
-        "calendar_forecast": newest.get("calendar_forecast") or "",
-        "calendar_previous": newest.get("calendar_previous") or "",
         "topic": newest.get("topic") or "",
         "topic_hint": newest.get("topic_hint") or "",
         "importance": max((i.get("importance") or 0) for i in pending),

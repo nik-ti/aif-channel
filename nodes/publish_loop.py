@@ -1,5 +1,5 @@
 """Turns queued items into posts at a sensible pace. Each tick expires stale items
-and runs the rest through brain.graph.
+and runs the rest through pipeline/graph.py.
 
 Expiry is not optional. Without it the queue grows without limit and the channel
 posts overnight news at breakfast.
@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 
 import config
-from brain import graph as brain, nodes as brain_nodes
+from pipeline import graph, stations
 from nodes import publisher
 from utils import db, logger as log_setup
 
@@ -57,7 +57,7 @@ async def process_item(item, place_only: bool = False, sweep: bool = False) -> s
     # That work is paid for, so go straight to sending.
     existing = db.get_post_by_item(item_id)
     if existing is not None and existing["status"] == "approved" and not place_only:
-        checked = await brain_nodes.repeat_check_node({"item": dict(item), "post_id": existing["id"],
+        checked = await stations.repeat_check_node({"item": dict(item), "post_id": existing["id"],
                                                      "post_html": existing["post_html"]})
         if checked.get("outcome"):
             return checked["outcome"]
@@ -72,7 +72,7 @@ async def process_item(item, place_only: bool = False, sweep: bool = False) -> s
         if sent and item["story_id"]:
             # Same booking the graph does. Without it a crash-then-resume sends
             # the post and leaves the story's other items held forever.
-            from brain import persona_loader
+            from utils import persona_loader
             db.record_story_post(item["story_id"], item_id,
                                  persona_loader.visible_text(existing["post_html"]))
         return "published" if sent else "retry"
@@ -80,7 +80,7 @@ async def process_item(item, place_only: bool = False, sweep: bool = False) -> s
     # A human overruled a rejection from the dashboard; db.force_item set this
     # when it put the item back in the queue.
     forced = bool(item["forced"]) if "forced" in item.keys() else False
-    state = await brain.run_item(item, dry_run=False, place_only=place_only,
+    state = await graph.run_item(item, dry_run=False, place_only=place_only,
                                  sweep=sweep, forced=forced)
     return state.get("outcome", "failed")
 
@@ -107,7 +107,7 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
         waiting = await reserve.next_release()
         if waiting is not None:
             log.info("Releasing item %s from the reserve: %s", waiting["id"], waiting["title"][:70])
-            state = await brain.run_item(waiting, dry_run=False, released=True)
+            state = await graph.run_item(waiting, dry_run=False, released=True)
             outcome = state.get("outcome", "failed")
             outcomes[outcome] = outcomes.get(outcome, 0) + 1
             if outcome == "published":

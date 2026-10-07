@@ -9,7 +9,7 @@ anything older than RESERVE_DAYS is dropped.
 from __future__ import annotations
 
 import config
-from brain import nodes as brain_nodes
+from pipeline import stations
 from utils import db, logger as log_setup, openrouter
 
 log = log_setup.get("reserve")
@@ -81,7 +81,7 @@ async def next_release():
     if dropped:
         log.info("Dropped %d reserve item(s) older than %d days", dropped, config.RESERVE_DAYS)
     for topic in config.TOPIC_LIMITS:
-        if brain_nodes.topic_limit_reason(topic):
+        if stations.topic_limit_reason(topic):
             continue
         rows = _waiting(topic)
         if rows:

@@ -1,12 +1,9 @@
-"""The only station that asks whether a story is worth covering at all. The editor
+"""The only station that asks whether an item is worth covering at all. The editor
 later checks a post against its source, which is a different question.
 
-The rubric makes the model name which market has to reprice before it scores
-anything. Without that, "a Russian retailer evacuates its stores" scores 4 out of
-5 as an event and is useless to a markets channel.
-
-It fails open: with no model the item keeps its source's topic and a middling
-score.
+The rubric (prompts/rubric.md) makes the model say who can use the thing today
+before it scores it, and "nobody" caps the score below the publishing bar.
+On a model failure the item goes back to the queue rather than being guessed.
 """
 
 from __future__ import annotations
@@ -14,36 +11,23 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import config
-from nodes import calendar
 from utils import logger as log_setup, openrouter
 
 log = log_setup.get("sorting")
 
-# --- AI configuration: the block to edit when tuning ---
 MODEL = config.SORTER_MODEL
-TEMPERATURE = 0.0          # we want consistent judgements, not creative ones
+TEMPERATURE = 0.0          # consistent judgements, not creative ones
 
 # 250 was too small and answers came back cut off mid-value. A reasoning model
 # thinks privately before answering and that counts against this budget too.
 MAX_TOKENS = 800
 
-# This channel's rubric — what it covers and what counts as important — lives
-# in channels/<name>/rubric.md. Everything else in this file is machinery that
-# any channel uses: the schema, the no-market cap, the failure counters.
 PROMPT = config.RUBRIC_PATH.read_text()
 
-# The markets a story can force somebody to look at again. "none" is a real
-# answer and by far the most common one — see NO_MARKET_CAP below.
-
-# What an item scores at most when no market has to reprice. Set to one below
-# the publishing threshold on purpose: naming no market is not a small penalty,
-# it is the answer that keeps the item off the channel.
-#
-# Enforced HERE, in code, and not only asked for in the prompt — same reasoning
-# as stripping emoji from brief posts and foreign links from finished ones. A
-# model that has just told us nothing needs repricing and then scores the item
-# 4 has contradicted itself, and we believe the concrete field over the number.
-NO_MARKET_CAP = 3
+# What an item scores at most when nobody can use it. One below the publishing
+# bar on purpose, and enforced here in code: a model that says "none" and then
+# scores 4 has contradicted itself, and the concrete answer wins.
+NO_USE_CAP = 3
 
 # The shape of the answer. "strict" mode means the provider enforces this, so
 # the model cannot invent a topic name or return importance as words.
@@ -53,14 +37,8 @@ SCHEMA = {
     "required": ["relevant", "topic", config.SORTER_AXIS, "importance", "reason"],
     "properties": {
         "relevant": {"type": "boolean"},
-        # "markets" MUST be here. The prompt defines it, config.VALID_TOPICS
-        # expects it, and it is this channel's main subject — but it was missing
-        # from this enum, and strict mode means the provider enforces the enum.
-        # So every bond yield, central bank and currency story had two ways out:
-        # call itself "crypto" and be killed by the editor for WRONG_TOPIC, or
-        # answer "other" and be marked irrelevant on sight by the rule below.
         "topic": {"type": "string", "enum": list(config.TOPICS)},
-        config.SORTER_AXIS: {"type": "string", "enum": list(config.MARKETS)},
+        config.SORTER_AXIS: {"type": "string", "enum": list(config.SORTER_AXIS_VALUES)},
         "importance": {"type": "integer", "minimum": 1, "maximum": 5},
         "reason": {"type": "string"},
     },
@@ -77,14 +55,12 @@ def user_message(item) -> str:
         body = f"{body}\n\n{article[:1500]}".strip()
     hint = item["topic_hint"] or "unknown"
     origin = "a post on X" if item["origin"] == "x" else "a news article"
-    scheduled = calendar.describe(item)
     today = (f"Today is {datetime.now(timezone.utc):%d %B %Y}.\n"
              if config.SORTER_SHOWS_DATE else "")
     return (
         f"{today}Source: {item['source_name']} ({origin})\n"
         f"The source files this under: {hint}\n"
-        + (f"{scheduled}\n" if scheduled else "")
-        + f"\nHeadline: {title}\n\n"
+        f"\nHeadline: {title}\n\n"
         f"Text: {body}"
     )
 
@@ -92,13 +68,8 @@ def user_message(item) -> str:
 async def execute(item) -> dict:
     """Judge one item. Always returns a usable answer, even when the model fails.
 
-    Returns a dictionary with:
-        relevant   (bool)  should we cover this at all
-        topic      (str)   crypto | geopolitics | other
-        market     (str)   which market has to reprice; see the channel profile
-        importance (int)   1-5, used to decide what gets posted first
-        reason     (str)   why, in one sentence
-        fallback   (bool)  True if the model failed and we guessed
+    Returns relevant, topic, market (who can use it; stored in items.market),
+    importance (1-5), reason, and fallback (True if the model failed).
     """
     title = item["title"] or ""
     hint = item["topic_hint"] or "unknown"
@@ -113,26 +84,20 @@ async def execute(item) -> dict:
         topic = result.get("topic", "other")
         relevant = bool(result.get("relevant", False))
         market = str(result.get(config.SORTER_AXIS, "none"))
-        if market not in config.MARKETS:
+        if market not in config.SORTER_AXIS_VALUES:
             market = "none"
         importance = int(result.get("importance", 2))
         reason = str(result.get("reason", ""))[:300]
 
-        # A story we do not cover is the same as a story we do not want, so we
-        # collapse the two. This makes topic sorting double as the relevance
-        # filter, at no extra cost.
+        # "other" is the topic that means "not ours", so it doubles as the filter.
         if topic == "other":
             relevant = False
 
-        # No market, no 4. The model has already told us in plain words that
-        # nothing needs repricing; a high score alongside that is a contradiction,
-        # and the specific answer beats the vague one.
-        if market == "none" and importance > NO_MARKET_CAP:
-            log.info("Capping item %s from %d to %d — the model named no market "
-                     "that has to reprice (%s)",
-                     item["id"], importance, NO_MARKET_CAP, title[:60])
-            importance = NO_MARKET_CAP
-            reason = f"no market has to reprice; {reason}"[:300]
+        if market == "none" and importance > NO_USE_CAP:
+            log.info("Capping item %s from %d to %d — the model named nobody who "
+                     "can use it (%s)", item["id"], importance, NO_USE_CAP, title[:60])
+            importance = NO_USE_CAP
+            reason = f"nobody can use it today; {reason}"[:300]
 
         return {
             "relevant": relevant,
@@ -145,13 +110,8 @@ async def execute(item) -> dict:
 
     except Exception as error:  # noqa: BLE001
         log.warning("Scoring failed for item %s (%s): %s", item["id"], title[:60], error)
-
-        # We could not score it, so we do not know whether it matters. There is
-        # no safe guess here: publishing it unscored would defeat the whole
-        # point of this node, and dropping it could lose a genuine story.
-        # So we do neither — the caller sees fallback=True and puts the item
-        # back in the queue for another go. It is only given up on after
-        # MAX_ATTEMPTS tries.
+        # Neither publish unscored nor drop: fallback=True sends it back to the
+        # queue, and it is given up on after MAX_ATTEMPTS tries.
         usable_hint = hint if hint in config.VALID_TOPICS else "other"
         return {
             "relevant": False,

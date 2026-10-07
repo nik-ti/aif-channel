@@ -13,12 +13,12 @@ from datetime import datetime, timezone
 from typing import Any
 
 import config
-from brain import persona_loader
-from nodes import (article, calendar, dedup, echo, editor, image_analyst, media, publisher,
+from utils import persona_loader
+from nodes import (article, dedup, echo, editor, image_analyst, media, publisher,
                    sorter, stories, video_analyst, writer)
 from utils import db, semantic_memory, logger as log_setup
 
-log = log_setup.get("brain")
+log = log_setup.get("pipeline")
 
 # EXECUTION problems fixable by one more draft; CONTENT problems (NO_NEWS, WRONG_TOPIC,
 # HYPE, INJECTION, UNSAFE) not fixable, dropped.
@@ -245,30 +245,6 @@ async def story_organizer_node(state: dict) -> dict[str, Any]:
                 log.info("Item %s resumes story %s", item["id"], existing_id)
                 return {"story": story, "story_id": story.id}
 
-    # A scheduled release is not a guess. The calendar named it before it
-    # happened, so every item about it belongs to one story, found by that name
-    # and not by asking a model which of thirty open stories looks closest. This
-    # is the branch that stops a PCE print landing in a story about Fed speeches.
-    release = item["calendar_key"] if "calendar_key" in item.keys() else ""
-    if release and not dry:
-        existing = db.story_for_calendar_key(release)
-        if existing is not None:
-            db.attach_item_to_story(item["id"], int(existing["id"]))
-            story = stories.load_one(int(existing["id"]), now)
-            if story is not None:
-                log.info("Item %s joins story %s: same scheduled release (%s)",
-                         item["id"], story.id, item["calendar_title"])
-                return {"story": story, "story_id": story.id}
-        headline = (item["title"] or "")[:200]
-        story_id = db.create_story(headline=headline, summary=headline,
-                                   item_id=item["id"], at=db.now_iso(),
-                                   calendar_key=release)
-        db.set_story_name(story_id, (item["calendar_title"] or headline)[:80])
-        story = stories.load_one(story_id, now)
-        log.info("Item %s opens story %s for the scheduled release %s",
-                 item["id"], story_id, item["calendar_title"])
-        return {"story": story, "story_id": story_id}
-
     try:
         open_stories = await stories.placement_candidates(item, now, persist=not dry)
     except semantic_memory.Unavailable as error:
@@ -464,8 +440,7 @@ async def writer_node(state: dict) -> dict[str, Any]:
             writer_model=writer.MODEL,
             source_context={"source_items": item.get("source_items") or [
                 {"id": item_id, "source_name": item["source_name"], "url": item["url"]}],
-                "title": item["title"], "body": (item["body"] or "")[:config.MAX_BODY_CHARS],
-                "calendar": calendar.describe(item)},
+                "title": item["title"], "body": (item["body"] or "")[:config.MAX_BODY_CHARS]},
         )
         if post_id is None:
             # A previous run got this far before stopping. Reuse its post.
@@ -683,29 +658,3 @@ async def publish_node(state: dict) -> dict[str, Any]:
         )
 
     return {"outcome": "published" if sent else "retry"}
-
-
-# The stations this codebase provides, and how each one routes onward.
-# "next" means the following stage in the channel's PIPELINE, "end" stops the
-# item. A channel that needs a station of its own adds it to this mapping from
-# its channels/<name>/nodes.py, then names it in its PIPELINE.
-STAGES: dict[str, tuple] = {
-    "dedup":           (dedup_node,            route_after_dedup,
-                        {"drop": "end", "sort": "next"}),
-    "sorter":          (sorter_node,           route_after_sorter,
-                        {"place": "next", "end": "end"}),
-    "fetch_article":   (fetch_article_node,    None, {}),
-    "story_organizer": (story_organizer_node,  route_after_story_organizer,
-                        {"gate": "next", "end": "end"}),
-    "gatekeeper":      (gatekeeper_node,       route_after_gatekeeper,
-                        {"write": "next", "end": "end"}),
-    "writer":          (writer_node,           route_after_writer,
-                        {"edit": "next", "end": "end"}),
-    "editor":          (editor_node,           route_after_editor,
-                        {"publish": "next", "rewrite": "writer", "end": "end"}),
-    "repeat_check":    (repeat_check_node,     route_after_repeat_check,
-                        {"send": "next", "end": "end"}),
-    "image_analyst":   (image_analyst_node,    None, {}),
-    "video_analyst":   (video_analyst_node,    None, {}),
-    "publish":         (publish_node,          None, {}),
-}

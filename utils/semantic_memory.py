@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import numpy as np
 
 import config
-from brain import persona_loader
+from utils import persona_loader
 from utils import db, embeddings, textclean, logger as log_setup
 
 log = log_setup.get("memory")
