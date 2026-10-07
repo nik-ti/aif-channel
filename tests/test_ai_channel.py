@@ -141,6 +141,33 @@ def the_publisher_fills_the_link_and_signs_once():
 
 
 @test
+def links_in_a_post_lose_their_utm_parameters():
+    from nodes import publisher
+    from utils import textclean
+    clean = textclean.strip_utm
+    # Every utm_ parameter goes, in any case; everything else stays, in order.
+    assert clean("https://x.ai/news/grok?utm_source=tldr&utm_medium=email") == "https://x.ai/news/grok"
+    assert clean("https://youtube.com/watch?v=abc&UTM_Campaign=x&t=30") == "https://youtube.com/watch?v=abc&t=30"
+    assert clean("https://a.dev/p?ref=hn&utm_source=x#install") == "https://a.dev/p?ref=hn#install"
+    assert clean("https://a.dev/p") == "https://a.dev/p"
+    assert clean("https://a.dev/p?") == "https://a.dev/p?"
+    # In the finished post: the product link, a kept source link, and HTML-escaped &amp;.
+    config.SIGNATURE_HTML = '<a href="https://t.me/x?utm_source=sig">Sub</a>'
+    post = ('<b>New tool</b>\n\n<a href="LINK">Try it here</a> and '
+            '<a href="https://github.com/a/tool/releases?page=2&amp;utm_source=feed">the releases</a>')
+    out = publisher.compose(post, "https://ai-tldr.dev/x?utm_source=rss",
+                            link_url="https://github.com/a/tool?utm_source=ai-tldr&tab=readme")
+    assert 'href="https://github.com/a/tool?tab=readme"' in out, out
+    assert 'href="https://github.com/a/tool/releases?page=2"' in out, out
+    # No product link: the item's own address, cleaned too.
+    out = publisher.compose('<b>New tool</b>\n\n<a href="LINK">Read it</a>',
+                            "https://openai.com/index/x?utm_source=rss&utm_medium=feed", link_url="")
+    assert 'href="https://openai.com/index/x"' in out, out
+    assert "utm_" not in out.replace(config.SIGNATURE_HTML, ""), out
+    assert config.SIGNATURE_HTML in out          # the channel's own signature is left as written
+
+
+@test
 def atom_related_links_and_the_byte_cap():
     from nodes import fetch_rss
     entry = ('<entry><title>Acme Icons</title><link href="https://tom.example/2026/acme.html"/>'

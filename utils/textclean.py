@@ -66,6 +66,18 @@ def normalise_url(url: str) -> str:
     return urlunparse((parsed.scheme, parsed.netloc.lower(), path, "", "", ""))
 
 
+def strip_utm(url: str) -> str:
+    """The link without its utm_ tracking parameters; every other part kept as it was."""
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    kept = [part for part in parsed.query.split("&")
+            if not part.lower().startswith("utm_")]
+    if len(kept) == len(parsed.query.split("&")):
+        return url
+    return urlunparse(parsed._replace(query="&".join(kept)))
+
+
 def normalise_headline(title: str) -> str:
     """Reduce a headline to lowercase letters, digits and single spaces.
 

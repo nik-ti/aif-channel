@@ -10,10 +10,11 @@ the chosen picture is used.
 from __future__ import annotations
 
 import asyncio
+import html
 import re
 
 import config
-from utils import db, logger as log_setup, telegram_client, telegram_html
+from utils import db, logger as log_setup, telegram_client, telegram_html, textclean
 
 log = log_setup.get("publisher")
 
@@ -48,6 +49,18 @@ def _strip_foreign_links(html: str, allowed_url: str) -> str:
     return _LINK_TAG.sub(replace, html)
 
 
+def _strip_utm_from_links(text: str) -> str:
+    """Remove utm_ tracking parameters from every link in the post (nikita, 2026-10-07)."""
+    def clean(match: re.Match) -> str:
+        raw = match.group(2)
+        escaped = "&amp;" in raw
+        cleaned = textclean.strip_utm(html.unescape(raw))
+        if escaped:
+            cleaned = cleaned.replace("&", "&amp;")
+        return f"{match.group(1)}{cleaned}{match.group(3)}"
+    return re.sub(r'(href=")([^"]*)(")', clean, text)
+
+
 def compose(post_html: str, url: str, link_url: str = "") -> str:
     """The post as it goes out: the writer's text, with any foreign link removed.
 
@@ -70,6 +83,7 @@ def compose(post_html: str, url: str, link_url: str = "") -> str:
             text = re.sub(r'<a\s+href="LINK"[^>]*>(.*?)</a>', r"\1", text, flags=re.DOTALL)
         url = target
     text = _strip_foreign_links(text, url)
+    text = _strip_utm_from_links(text)
     if config.SIGNATURE_HTML:
         text += "\n\n" + config.SIGNATURE_HTML
     return text

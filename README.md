@@ -170,7 +170,7 @@ alert. On a rewrite it is shown its own earlier reason, so it can't ask for the 
 
 **Writer.** No emoji at all, only the "•" bullet. Bold first line, bold key words, the link
 last. It never copies a link: it writes `LINK` and the publisher fills in the product
-address. Code guarantees what the prompt asks: a one-line source stays one line unless the
+address. Every link in a post loses its `utm_` tracking parameters (`textclean.strip_utm`). Code guarantees what the prompt asks: a one-line source stays one line unless the
 extra lines carry a figure from the source, and a post that opens like a recent one is
 written again once.
 
