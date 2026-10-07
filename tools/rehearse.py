@@ -66,7 +66,7 @@ async def _process(item, index: int, total: int, args) -> str:
     if outcome == "low_impact":
         if not args.declined:
             print(f"\n{header}")
-            print(f"   📉 BELOW THE BAR ({verdict.get('topic', '?')} · market "
+            print(f"   📉 BELOW THE BAR ({verdict.get('topic', '?')} · for "
                   f"{verdict.get('market', '?')} · {verdict.get('importance', '?')}/5, need "
                   f"{config.MIN_IMPORTANCE}) — {title}")
             print(f"      reason: {verdict.get('reason', '')}")
@@ -85,7 +85,7 @@ async def _process(item, index: int, total: int, args) -> str:
     brief_note = "  ⚡ brief" if writer.is_brief(dict(item)) else ""
     ai_note = "" if state.get("used_ai") else "  📋 verbatim"
     print(f"\n{header}")
-    print(f"   {verdict.get('topic', '?')} · market {verdict.get('market', '?')} · "
+    print(f"   {verdict.get('topic', '?')} · for {verdict.get('market', '?')} · "
           f"importance {verdict.get('importance', '?')}{image_note}{brief_note}{ai_note} · "
           f"{len(post)} chars")
     print(LINE)
@@ -163,7 +163,7 @@ async def main() -> None:
         print("   python main.py collect --once\n")
         return
 
-    print(f"\nRehearsing {len(items)} item(s) through THE BRAIN GRAPH. Nothing will be sent.")
+    print(f"\nRehearsing {len(items)} item(s) through the graph. Nothing will be sent.")
     print(f"Publishing anything scored {config.MIN_IMPORTANCE}/5 or above.")
     print(f"Models — sorting: {sorter.MODEL}")
     print(f"         writer: {writer.MODEL}")
@@ -187,7 +187,7 @@ async def main() -> None:
         "duplicate": "🔁 already covered",
         "irrelevant": "⛔ not news, or not our subject",
         "declined":   "✗ written, then rejected by the editor",
-        "low_impact": "📉 real news, nothing to reprice",
+        "low_impact": "📉 real, but below the usefulness bar",
         "held": "🤐 its story had not moved",
         "write_failed": "❌ the writer failed",
         "editor_error": "⚠️  the editor was unreachable",

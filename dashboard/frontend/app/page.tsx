@@ -1,31 +1,27 @@
-// Main layout: header (incl. channel switcher), tab nav, the active tab's
-// content, and the global "API offline" banner driven by a lightweight
-// health-check poll.
+// Main layout: header, tab nav, the active tab's content, and the global
+// "API offline" banner driven by a lightweight health-check poll.
 //
-// The chosen channel lives in the URL's ?channel= query param, not
-// localStorage, so a link to this dashboard carries the channel with it. The
-// open tab does too (?tab=stats), so a reload stays where you were.
+// The open tab lives in the URL (?tab=stats), so a reload stays where you were.
 // Reading it needs next/navigation's useSearchParams, which Next.js requires
 // to sit under a Suspense boundary even in an all-client page — hence the
 // HomeContent/Home split below.
 "use client";
 
-import { Suspense, useCallback, useEffect } from "react";
+import { Suspense, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { GraphViewer } from "@/components/GraphViewer";
 import { Header } from "@/components/Header";
 import { NodesViewer } from "@/components/NodesViewer";
-import { POSTS_PARAMS, PostsFeed } from "@/components/PostsFeed";
+import { PostsFeed } from "@/components/PostsFeed";
 import { StatsPanel } from "@/components/StatsPanel";
 import { StoriesView } from "@/components/StoriesView";
 import { TabNav, TABS, type Tab } from "@/components/TabNav";
 import { Button } from "@/components/ui/button";
-import { useChannels, useHealth } from "@/hooks/useApi";
-import { DEFAULT_CHANNEL } from "@/lib/channel";
+import { useHealth } from "@/hooks/useApi";
 import { cn } from "@/lib/utils";
 
-const TAB_CONTENT: Record<Tab, React.ComponentType<{ channel: string }>> = {
+const TAB_CONTENT: Record<Tab, React.ComponentType> = {
   Posts: PostsFeed,
   Stories: StoriesView,
   Stats: StatsPanel,
@@ -37,7 +33,6 @@ function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const channel = searchParams.get("channel") || DEFAULT_CHANNEL;
   const tabParam = searchParams.get("tab");
   const tab: Tab = TABS.find((t) => t.toLowerCase() === tabParam) ?? TABS[0];
 
@@ -60,37 +55,13 @@ function HomeContent() {
   );
 
   const health = useHealth();
-  const { data: channelsData } = useChannels();
   const offline = health.isError;
-
-  const setChannel = useCallback(
-    (next: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (next === DEFAULT_CHANNEL) params.delete("channel");
-      else params.set("channel", next);
-      // A source or search from the last channel makes no sense once the
-      // underlying data is a different pipeline.
-      for (const key of POSTS_PARAMS) params.delete(key);
-      replaceParams(params);
-    },
-    [searchParams, replaceParams]
-  );
-
-  // A stale or mistyped ?channel= (an old shared link, a typo) snaps back to
-  // the default once the real channel list is known, instead of leaving the
-  // switcher showing a value it doesn't recognize.
-  useEffect(() => {
-    if (!channelsData) return;
-    if (channelsData.channels.length === 0) return;
-    const known = channelsData.channels.some((c) => c.id === channel);
-    if (!known) setChannel(DEFAULT_CHANNEL);
-  }, [channelsData, channel, setChannel]);
 
   const ActiveTab = TAB_CONTENT[tab];
 
   return (
     <div className="min-h-screen bg-surface-secondary">
-      <Header channel={channel} channels={channelsData?.channels ?? []} onChannelChange={setChannel} />
+      <Header />
 
       {offline && (
         <div className="flex items-center justify-between gap-3 bg-status-rejected/10 px-4 py-2 text-sm text-status-rejected">
@@ -104,7 +75,7 @@ function HomeContent() {
       <TabNav active={tab} onChange={setTab} />
 
       <main className={cn("transition-opacity", offline && "pointer-events-none opacity-50")}>
-        <ActiveTab channel={channel} />
+        <ActiveTab />
       </main>
     </div>
   );

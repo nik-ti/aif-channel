@@ -1,0 +1,13 @@
+# Weekly log rotation for the channel and the dashboard API. copytruncate because
+# systemd holds the log file open: renaming it would leave the new file empty forever.
+/home/nikita/systems/aif-channel/logs/*.log {
+    weekly
+    maxsize 50M
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su nikita nikita
+}

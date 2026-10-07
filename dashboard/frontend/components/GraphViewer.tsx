@@ -11,7 +11,7 @@ import remarkGfm from "remark-gfm";
 import { EmptyState } from "@/components/EmptyState";
 import { useGraph } from "@/hooks/useApi";
 import type { GraphNode } from "@/lib/types";
-import { workflowExplanation } from "@/lib/workflowExplanation";
+import { WORKFLOW_EXPLANATION } from "@/lib/workflowExplanation";
 
 const HEALTH_CLASS: Record<GraphNode["health"], string> = {
   ok: "healthy",
@@ -48,8 +48,8 @@ function buildDiagram(nodes: GraphNode[]): string {
   return lines.join("\n");
 }
 
-export function GraphViewer({ channel }: { channel: string }) {
-  const { data, isFetching } = useGraph(channel);
+export function GraphViewer() {
+  const { data, isFetching } = useGraph();
   const [selected, setSelected] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,7 +102,7 @@ export function GraphViewer({ channel }: { channel: string }) {
       {isFetching && <span className="text-xs text-ink-muted">Refreshing...</span>}
 
       {notReady ? (
-        <EmptyState channel={channel} />
+        <EmptyState />
       ) : (
         <>
           {nodes.length > 0 && (
@@ -136,7 +136,7 @@ export function GraphViewer({ channel }: { channel: string }) {
       )}
 
       {/* The workflow write-up explains the shared machinery, not this
-          channel's data, so it stays visible even with no database yet. */}
+          database, so it stays visible even with no database yet. */}
       <div className="rounded-lg border border-border bg-surface-primary p-4 md:p-6">
         <article className="prose-workflow">
           <ReactMarkdown
@@ -156,7 +156,7 @@ export function GraphViewer({ channel }: { channel: string }) {
               ),
             }}
           >
-            {workflowExplanation(channel)}
+            {WORKFLOW_EXPLANATION}
           </ReactMarkdown>
         </article>
       </div>

@@ -439,7 +439,7 @@ function DedupView({ data }: { data: StatsResponse }) {
 
 // ── the tab ───────────────────────────────────────────────────────────────
 
-export function StatsPanel({ channel }: { channel: string }) {
+export function StatsPanel() {
   const [range, setRange] = useState<StatsRange>("7d");
 
   // Remember the window per browser — a convenience, never required.
@@ -461,12 +461,12 @@ export function StatsPanel({ channel }: { channel: string }) {
     }
   }
 
-  const { data, isFetching, isPlaceholderData } = useStats(channel, range);
+  const { data, isFetching, isPlaceholderData } = useStats(range);
 
   if (data && !data.ready) {
     return (
       <div className="p-4">
-        <EmptyState channel={channel} />
+        <EmptyState />
       </div>
     );
   }

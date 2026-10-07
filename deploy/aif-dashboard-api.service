@@ -1,0 +1,28 @@
+# The read-only API behind the dashboard website (on Vercel). Installed by deploy/install.sh.
+# Its token is DASHBOARD_TOKEN in the project's .env — never put it in this file,
+# which is committed to GitHub.
+
+[Unit]
+Description=AI Flow dashboard API — read-only view of the channel database
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nikita
+Group=nikita
+WorkingDirectory=/home/nikita/systems/aif-channel/dashboard/backend
+# Localhost only: nginx forwards /api/dashboard/v1 here. 0.0.0.0 would open port
+# 8000 to the internet and bypass nginx.
+ExecStart=/home/nikita/systems/aif-channel/dashboard/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=append:/home/nikita/systems/aif-channel/logs/aif-dashboard-api.log
+StandardError=append:/home/nikita/systems/aif-channel/logs/aif-dashboard-api.log
+# This box is shared with the trading bots; a runaway here must not take them down.
+MemoryHigh=300M
+MemoryMax=500M
+
+[Install]
+WantedBy=multi-user.target

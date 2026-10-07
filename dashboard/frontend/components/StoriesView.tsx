@@ -105,7 +105,7 @@ function HoldMeter({ postCount, itemCount, declinedCount }: {
   );
 }
 
-function StoryPostRow({ post, channel }: { post: StoryPost; channel: string }) {
+function StoryPostRow({ post }: { post: StoryPost }) {
   const label = post.status === "published" ? "Post" : "Item";
   return (
     <div className="flex flex-col gap-1.5 border-t border-border py-3 first:border-t-0">
@@ -118,7 +118,7 @@ function StoryPostRow({ post, channel }: { post: StoryPost; channel: string }) {
       {post.body && post.body !== post.title && (
         <p className="whitespace-pre-wrap break-words text-sm text-ink-muted">{post.body}</p>
       )}
-      <DecisionTrail item={post} channel={channel} />
+      <DecisionTrail item={post} />
       {post.telegram_url && (
         <a
           href={post.telegram_url}
@@ -133,7 +133,7 @@ function StoryPostRow({ post, channel }: { post: StoryPost; channel: string }) {
   );
 }
 
-function StoryCard({ story, channel }: { story: Story; channel: string }) {
+function StoryCard({ story }: { story: Story }) {
   const [open, setOpen] = useState(false);
   const title = story.name || story.headline;
   const ago = timeAgo(story.last_post_at);
@@ -184,7 +184,7 @@ function StoryCard({ story, channel }: { story: Story; channel: string }) {
           ) : (
             <div className="flex flex-col">
               {story.posts.map((post) => (
-                <StoryPostRow key={post.item_id} post={post} channel={channel} />
+                <StoryPostRow key={post.item_id} post={post} />
               ))}
             </div>
           )}
@@ -194,14 +194,14 @@ function StoryCard({ story, channel }: { story: Story; channel: string }) {
   );
 }
 
-export function StoriesView({ channel }: { channel: string }) {
-  const { data, isFetching } = useStories(channel);
+export function StoriesView() {
+  const { data, isFetching } = useStories();
   const [showClosed, setShowClosed] = useState(false);
 
   if (data && !data.ready) {
     return (
       <div className="p-4">
-        <EmptyState channel={channel} />
+        <EmptyState />
       </div>
     );
   }
@@ -218,7 +218,7 @@ export function StoriesView({ channel }: { channel: string }) {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {live.map((story) => (
-          <StoryCard key={story.id} story={story} channel={channel} />
+          <StoryCard key={story.id} story={story} />
         ))}
         {live.length === 0 && <p className="text-sm text-ink-muted">No active stories right now.</p>}
       </div>
@@ -234,7 +234,7 @@ export function StoriesView({ channel }: { channel: string }) {
         {showClosed && (
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {closed.map((story) => (
-              <StoryCard key={story.id} story={story} channel={channel} />
+              <StoryCard key={story.id} story={story} />
             ))}
           </div>
         )}

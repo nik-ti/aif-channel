@@ -168,7 +168,7 @@ async def execute(item, post_html: str, post_id: int,
     `reply_to_message_id` threads the post under an earlier one, for
     continuations. Failures are counted on the post row and eventually give up.
     """
-    topic = item["topic"] or item["topic_hint"] or "crypto"
+    topic = item["topic"] or item["topic_hint"] or "?"
     link_url = (item["link_url"] if "link_url" in item.keys() else "") or ""
     message = compose(post_html, item["url"] or "", link_url)
     # Only what the analysts chose for this post. A post they never saw goes out

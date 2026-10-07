@@ -3,7 +3,7 @@
 // Steps: 1 the sorter (worth covering?), 2 the editor (is the post right?),
 // 3 the outcome — skipping any text an earlier step already showed.
 import { StatusReason } from "@/components/StatusReason";
-import { channelCopy } from "@/lib/channel";
+import { COPY } from "@/lib/copy";
 import { statusInfo } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
@@ -76,8 +76,8 @@ function outcomeVerdict(status: string): string {
   }
 }
 
-export function DecisionTrail({ item, channel }: { item: TrailItem; channel: string }) {
-  const copy = channelCopy(channel);
+export function DecisionTrail({ item }: { item: TrailItem }) {
+  const copy = COPY;
   const steps: React.ReactNode[] = [];
   const stoppedEarly = STOPPED_BY_SORTER.has(item.status);
 

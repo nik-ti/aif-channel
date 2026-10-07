@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useItemAction, usePosts, useStats } from "@/hooks/useApi";
-import { channelCopy } from "@/lib/channel";
+import { COPY } from "@/lib/copy";
 import { FORCEABLE, STATUS_FILTERS } from "@/lib/status";
 import type { PostItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -89,8 +89,8 @@ function ImportanceDots({ value, label = "Market impact" }: { value: number; lab
 
 // The expanded detail, shared by the card and the table row: full text,
 // the pipeline's metadata and reason, and the override actions.
-function PostDetail({ item, channel, terms }: { item: PostItem; channel: string; terms: string[] }) {
-  const action = useItemAction(channel);
+function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
+  const action = useItemAction();
   const [confirming, setConfirming] = useState<"force" | "regret" | null>(null);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -127,11 +127,11 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
         <div>
-          <dt className="text-ink-muted">{channelCopy(channel).importance}</dt>
-          <dd className="mt-0.5"><ImportanceDots value={item.importance} label={channelCopy(channel).importance} /></dd>
+          <dt className="text-ink-muted">{COPY.importance}</dt>
+          <dd className="mt-0.5"><ImportanceDots value={item.importance} label={COPY.importance} /></dd>
         </div>
         <div>
-          <dt className="text-ink-muted">{channelCopy(channel).market}</dt>
+          <dt className="text-ink-muted">{COPY.market}</dt>
           <dd className="mt-0.5 text-ink-primary">{item.market || "-"}</dd>
         </div>
         <div>
@@ -144,7 +144,7 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
         </div>
       </dl>
 
-      <DecisionTrail item={item} channel={channel} />
+      <DecisionTrail item={item} />
 
       <div className="flex flex-wrap items-center gap-2">
         {item.telegram_url && (
@@ -219,13 +219,11 @@ function PostDetail({ item, channel, terms }: { item: PostItem; channel: string;
 
 function PostCard({
   item,
-  channel,
   terms,
   isOpen,
   onToggle,
 }: {
   item: PostItem;
-  channel: string;
   terms: string[];
   isOpen: boolean;
   onToggle: () => void;
@@ -258,7 +256,7 @@ function PostCard({
       </button>
       {isOpen && (
         <div className="border-t border-border p-4 pt-3">
-          <PostDetail item={item} channel={channel} terms={terms} />
+          <PostDetail item={item} terms={terms} />
         </div>
       )}
     </div>
@@ -294,7 +292,7 @@ function usePostFilters() {
   return { source, statusIds, q, update };
 }
 
-export function PostsFeed({ channel }: { channel: string }) {
+export function PostsFeed() {
   const { source, statusIds, q, update } = usePostFilters();
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -323,7 +321,7 @@ export function PostsFeed({ channel }: { channel: string }) {
   }, [q]);
 
   // Any filter change starts over at page one.
-  const filterKey = `${channel}|${source}|${statusIds.join(",")}|${q}`;
+  const filterKey = `${source}|${statusIds.join(",")}|${q}`;
   useEffect(() => {
     setPage(0);
   }, [filterKey]);
@@ -334,9 +332,8 @@ export function PostsFeed({ channel }: { channel: string }) {
   );
   const terms = useMemo(() => q.split(/\s+/).filter(Boolean), [q]);
 
-  const { data: stats } = useStats(channel);
+  const { data: stats } = useStats();
   const { data, isFetching, dataUpdatedAt } = usePosts(
-    channel,
     { source, statuses, q },
     PAGE_SIZE,
     page * PAGE_SIZE
@@ -345,7 +342,7 @@ export function PostsFeed({ channel }: { channel: string }) {
   if (data && !data.ready) {
     return (
       <div className="p-4">
-        <EmptyState channel={channel} />
+        <EmptyState />
       </div>
     );
   }
@@ -489,7 +486,7 @@ export function PostsFeed({ channel }: { channel: string }) {
           <PostCard
             key={item.id}
             item={item}
-            channel={channel}
+           
             terms={terms}
             isOpen={expanded.has(item.id)}
             onToggle={() => toggleExpanded(item.id)}
@@ -558,7 +555,7 @@ export function PostsFeed({ channel }: { channel: string }) {
                           <Highlight text={item.title} terms={terms} />
                           <span className="ml-2 text-xs font-normal text-ink-muted">#{item.id}</span>
                         </p>
-                        <PostDetail item={item} channel={channel} terms={terms} />
+                        <PostDetail item={item} terms={terms} />
                       </TableCell>
                     </TableRow>
                   )}

@@ -33,7 +33,6 @@ export interface PostItem {
 }
 
 export interface PostsResponse {
-  channel: string;
   ready: boolean;
   items: PostItem[];
   total: number;
@@ -83,7 +82,6 @@ export interface Story {
 }
 
 export interface StoriesResponse {
-  channel: string;
   ready: boolean;
   stories: Story[];
 }
@@ -144,7 +142,6 @@ export interface SourcePerformance {
 }
 
 export interface StatsResponse {
-  channel: string;
   ready: boolean;
   range: StatsRange;
   sources_count: SourceCount[];
@@ -176,7 +173,6 @@ export interface GraphEdge {
 }
 
 export interface GraphResponse {
-  channel: string;
   ready: boolean;
   nodes: GraphNode[];
   edges: GraphEdge[];
@@ -192,17 +188,6 @@ export interface NodeInfo {
 }
 
 export interface NodesResponse {
-  channel: string;
   ready: boolean;
   nodes: NodeInfo[];
-}
-
-export interface Channel {
-  id: string;
-  name: string;
-  ready: boolean;
-}
-
-export interface ChannelsResponse {
-  channels: Channel[];
 }

@@ -1,0 +1,27 @@
+# AI Flow (@ai_flow_daily): collects AI news and posts it. Installed by deploy/install.sh.
+#   sudo systemctl status aif-channel      is it running?
+#   sudo systemctl restart aif-channel     restart after a change
+#   tail -f logs/aif-channel.log           watch it work
+
+[Unit]
+Description=AI Flow — AI tools news Telegram channel
+After=network-online.target redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nikita
+Group=nikita
+WorkingDirectory=/home/nikita/systems/aif-channel
+ExecStart=/usr/bin/python3 /home/nikita/systems/aif-channel/main.py run
+Restart=always
+RestartSec=15
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=append:/home/nikita/systems/aif-channel/logs/aif-channel.log
+StandardError=append:/home/nikita/systems/aif-channel/logs/aif-channel.log
+# It opens a browser for pages with no feed and downloads video clips.
+MemoryHigh=700M
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

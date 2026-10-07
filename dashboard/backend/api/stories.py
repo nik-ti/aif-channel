@@ -1,6 +1,6 @@
 """GET /api/v1/stories lists every story with item/post counts computed live from the database (not cached on the story row, matching nodes/stories.py).
 Includes the full list of posts so the dashboard can show what happened to each piece of news without a second request.
-Takes optional ?channel= (defaults to markets). A channel with no database yet returns a valid response with "ready": false."""
+With no database yet it returns a valid response with "ready": false."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ import re
 from fastapi import APIRouter, Query
 
 import paths
-from channel_resolver import resolve_channel
 from db_connector import query
 
 router = APIRouter()
@@ -32,11 +31,10 @@ def _display_status(item_status: str) -> str:
 
 
 @router.get("/stories")
-def get_stories(channel: str | None = Query(default=None, description="Which channel's database to read")):
-    name = resolve_channel(channel)
+def get_stories():
 
-    if not paths.database_ready(name):
-        return {"channel": name, "ready": False, "stories": []}
+    if not paths.database_ready():
+        return {"ready": False, "stories": []}
 
     story_rows = query(
         """
@@ -62,7 +60,6 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
         FROM stories s
         ORDER BY s.last_item_at DESC
         """,
-        channel=name,
     )
 
     # One query for every item belonging to any story, LEFT JOINed to its
@@ -93,10 +90,9 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
         WHERE i.story_id IS NOT NULL
         ORDER BY i.id ASC
         """,
-        channel=name,
     )
 
-    username = paths.channel_username(name)
+    username = paths.channel_username()
     posts_by_story: dict[int, list[dict]] = {}
     for row in item_rows:
         body = _strip_html(row["post_html"]) if row["post_html"] else (row["item_body"] or "")
@@ -143,4 +139,4 @@ def get_stories(channel: str | None = Query(default=None, description="Which cha
             }
         )
 
-    return {"channel": name, "ready": True, "stories": stories}
+    return {"ready": True, "stories": stories}

@@ -20,11 +20,11 @@ class DatabaseUnavailableError(Exception):
     """Raised when the DB file is missing or a query times out / fails."""
 
 
-def get_connection(channel: str | None = None) -> sqlite3.Connection:
-    """Open a fresh read-only connection to `channel`'s database. Callers
+def get_connection() -> sqlite3.Connection:
+    """Open a fresh read-only connection to the channel's database. Callers
     should use it in a `with` block (via query()/query_one() below) so it
     always gets closed."""
-    db_path = paths.database_path(channel)
+    db_path = paths.database_path()
     if not db_path.exists():
         raise DatabaseUnavailableError(f"database file not found: {db_path}")
 
@@ -48,11 +48,11 @@ def get_connection(channel: str | None = None) -> sqlite3.Connection:
         raise DatabaseUnavailableError(str(exc)) from exc
 
 
-def query(sql: str, params: tuple = (), channel: str | None = None) -> list[dict[str, Any]]:
-    """Run a SELECT against `channel`'s database and return a list of plain
+def query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
+    """Run a SELECT against the channel's database and return a list of plain
     dicts (JSON-friendly)."""
     try:
-        with get_connection(channel) as conn:
+        with get_connection() as conn:
             cur = conn.execute(sql, params)
             rows = cur.fetchall()
             return [dict(row) for row in rows]
@@ -70,6 +70,6 @@ def query(sql: str, params: tuple = (), channel: str | None = None) -> list[dict
         raise DatabaseUnavailableError(str(exc)) from exc
 
 
-def query_one(sql: str, params: tuple = (), channel: str | None = None) -> dict[str, Any] | None:
-    rows = query(sql, params, channel)
+def query_one(sql: str, params: tuple = ()) -> dict[str, Any] | None:
+    rows = query(sql, params)
     return rows[0] if rows else None

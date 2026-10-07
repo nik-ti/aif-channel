@@ -45,7 +45,7 @@ export default function LoginPage() {
             <Lock className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-xl font-semibold text-ink-primary">Simple Flow Channels</h1>
+            <h1 className="text-xl font-semibold text-ink-primary">AI Flow Dashboard</h1>
             <p className="mt-1 text-sm text-ink-muted">Enter the password to continue.</p>
           </div>
         </div>

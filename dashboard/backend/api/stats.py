@@ -15,9 +15,7 @@ everything that isn't published/held/expired into "rejected"; the newer
 status_breakdown keeps them apart, because "why didn't it post" is the
 question the Stats tab is mostly for.
 
-Takes an optional ?channel=, resolved by channel_resolver (defaults to
-markets, never .env). A channel with no database yet returns an
-empty-but-valid response with "ready": false instead of an error.
+With no database yet it returns empty-but-valid response with "ready": false instead of an error.
 """
 
 from __future__ import annotations
@@ -30,7 +28,6 @@ from typing import Literal
 from fastapi import APIRouter, Query
 
 import paths
-from channel_resolver import resolve_channel
 from db_connector import query, query_one
 
 router = APIRouter()
@@ -58,9 +55,8 @@ def _between(column: str, start: str, end: str) -> tuple[str, tuple]:
     return f"{column} >= datetime('now', ?) AND {column} < datetime('now', ?)", (start, end)
 
 
-def _empty(name: str, window: str) -> dict:
+def _empty(window: str) -> dict:
     return {
-        "channel": name,
         "ready": False,
         "range": window,
         "sources_count": [],
@@ -78,31 +74,29 @@ def _empty(name: str, window: str) -> dict:
     }
 
 
-def _count(sql: str, params: tuple, channel: str) -> int:
-    row = query_one(sql, params, channel=channel)
+def _count(sql: str, params: tuple) -> int:
+    row = query_one(sql, params)
     return int(row["n"] or 0) if row else 0
 
 
 def _window_totals(item_where: str, item_params: tuple,
-                   post_where: str, post_params: tuple, channel: str) -> dict:
+                   post_where: str, post_params: tuple) -> dict:
     return {
-        "ingested": _count(f"SELECT COUNT(*) AS n FROM items WHERE {item_where}", item_params, channel),
+        "ingested": _count(f"SELECT COUNT(*) AS n FROM items WHERE {item_where}", item_params),
         "published": _count(
             f"SELECT COUNT(*) AS n FROM posts WHERE status = 'sent' AND {post_where}",
-            post_params, channel,
+            post_params,
         ),
     }
 
 
 @router.get("/stats")
 def get_stats(
-    channel: str | None = Query(default=None, description="Which channel's database to read"),
     window: Range = Query(default="7d", alias="range", description="Time window for the breakdowns"),
 ):
-    name = resolve_channel(channel)
 
-    if not paths.database_ready(name):
-        return _empty(name, window)
+    if not paths.database_ready():
+        return _empty(window)
 
     modifier = _RANGE_MODIFIER[window]
     item_where, item_params = _since("fetched_at", modifier)
@@ -111,10 +105,9 @@ def get_stats(
     # ── the three original views ────────────────────────────────────────────
     source_rows = query(
         "SELECT source_name, COUNT(*) AS count FROM items GROUP BY source_name ORDER BY count DESC",
-        channel=name,
     )
 
-    all_status_rows = query("SELECT status, COUNT(*) AS count FROM items GROUP BY status", channel=name)
+    all_status_rows = query("SELECT status, COUNT(*) AS count FROM items GROUP BY status")
     gate_outcomes = dict(_EMPTY_GATE_OUTCOMES)
     for row in all_status_rows:
         bucket = row["status"] if row["status"] in _HELD_OR_TERMINAL else "rejected"
@@ -128,16 +121,15 @@ def get_stats(
         GROUP BY hour
         ORDER BY hour ASC
         """,
-        channel=name,
     )
 
     # ── headline numbers ────────────────────────────────────────────────────
-    current = _window_totals(item_where, item_params, post_where, post_params, name)
+    current = _window_totals(item_where, item_params, post_where, post_params)
     previous = None
     if window in _PREVIOUS_MODIFIER:
         prev_items = _between("fetched_at", _PREVIOUS_MODIFIER[window], modifier)
         prev_posts = _between("sent_at", _PREVIOUS_MODIFIER[window], modifier)
-        previous = _window_totals(*prev_items, *prev_posts, name)
+        previous = _window_totals(*prev_items, *prev_posts)
 
     # Minutes from an item arriving to its post going out. Median, not mean:
     # one post forced through a day later should not move the headline.
@@ -148,7 +140,6 @@ def get_stats(
         WHERE p.status = 'sent' AND p.sent_at IS NOT NULL AND {post_where.replace('sent_at', 'p.sent_at')}
         """,
         post_params,
-        channel=name,
     )
     latencies = [r["minutes"] for r in latency_rows if r["minutes"] is not None and r["minutes"] >= 0]
 
@@ -158,12 +149,12 @@ def get_stats(
         "publish_rate": (current["published"] / current["ingested"]) if current["ingested"] else None,
         "median_minutes_to_publish": median(latencies) if latencies else None,
         "queued_now": _count(
-            "SELECT COUNT(*) AS n FROM items WHERE status IN ('queued', 'written')", (), name
+            "SELECT COUNT(*) AS n FROM items WHERE status IN ('queued', 'written')", ()
         ),
-        "held_now": _count("SELECT COUNT(*) AS n FROM items WHERE status = 'held'", (), name),
-        "live_stories": _count("SELECT COUNT(*) AS n FROM stories WHERE status = 'live'", (), name),
+        "held_now": _count("SELECT COUNT(*) AS n FROM items WHERE status = 'held'", ()),
+        "live_stories": _count("SELECT COUNT(*) AS n FROM stories WHERE status = 'live'", ()),
         "last_published_at": (query_one(
-            "SELECT MAX(sent_at) AS t FROM posts WHERE status = 'sent'", channel=name
+            "SELECT MAX(sent_at) AS t FROM posts WHERE status = 'sent'"
         ) or {}).get("t"),
     }
 
@@ -172,12 +163,12 @@ def get_stats(
     ingested_by_bucket = query(
         f"SELECT strftime('{bucket_fmt}', fetched_at) AS bucket, COUNT(*) AS n "
         f"FROM items WHERE {item_where} GROUP BY bucket",
-        item_params, channel=name,
+        item_params,
     )
     published_by_bucket = query(
         f"SELECT strftime('{bucket_fmt}', sent_at) AS bucket, COUNT(*) AS n "
         f"FROM posts WHERE status = 'sent' AND {post_where} GROUP BY bucket",
-        post_params, channel=name,
+        post_params,
     )
     activity: dict[str, dict] = {}
     for row in ingested_by_bucket:
@@ -193,7 +184,7 @@ def get_stats(
     status_breakdown = query(
         f"SELECT status, COUNT(*) AS count FROM items WHERE {item_where} "
         "GROUP BY status ORDER BY count DESC",
-        item_params, channel=name,
+        item_params,
     )
 
     sources = query(
@@ -211,7 +202,7 @@ def get_stats(
         GROUP BY source_name
         ORDER BY total DESC
         """,
-        item_params, channel=name,
+        item_params,
     )
 
     importance = query(
@@ -222,7 +213,7 @@ def get_stats(
         GROUP BY importance
         ORDER BY importance ASC
         """,
-        item_params, channel=name,
+        item_params,
     )
 
     markets = query(
@@ -234,20 +225,20 @@ def get_stats(
         ORDER BY published DESC, count DESC
         LIMIT 10
         """,
-        item_params, channel=name,
+        item_params,
     )
 
     # ── the editor and the dedup ladder: the two filters worth auditing ─────
     editor_where, editor_params = _since("created_at", modifier)
     verdict_rows = query(
         f"SELECT verdict, COUNT(*) AS n FROM editor_decisions WHERE {editor_where} GROUP BY verdict",
-        editor_params, channel=name,
+        editor_params,
     )
     verdicts = {row["verdict"]: row["n"] for row in verdict_rows}
     rules = Counter()
     for row in query(
         f"SELECT rules_broken FROM editor_decisions WHERE verdict = 'decline' AND {editor_where}",
-        editor_params, channel=name,
+        editor_params,
     ):
         try:
             broken = json.loads(row["rules_broken"] or "[]")
@@ -265,18 +256,17 @@ def get_stats(
         GROUP BY rung
         ORDER BY dropped DESC
         """,
-        dedup_params, channel=name,
+        dedup_params,
     )
 
     hour_rows = query(
         f"SELECT CAST(strftime('%H', sent_at) AS INTEGER) AS hour, COUNT(*) AS count "
         f"FROM posts WHERE status = 'sent' AND {post_where} GROUP BY hour",
-        post_params, channel=name,
+        post_params,
     )
     by_hour = {row["hour"]: row["count"] for row in hour_rows if row["hour"] is not None}
 
     return {
-        "channel": name,
         "ready": True,
         "range": window,
         "sources_count": source_rows,

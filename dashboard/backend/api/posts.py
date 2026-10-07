@@ -6,9 +6,7 @@ columns the frontend table needs: source, title, story link, status. `body`
 and `status_reason` are included too, so the frontend's expandable row can
 show the full item text and the pipeline's reason without a second request.
 
-Takes an optional ?channel=, resolved by channel_resolver (defaults to
-markets, never .env). A channel with no database yet (ai_news, today) returns
-an empty-but-valid response with "ready": false instead of a 503 or 500 — see
+With no database yet it returns an empty-but-valid response with "ready": false instead of a 503 or 500 — see
 paths.database_ready().
 
 Filters combine with AND: ?source= picks one source, ?status= takes a
@@ -25,7 +23,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Query
 
 import paths
-from channel_resolver import resolve_channel
 from db_connector import query
 
 router = APIRouter()
@@ -42,18 +39,15 @@ def _escape_like(term: str) -> str:
 
 @router.get("/posts")
 def get_posts(
-    channel: str | None = Query(default=None, description="Which channel's database to read"),
     source: str | None = Query(default=None, description="Filter by source_name"),
     status: str | None = Query(default=None, description="Comma-separated item statuses"),
     q: str | None = Query(default=None, max_length=200, description="Keywords, all must match"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
-    name = resolve_channel(channel)
 
-    if not paths.database_ready(name):
+    if not paths.database_ready():
         return {
-            "channel": name,
             "ready": False,
             "items": [],
             "total": 0,
@@ -78,7 +72,6 @@ def get_posts(
     count_rows = query(
         f"SELECT status, COUNT(*) AS n FROM items {base_where} GROUP BY status",
         tuple(params),
-        channel=name,
     )
     status_counts = {row["status"]: row["n"] for row in count_rows}
 
@@ -121,20 +114,18 @@ def get_posts(
         LIMIT ? OFFSET ?
         """,
         (*params, limit, offset),
-        channel=name,
     )
 
     # Built here rather than in the browser: only this side knows the channel's
-    # @name, and a channel without one (ai_news has no id yet) must simply get no
+    # @name, and a channel without one (a numeric id) must simply get no
     # link instead of a broken one.
-    username = paths.channel_username(name)
+    username = paths.channel_username()
     for row in rows:
         message_id = row.get("telegram_message_id")
         row["telegram_url"] = (f"https://t.me/{username}/{message_id}"
                                if username and message_id else None)
 
     return {
-        "channel": name,
         "ready": True,
         "items": rows,
         "total": total,

@@ -19,8 +19,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Simple Flow Channels",
-  description: "Live monitor over the Simple Flow news channels",
+  title: "AI Flow Dashboard",
+  description: "Live monitor over the AI Flow Telegram channel",
 };
 
 export default function RootLayout({

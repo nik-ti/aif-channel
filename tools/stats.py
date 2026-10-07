@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from nodes.sorter import NO_MARKET_CAP  # noqa: E402
+from nodes.sorter import NO_USE_CAP  # noqa: E402
 from utils import db  # noqa: E402
 
 LINE = "─" * 74
@@ -77,7 +77,7 @@ def report(days: int = 3) -> None:
         if rate > 0.5:
             print("\n   ⚠️  MORE THAN HALF REJECTED. That is very unlikely to be the")
             print("       news being bad. Read the reasons below — if the editor is")
-            print("       wrong, loosen PROMPT in nodes/editor.py.")
+            print("       wrong, loosen prompts/editor.md.")
         elif rate > 0.33:
             print("\n   ⚠️  Rejection rate is on the high side. Worth reading the")
             print("       reasons below to check the editor is being fair.")
@@ -105,10 +105,10 @@ def report(days: int = 3) -> None:
     _section("The importance gate")
     rows = db.market_breakdown(days)
     if rows:
-        print("   Every scored item, by the market the sorter said must reprice.")
-        print(f"   'none' caps an item at {NO_MARKET_CAP}/5, so it never reaches "
+        print("   Every scored item, by who the sorter said can use it today.")
+        print(f"   'none' caps an item at {NO_USE_CAP}/5, so it never reaches "
               f"the channel.\n")
-        print(f"   {'market':<16}{'seen':>7}{'published':>12}")
+        print(f"   {'who can use it':<16}{'seen':>7}{'published':>12}")
         for row in rows:
             print(f"   {row['market']:<16}{row['seen']:>7}{row['published'] or 0:>12}")
 
@@ -116,16 +116,15 @@ def report(days: int = 3) -> None:
         total_seen = sum(r["seen"] for r in rows)
         if total_seen:
             share = none_seen / total_seen
-            print(f"\n   {share:.0%} of scored items had no market to reprice.")
+            print(f"\n   {share:.0%} of scored items were usable by nobody today.")
             if share > 0.9:
-                print("   ⚠️  That is very high. Either your sources are mostly general")
-                print("       news rather than market news, or the market definitions in")
-                print("       nodes/sorter.py are too narrow. Check with --dropped before")
-                print("       loosening anything.")
+                print("   ⚠️  That is very high. Either the sources are mostly research and")
+                print("       industry news, or prompts/rubric.md is too narrow. Check with")
+                print("       --dropped before loosening anything.")
             elif share < 0.4:
-                print("   ⚠️  That is low, and the usual cause is a model reaching for a")
-                print("       market to justify a story. Read --dropped and the published")
-                print("       posts together: are the 4s really things you would trade on?")
+                print("   ⚠️  That is low, and the usual cause is a model reaching for an")
+                print("       audience to justify a story. Read --dropped and the published")
+                print("       posts together: could a regular person really use the 4s?")
     else:
         print("   Nothing scored yet.")
 
@@ -235,7 +234,7 @@ def show_declines(count: int = 10) -> None:
         print(LINE)
 
     print("\n   If these look like good posts, the editor is too strict.")
-    print("   Loosen PROMPT in nodes/editor.py and rehearse with tools/dry_run.py.\n")
+    print("   Loosen prompts/editor.md and rehearse with tools/rehearse.py.\n")
 
 
 def show_held(count: int = 25) -> None:
@@ -281,12 +280,11 @@ def show_dropped(count: int = 25, market: str = "") -> None:
       * Too strict, and the channel goes quiet and misses things it should have
         run. You will see stories here you would obviously have posted.
       * Too loose, and it publishes filler. You will see almost nothing here,
-        while the channel fills up with items nobody would trade on.
+        while the channel fills up with items nobody can use.
 
-    The 'market' column is the one to look at. An item dropped with market
-    'none' is the model saying, in plain words, that nothing has to be repriced.
-    If you disagree with that on a story, THAT is the judgement to go and fix in
-    nodes/sorter.py — not the number.
+    The 'for' column is the one to look at. An item dropped with 'none' is the
+    model saying nobody can use it today. If you disagree on a story, THAT is the
+    judgement to fix in prompts/rubric.md — not the number.
     """
     rows = db.recent_low_impact(count, market=market)
     if not rows:
@@ -305,13 +303,13 @@ def show_dropped(count: int = 25, market: str = "") -> None:
     for row in rows:
         print(f"\n   {row['updated_at']}   {row['source_name']}")
         print(f"   {(row['title'] or '')[:100]}")
-        print(f"   topic {row['topic'] or '?':<12} market {row['market'] or '?':<14} "
-              f"impact {row['importance']}/5")
+        print(f"   topic {row['topic'] or '?':<12} for {row['market'] or '?':<14} "
+              f"usefulness {row['importance']}/5")
         print(f"   → {row['status_reason']}")
 
     print(f"\n{LINE}")
-    print("   If good stories are in this list, the gate is too strict: loosen the")
-    print("   market definitions or the continuing-story test in nodes/sorter.py.")
+    print("   If good stories are in this list, the sorter is too strict: loosen")
+    print("   prompts/rubric.md.")
     print("   If this list looks correctly boring, the gate is doing its job.\n")
 
 
@@ -325,7 +323,7 @@ if __name__ == "__main__":
     parser.add_argument("--dropped", action="store_true",
                         help="show real news the importance gate did not run")
     parser.add_argument("--market", default="",
-                        help="with --dropped, show only one market (e.g. none)")
+                        help="with --dropped, show only one audience (e.g. none)")
     parser.add_argument("--count", type=int, default=10)
     args = parser.parse_args()
 

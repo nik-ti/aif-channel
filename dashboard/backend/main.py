@@ -1,4 +1,4 @@
-"""FastAPI backend for Market One Dashboard. Serves the channel's database to the frontend under /api/v1/*.
+"""FastAPI backend for the AI Flow dashboard. Serves the channel's database to the frontend under /api/v1/*.
 Every request requires a shared token (added by the server, not the browser) because nginx publishes this API on the open internet."""
 
 from __future__ import annotations
@@ -11,15 +11,16 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api import actions, channels, graph, nodes, posts, stats, stories
+import paths
+from api import actions, graph, nodes, posts, stats, stories
 from db_connector import DatabaseUnavailableError
 
-app = FastAPI(title="Market One Dashboard API", version="1.0.0")
+app = FastAPI(title="AI Flow Dashboard API", version="2.0.0")
 
-# Set in the systemd unit. Empty means "refuse everything" rather than "let
-# everyone in": a missing secret must fail closed, or a typo in the unit file
-# quietly reopens the API to the internet.
-DASHBOARD_TOKEN = os.environ.get("DASHBOARD_TOKEN", "")
+# Kept in the project's .env, never in a committed file (the old service file
+# leaked one to GitHub). Empty means "refuse everything": a missing secret must
+# fail closed, or a typo quietly reopens the API to the internet.
+DASHBOARD_TOKEN = (os.environ.get("DASHBOARD_TOKEN") or paths.env().get("DASHBOARD_TOKEN") or "").strip()
 
 PUBLIC_PATHS = {"/api/v1/health", "/docs", "/openapi.json"}
 
@@ -60,7 +61,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(actions.router, prefix="/api/v1", tags=["actions"])
-app.include_router(channels.router, prefix="/api/v1")
 app.include_router(posts.router, prefix="/api/v1")
 app.include_router(stories.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")

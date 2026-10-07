@@ -1,27 +1,16 @@
-// Sticky top bar: logo, channel switcher, theme toggle, and a help icon.
+// Sticky top bar: the channel's name, a help icon and the theme toggle.
 // Light mode is the default on every fresh visit; the theme choice made here
-// only sticks around in this browser via localStorage. The channel choice is
-// lifted to the URL by the caller (page.tsx) so a link can be shared.
+// only sticks around in this browser via localStorage.
 "use client";
 
 import { Info, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { ChannelSwitcher } from "@/components/ChannelSwitcher";
 import { Button } from "@/components/ui/button";
-import type { Channel } from "@/lib/types";
 
-const THEME_KEY = "market-one-theme";
+const THEME_KEY = "aif-theme";
 
-export function Header({
-  channel,
-  channels,
-  onChannelChange,
-}: {
-  channel: string;
-  channels: Channel[];
-  onChannelChange: (id: string) => void;
-}) {
+export function Header() {
   const [dark, setDark] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -47,11 +36,8 @@ export function Header({
     <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-surface-primary px-4 py-2 sm:py-3">
       <div className="flex min-w-0 items-center gap-2">
         {/* The full name pushed the icons onto a second row at phone width. */}
-        <span className="shrink-0 text-base font-semibold text-ink-primary">
-          <span className="sm:hidden">SF</span>
-          <span className="hidden sm:inline">Simple Flow Channels</span>
-        </span>
-        <ChannelSwitcher channel={channel} channels={channels} onChange={onChannelChange} />
+        <span className="shrink-0 text-base font-semibold text-ink-primary">AI Flow</span>
+        <span className="hidden truncate text-sm text-ink-muted sm:inline">@ai_flow_daily</span>
       </div>
 
       <div className="relative flex shrink-0 items-center gap-0.5 sm:gap-1">
@@ -74,8 +60,8 @@ export function Header({
 
         {showHelp && (
           <div className="absolute right-0 top-10 w-64 rounded-md border border-border bg-surface-primary p-3 text-xs text-ink-muted shadow-md">
-            Live monitor over the Simple Flow news channels. Pick a channel above;
-            data refreshes every 10 seconds from that channel&apos;s own database.
+            Live monitor over the AI Flow Telegram channel. Data refreshes every
+            10 seconds from the channel&apos;s own database.
           </div>
         )}
       </div>

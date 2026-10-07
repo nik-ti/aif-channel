@@ -2,7 +2,6 @@
 // environment (never hardcoded — see SPEC.md FAILURE #10) so the same build
 // works against localhost in dev and the VPS through Vercel in prod.
 import type {
-  ChannelsResponse,
   PostFilters,
   GraphResponse,
   NodesResponse,
@@ -47,8 +46,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data as T;
 }
 
-export function fetchPosts(channel: string, filters: PostFilters, limit: number, offset: number) {
-  const params = new URLSearchParams({ channel, limit: String(limit), offset: String(offset) });
+export function fetchPosts(filters: PostFilters, limit: number, offset: number) {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (filters.source) params.set("source", filters.source);
   if (filters.statuses.length) params.set("status", filters.statuses.join(","));
   if (filters.q.trim()) params.set("q", filters.q.trim());
@@ -57,38 +56,34 @@ export function fetchPosts(channel: string, filters: PostFilters, limit: number,
 
 // The two write actions (backend api/actions.py): overrule a rejection, or
 // label a post that should not have gone out. Both record a human verdict.
-export function forcePublish(channel: string, itemId: number, note = "") {
+export function forcePublish(itemId: number, note = "") {
   return post<{ ok: boolean; message: string }>(
-    `/actions/force?${new URLSearchParams({ channel }).toString()}`,
+    `/actions/force`,
     { item_id: itemId, note }
   );
 }
 
-export function markShouldNotHavePosted(channel: string, itemId: number, note = "") {
+export function markShouldNotHavePosted(itemId: number, note = "") {
   return post<{ ok: boolean }>(
-    `/actions/should-not-have-posted?${new URLSearchParams({ channel }).toString()}`,
+    `/actions/should-not-have-posted`,
     { item_id: itemId, note }
   );
 }
 
-export function fetchStories(channel: string) {
-  return get<StoriesResponse>(`/stories?${new URLSearchParams({ channel }).toString()}`);
+export function fetchStories() {
+  return get<StoriesResponse>("/stories");
 }
 
-export function fetchStats(channel: string, range: StatsRange = "7d") {
-  return get<StatsResponse>(`/stats?${new URLSearchParams({ channel, range }).toString()}`);
+export function fetchStats(range: StatsRange = "7d") {
+  return get<StatsResponse>(`/stats?${new URLSearchParams({ range }).toString()}`);
 }
 
-export function fetchGraph(channel: string) {
-  return get<GraphResponse>(`/graph?${new URLSearchParams({ channel }).toString()}`);
+export function fetchGraph() {
+  return get<GraphResponse>("/graph");
 }
 
-export function fetchNodes(channel: string) {
-  return get<NodesResponse>(`/nodes?${new URLSearchParams({ channel }).toString()}`);
-}
-
-export function fetchChannels() {
-  return get<ChannelsResponse>("/channels");
+export function fetchNodes() {
+  return get<NodesResponse>("/nodes");
 }
 
 // /health is not under /api/v1 in api.ts's base path sense — it lives at

@@ -1,7 +1,7 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "brain": "./brain/graph.py:graph"
+    "aif": "./pipeline/graph.py:graph"
   },
   "env": "./.env",
   "python_version": "3.12"

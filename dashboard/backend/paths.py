@@ -1,10 +1,10 @@
-"""Locate the channel project by looking for markers instead of counting parent directories.
-Old approach broke when the dashboard moved deeper; this approach is robust."""
+"""Where the dashboard finds the channel: the project root (the folder holding config.py
+and schema.sql), its database, its prompts and its .env. Found by looking for those
+markers rather than counting parent folders, so moving the dashboard cannot break it."""
 
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
 
 from dotenv import dotenv_values
@@ -20,70 +20,32 @@ def project_root() -> Path:
 
 ROOT_DIR = project_root()
 ENV_PATH = ROOT_DIR / ".env"
+PROMPTS_DIR = ROOT_DIR / "prompts"
+
+# The stations in the order pipeline/graph.py runs them (the article is read before
+# the sorter, the video analyst runs after the image analyst).
+STATIONS = [
+    "dedup", "fetch_article", "sorter", "story_organizer", "gatekeeper",
+    "writer", "editor", "repeat_check", "image_analyst", "video_analyst", "publish",
+]
 
 
-def active_channel() -> str:
-    env = dotenv_values(ENV_PATH) if ENV_PATH.exists() else {}
-    return env.get("CHANNEL") or os.environ.get("CHANNEL") or "markets"
+def env() -> dict[str, str | None]:
+    """The project's .env, read fresh each time so an edit needs no restart."""
+    return dotenv_values(ENV_PATH) if ENV_PATH.exists() else {}
 
 
-def channel_dir(channel: str | None = None) -> Path:
-    return ROOT_DIR / "channels" / (channel or active_channel())
+def database_path() -> Path:
+    """The channel's database (same file config.py names)."""
+    return ROOT_DIR / "data" / "aif-channel.db"
 
 
-def database_path(channel: str | None = None) -> Path:
-    """A channel's database, read from its profile without importing it.
-
-    Defaults to the one named in .env, so callers that serve a single channel
-    need not pass anything.
-    """
-    profile = channel_dir(channel) / "profile.py"
-    try:
-        match = re.search(r'^DB_FILENAME\s*=\s*["\'](.+?)["\']',
-                          profile.read_text(), re.M)
-    except OSError:
-        match = None
-    return ROOT_DIR / "data" / (match.group(1) if match else "markets.db")
+def database_ready() -> bool:
+    return database_path().exists()
 
 
-def channel_username(channel: str | None = None) -> str:
-    """A channel's Telegram @name, or "" when it is a numeric id.
-
-    Read from .env the same way config.py does: the profile names the key, and a
-    channel-specific value wins over the shared one. Only an @name can be turned
-    into a t.me link a non-member can open.
-    """
-    name = channel or active_channel()
-    profile = channel_dir(name) / "profile.py"
-    try:
-        match = re.search(r'^CHANNEL_ID_KEY\s*=\s*["\'](.+?)["\']',
-                          profile.read_text(), re.M)
-    except OSError:
-        return ""
-    if not match:
-        return ""
-    key = match.group(1)
-    env = dotenv_values(ENV_PATH) if ENV_PATH.exists() else {}
-    for candidate in (f"{name.upper()}_{key}", key):
-        value = (env.get(candidate) or os.environ.get(candidate) or "").strip()
-        if value.startswith("@"):
-            return value[1:]
-    return ""
-
-
-def list_channel_names() -> list[str]:
-    """Every channel this project defines: a directory under channels/ with
-    its own profile.py. Sorted for a stable, predictable switcher order."""
-    channels_root = ROOT_DIR / "channels"
-    if not channels_root.is_dir():
-        return []
-    return sorted(
-        entry.name for entry in channels_root.iterdir()
-        if entry.is_dir() and (entry / "profile.py").is_file()
-    )
-
-
-def database_ready(channel: str | None = None) -> bool:
-    """Whether this channel's database file exists yet. ai_news does not
-    have one until its pipeline has run for the first time."""
-    return database_path(channel).exists()
+def channel_username() -> str:
+    """The channel's Telegram @name without the @, or "" when it is a numeric id.
+    Only an @name can be turned into a t.me link a non-member can open."""
+    value = (env().get("CHANNEL_ID") or os.environ.get("CHANNEL_ID") or "").strip()
+    return value[1:] if value.startswith("@") else ""

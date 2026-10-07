@@ -30,25 +30,25 @@ class OverrideRequest(BaseModel):
     note: str = ""
 
 
-def _writable_connection(channel: str | None) -> sqlite3.Connection:
+def _writable_connection() -> sqlite3.Connection:
     """The one place this service opens a database for writing.
 
     Everything else uses db_connector's read-only connection on purpose. The
     timeout matters: the channel itself is usually holding the database, and
     the right answer to that is to wait a moment, not to fail the click.
     """
-    path = paths.database_path(channel)
+    path = paths.database_path()
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"no database for channel '{channel}'")
+        raise HTTPException(status_code=404, detail="no channel database yet")
     connection = sqlite3.connect(path, timeout=15.0)
     connection.row_factory = sqlite3.Row
     return connection
 
 
 @router.post("/actions/force")
-def force_publish(request: OverrideRequest, channel: str | None = None):
+def force_publish(request: OverrideRequest):
     """Overrule a rejection: back to the queue, to go out on the next round."""
-    connection = _writable_connection(channel)
+    connection = _writable_connection()
     try:
         row = connection.execute(
             "SELECT id, status, status_reason FROM items WHERE id = ?", (request.item_id,)
@@ -85,14 +85,14 @@ def force_publish(request: OverrideRequest, channel: str | None = None):
 
 
 @router.post("/actions/should-not-have-posted")
-def mark_regret(request: OverrideRequest, channel: str | None = None):
+def mark_regret(request: OverrideRequest):
     """Label a post as one that should not have gone out.
 
     Deliberately does not delete anything from Telegram. It is the other half
     of the dataset — without it every label points the same way, and a filter
     tuned only on things it wrongly rejected learns to reject nothing.
     """
-    connection = _writable_connection(channel)
+    connection = _writable_connection()
     try:
         row = connection.execute(
             "SELECT id, status, status_reason FROM items WHERE id = ?", (request.item_id,)
@@ -114,9 +114,9 @@ def mark_regret(request: OverrideRequest, channel: str | None = None):
 
 
 @router.get("/overrides")
-def list_overrides(channel: str | None = None, limit: int = 100):
+def list_overrides(limit: int = 100):
     """Every disagreement, newest first — the list worth reading weekly."""
-    connection = _writable_connection(channel)
+    connection = _writable_connection()
     try:
         rows = connection.execute(
             """SELECT o.id, o.item_id, o.was_status, o.was_reason, o.decision,
