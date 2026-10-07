@@ -27,3 +27,6 @@ venv/
 .env.local
 .env.production
 .vercel
+
+# Market One archive: its database and logs stay on the VPS only
+archive/market-one/data/
