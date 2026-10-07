@@ -133,9 +133,17 @@ SOURCES = [
      "link_pattern": r"^https://skills\.sh/(?!(packs|topic|official|audits|docs|agent)$)[a-z0-9-]+$"},
 ]
 
-# X accounts read from the shared tweet relay (/home/nikita/trading/infra/tweet-relay).
-# None yet. Adding one also needs the relay's accounts.txt and a relay restart.
-X_ACCOUNTS: dict[str, str] = {}
+# X accounts read from the tweet relay (/home/nikita/systems/infra/tweet-relay), each
+# with the topic it usually posts. Must match the relay's accounts.txt (a test checks);
+# changing it needs both edits and a relay restart. Handles are lowercase.
+X_ACCOUNTS: dict[str, str] = {
+    "openai": "launch",
+    "googledeepmind": "launch",
+    "claudeai": "launch",
+    "claudedevs": "launch",        # Claude's developer platform and API news
+    "testingcatalog": "launch",    # tracks new AI features as they roll out, and leaks
+    "btibor91": "launch",          # Tibor Blaho: AI product changes and leaks
+}
 NO_MEDIA_SOURCES: set[str] = set()
 
 # AI/TLDR dates its items at midnight, so a day-old cutoff drops most of them.

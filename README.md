@@ -124,7 +124,9 @@ then `sudo systemctl restart aif-channel`.
 `TOPICS` in `config.py` (the model physically cannot answer with a topic the list lacks).
 **Add a feed:** add it to `SOURCES` in `config.py`, run `tools/check_sources.py`, restart.
 **Add an X account:** it needs two edits: `X_ACCOUNTS` in `config.py` and the tweet relay's
-`/home/nikita/trading/infra/tweet-relay/accounts.txt` (then restart the relay).
+`/home/nikita/systems/infra/tweet-relay/accounts.txt` (then `sudo systemctl restart tweet-relay`
+and `aif-channel`). A test fails if the two lists differ. Followed now: openai, googledeepmind,
+claudeai, claudedevs, testingcatalog, btibor91.
 
 ### Changing a model
 

@@ -75,7 +75,8 @@ def _parse_entry(fields: dict) -> Tweet | None:
 
     return Tweet(
         tweet_id=data.get("tweet_id", ""),
-        handle=data.get("handle", "unknown"),
+        # X spells usernames with capitals ("OpenAI"); our lists are lowercase.
+        handle=(data.get("handle") or "unknown").lower(),
         text=data.get("text", ""),
         created_at=data.get("created_at", ""),
         url=data.get("url", ""),

@@ -210,11 +210,36 @@ def the_product_link_reaches_the_folded_story():
     assert stories.as_source(story)["link_url"] == "https://github.com/acme/icons"
 
 
+RELAY_ACCOUNTS = Path("/home/nikita/systems/infra/tweet-relay/accounts.txt")
+
+
 @test
-def this_channel_stays_out_of_market_ones_tweets():
-    assert config.TWEET_STREAM_GROUP != "news-channel"
+def the_channel_follows_exactly_the_relays_accounts():
     from nodes import collect_loop
-    assert not collect_loop.reads_tweets()
+    assert config.TWEET_STREAM_GROUP != "news-channel"      # its own bookmark on the shared stream
+    assert collect_loop.reads_tweets()
+    assert all(h == h.lower() for h in config.X_ACCOUNTS)
+    assert all(t in config.VALID_TOPICS for t in config.X_ACCOUNTS.values())
+    if RELAY_ACCOUNTS.exists():                             # on the VPS: the two lists must agree
+        relay = {line.strip().lower() for line in RELAY_ACCOUNTS.read_text().splitlines()
+                 if line.strip() and not line.startswith("#")}
+        assert relay == set(config.X_ACCOUNTS), (relay, set(config.X_ACCOUNTS))
+
+
+@test
+def a_tweet_matches_its_account_whatever_the_capitals():
+    import json
+    from nodes import fetch_tweets
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+
+    def entry(handle):
+        return {"data": json.dumps({"tweet_id": handle + "1", "handle": handle, "text": "New model",
+                                    "created_at": now, "url": f"https://x.com/{handle}/status/1"})}
+    tweets = [fetch_tweets._parse_entry(entry(h)) for h in ("OpenAI", "GoogleDeepMind", "DeItaone")]
+    assert tweets[0].handle == "openai" and tweets[0].url == "https://x.com/OpenAI/status/1"
+    kept = fetch_tweets._filter_batch(tweets)
+    assert [t.handle for t in kept] == ["openai", "googledeepmind"]      # a market account is not ours
 
 
 @test
