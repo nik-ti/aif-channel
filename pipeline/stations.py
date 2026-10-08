@@ -14,7 +14,7 @@ from typing import Any
 
 import config
 from utils import persona_loader
-from nodes import (article, dedup, echo, editor, image_analyst, media, publisher,
+from nodes import (article, dedup, echo, editor, image_analyst, link_finder, media, publisher,
                    sorter, stories, video_analyst, writer)
 from utils import db, semantic_memory, logger as log_setup
 
@@ -403,6 +403,7 @@ async def writer_node(state: dict) -> dict[str, Any]:
     writer_kwargs = {
         "has_image": has_image,
         "editor_feedback": feedback,
+        "previous_draft": state.get("post_html", "") if feedback else "",
         "persona": persona,
         "recent_posts": recent_posts,
         "brief": state.get("story_brief", ""),
@@ -464,8 +465,8 @@ async def writer_node(state: dict) -> dict[str, Any]:
 async def editor_node(state: dict) -> dict[str, Any]:
     """Judge the finished post against its source. Fails closed.
 
-    A rejection naming ONLY fixable rules goes back to the writer once with the
-    reason. The post is not marked declined until a rejection is final, so a
+    A rejection naming ONLY fixable rules goes back to the writer with the reason,
+    up to config.MAX_REWRITES times. The post is not marked declined until a rejection is final, so a
     rejected-then-fixed draft never shows up in the decline statistics.
     """
     item = state["item"]
@@ -517,8 +518,11 @@ async def editor_node(state: dict) -> dict[str, Any]:
             if not dry:
                 db.set_item_status(item["id"], "written",
                                    f"editor asked for a rewrite: {feedback[:200]}")
-            return {"editor_verdict": decision, "editor_feedback": feedback,
-                    "previous_editor_reason": feedback,
+            # Every earlier request travels along, so a fix in round 2 is not undone in round 3.
+            earlier = state.get("previous_editor_reason", "")
+            notes = f"{earlier}\n{rewrite_count + 1}. {feedback}" if earlier else f"1. {feedback}"
+            return {"editor_verdict": decision, "editor_feedback": notes,
+                    "previous_editor_reason": notes,
                     "rewrite_count": rewrite_count + 1, "rewrite_requested": True}
 
         # Final rejection.
@@ -640,6 +644,8 @@ async def publish_node(state: dict) -> dict[str, Any]:
         return {"outcome": "approved"}
 
     item = state["item"]
+    if config.LINK_TO_PRODUCT and not item.get("link_url") and publisher.is_x_link(item.get("url", "")):
+        item = {**item, "link_url": await link_finder.find(item, state["post_html"])}
     story = state.get("story")
     reply_to = story.first_message_id if story and story.posts else None
     sent = await publisher.execute(item, state["post_html"], state["post_id"],

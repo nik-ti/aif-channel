@@ -823,6 +823,79 @@ async def a_source_too_thin_to_write_from_is_capped_below_the_bar():
         openrouter.chat_json = real
 
 
+# ── Never "Try it here" to a tweet ──
+
+@test
+def a_post_never_links_to_x():
+    from nodes import publisher
+    config.SIGNATURE_HTML = ""
+    post = '<b>Odyssey-3 builds a world from a prompt</b>\n\nWalk through it.\n\n<a href="LINK">Try it here</a>'
+    tweet = "https://x.com/testingcatalog/status/2108246975883751665"
+    out = publisher.compose(post, tweet, link_url="")
+    assert "x.com" not in out and "Try it here" not in out, out
+    assert out.endswith("Walk through it."), out
+    out = publisher.compose(post, tweet, link_url="https://twitter.com/odysseyml/status/1")
+    assert "twitter.com" not in out and "Try it here" not in out, out
+    out = publisher.compose(post, tweet, link_url="https://odyssey.world/experience")
+    assert '<a href="https://odyssey.world/experience">Try it here</a>' in out, out
+    assert publisher.is_x_link("https://www.x.com/a") and not publisher.is_x_link("https://x.ai/news")
+
+
+@test
+async def the_link_finder_keeps_only_a_real_page_off_x():
+    from nodes import link_finder
+    from utils import openrouter
+    answers = iter(["https://x.com/odysseyml/status/1", "NONE",
+                    "Here it is: https://odyssey.world/experience."])
+
+    async def fake(**kwargs):
+        assert kwargs["web_search"]
+        return next(answers)
+
+    async def loads(url):
+        return url, ""
+    real = openrouter.chat_text, link_finder._loads
+    openrouter.chat_text, link_finder._loads = fake, loads
+    item_id = db.insert_item(origin="x", source_name="testingcatalog", external_id="odyssey3",
+                             url="https://x.com/testingcatalog/status/2", title="Odyssey-3")
+    item = dict(db.get_item(item_id))
+    try:
+        assert await link_finder.find(item, "<b>Odyssey-3</b>") == ""
+        assert await link_finder.find(item, "<b>Odyssey-3</b>") == ""
+        assert await link_finder.find(item, "<b>Odyssey-3</b>") == "https://odyssey.world/experience"
+    finally:
+        openrouter.chat_text, link_finder._loads = real
+    assert db.get_item(item_id)["link_url"] == "https://odyssey.world/experience"
+    page = ('<a href="https://odyssey.systems/blog">Blog</a> <a href="https://x.com/odysseyml">X</a>'
+            '<a href="https://experience.odyssey.systems"><span>Explore</span></a>')
+    assert link_finder.demo_link(page, "https://odyssey.systems/introducing-odyssey-3") == \
+        "https://experience.odyssey.systems"
+    assert link_finder.demo_link('<a href="https://other.com/try">Try it</a>', "https://odyssey.systems/x") == ""
+
+
+# ── A rewrite edits the rejected draft, with every request so far ──
+
+@test
+async def a_rewrite_edits_the_previous_draft_and_keeps_every_request():
+    from nodes import writer
+    from utils import openrouter
+    seen = {}
+
+    async def fake(**kwargs):
+        seen["user"] = kwargs["user"]
+        return "<b>Post</b>\n\n<a href=\"LINK\">See it here</a>"
+    real, openrouter.chat_text = openrouter.chat_text, fake
+    item = {"id": 1, "source_name": "openai", "title": "GPT", "body": "text " * 50, "origin": "rss",
+            "topic": "launch", "topic_hint": "launch", "article_text": ""}
+    try:
+        await writer.execute(item, editor_feedback="1. JARGON: explain SDK\n2. FACTUAL_DRIFT: drop 'free'",
+                             previous_draft="<b>A free SDK</b>")
+    finally:
+        openrouter.chat_text = real
+    assert "<b>A free SDK</b>" in seen["user"]
+    assert "explain SDK" in seen["user"] and "drop 'free'" in seen["user"]
+    assert config.MAX_REWRITES >= 3
+
 print(f"{len(PASSED)} passed, {len(FAILED)} failed")
 for line in FAILED:
     print("  FAIL", line[:240])

@@ -85,9 +85,12 @@ writer never copies a link: it writes LINK and the publisher fills in the addres
 Its own prompt (editor.md), on a different model from the writer. It checks the post
 against the source and can only reject by naming a rule. This channel adds **JARGON**:
 a word a 12-year-old would not know, left unexplained ("tokens" and "API" are fine).
-A fixable rejection goes back to the writer **once**, and on that second check the editor
-is shown **its own earlier reason**, so it cannot ask for the opposite of what it asked
-before. A second rejection is final.
+A fixable rejection goes back to the writer, **up to 3 times**. The writer gets its
+rejected draft back and changes **only the words the editor named**, instead of writing
+the post again from scratch (that used to fix one fault and add a new one, like "free" or
+"just launched"). Both the writer and the editor see **every earlier request**, so a fix
+is not undone and the editor cannot ask for the opposite of what it asked before. A
+rejection after the third rewrite, or for a rule that cannot be fixed, is final.
 
 ## 9. Repeat check
 The exit: does this finished post tell the reader anything a post of the last 60 days
@@ -102,7 +105,11 @@ every Monday, and 3 failed downloads in a row send an alert.
 
 ## 11. Publish
 Fills in the link, adds the signature ("AI Flow | Subscribe"), and sends the post with
-the chosen media. Pace: at most 30 posts an hour and 200 a day, 90 seconds apart.
+the chosen media. **A post never links to X.** When the source is a tweet with no outside
+link, a web search (Gemini with OpenRouter's search, ~2 cents) looks for the maker's own
+page, and prefers a demo that page links to. The page must load and must not be on X.
+If nothing is found, the post goes out with no link line rather than a link to the tweet.
+Pace: at most 30 posts an hour and 200 a day, 90 seconds apart.
 
 ## Reading an item on the Posts tab
 Open an item and read **What happened** top to bottom: what the **sorter** decided and

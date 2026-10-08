@@ -61,6 +61,13 @@ def _strip_utm_from_links(text: str) -> str:
     return re.sub(r'(href=")([^"]*)(")', clean, text)
 
 
+def is_x_link(url: str) -> bool:
+    """True for a link to X/Twitter, which is never what a post should point at."""
+    host = (re.match(r"https?://([^/]+)", url or "") or [None, ""])[1].lower()
+    return host.removeprefix("www.").removeprefix("mobile.") in (
+        "x.com", "twitter.com", "t.co", "pic.x.com", "pic.twitter.com")
+
+
 def compose(post_html: str, url: str, link_url: str = "") -> str:
     """The post as it goes out: the writer's text, with any foreign link removed.
 
@@ -75,12 +82,17 @@ def compose(post_html: str, url: str, link_url: str = "") -> str:
     text = post_html.strip()
     if config.LINK_TO_PRODUCT:
         target = link_url or url
+        # Never X: "Try it here" opening a news account's tweet promotes them and
+        # misleads the reader (Odyssey-3, 2026-10-08). No link beats that one.
+        if is_x_link(target):
+            target = ""
         if target and 'href="LINK"' not in text:
             text += f'\n\n<a href="LINK">{config.LINK_FALLBACK_TEXT}</a>'
         if target:
             text = text.replace('href="LINK"', f'href="{target}"')
         else:
-            text = re.sub(r'<a\s+href="LINK"[^>]*>(.*?)</a>', r"\1", text, flags=re.DOTALL)
+            # The whole link line goes: "Try it here" with nothing to tap is noise.
+            text = re.sub(r'\s*<a\s+href="LINK"[^>]*>.*?</a>', "", text, flags=re.DOTALL)
         url = target
     text = _strip_foreign_links(text, url)
     text = _strip_utm_from_links(text)

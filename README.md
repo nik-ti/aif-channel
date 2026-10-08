@@ -52,10 +52,10 @@ graph LR
 | story_organizer | `nodes/stories.py` | Which running story does it join? One product or release = one story. |
 | gatekeeper | `nodes/stories.py` | Has the story moved? Post, or hold the item as fuel for the story's next post. |
 | writer | `nodes/writer.py` + `prompts/writer.md`, `prompts/persona.md` | Writes the post in AI Flow's voice. |
-| editor | `nodes/editor.py` + `prompts/editor.md` | Checks the post against its source. Can only reject by naming a rule. A fixable rejection goes back to the writer once. **Fails closed.** |
+| editor | `nodes/editor.py` + `prompts/editor.md` | Checks the post against its source. Can only reject by naming a rule. A fixable rejection goes back to the writer, up to 3 times. **Fails closed.** |
 | repeat_check | `nodes/echo.py` | Does the finished post tell the reader anything a post of the last 60 days did not? |
 | image / video analyst | `nodes/image_analyst.py`, `nodes/video_analyst.py` + `prompts/*_rubric.md` | Picks the one picture or clip that shows what the post says, or none. |
-| publish | `nodes/publisher.py` | Fills in the product link, adds the signature, sends with the chosen media. |
+| publish | `nodes/publisher.py`, `nodes/link_finder.py` | Fills in the product link (never a link to X), adds the signature, sends with the chosen media. |
 
 `pipeline/stations.py` holds the thin graph-node wrappers; the real work is in `nodes/`.
 
@@ -135,9 +135,21 @@ real address and X's preview of every link, and the post it quotes or reposts (r
 included). AI Flow stores one source with labelled parts: `POST by @account`, then
 `QUOTED POST by @other` or `@account REPOSTED this post by @other`, then `LINKED PAGE 1-3`
 (read with the same plain → browser → reader chain; X's preview stands in for a page that
-can't be read). Links back to X are skipped. The first outside link becomes the post's link,
-and the pictures and clips of the tweet, the shared post and the linked pages are all
+can't be read). Links back to X are skipped. The first outside link becomes the post's link.
+The pictures and clips of the tweet, the shared post and the linked pages are all
 candidates for the analysts. `prompts/writer.md` and `prompts/editor.md` explain the labels.
+
+**A post never links to X.** "Try it here" opening a news account's tweet promoted them and
+misled the reader (Odyssey-3, 2026-10-08). Two layers:
+- `publisher.compose` refuses any X/Twitter address in code; with nothing else to link, the
+  whole link line is dropped.
+- When a tweet has no outside link, `nodes/link_finder.py` runs just before sending (called
+  from `publish_node`). It sends Gemini one request with OpenRouter's **web plugin** switched on
+  (`web_search=True` in `openrouter.chat_text`): OpenRouter searches the web first (Exa, 5
+  results, ~2 cents) and puts the results in the prompt; Gemini answers with one URL or NONE.
+  It is one search, not a tool the model can call again. Code then checks the page loads and
+  is not on X, and if the page links to a "try it" page on the same site (`experience.`,
+  `app.`, "Try", "Demo"…), that demo is used instead.
 
 ### Changing a model
 
@@ -183,7 +195,11 @@ names, a changed date or a changed "what it does" must not. Before changing its 
 `python3 tools/check_editor.py` (22 cases: faithful rewrites to approve, planted and real falsehoods
 to reject, in `tests/fixtures/editor_cases.json`). Can only reject by naming a rule from a fixed list
 (plus JARGON on this channel). Every decision is logged; rejecting more than half of the last 20 sends an
-alert. On a rewrite it is shown its own earlier reason, so it can't ask for the opposite.
+alert. A fixable rejection goes back to the writer up to 3 times (`MAX_REWRITES`). The writer
+edits its rejected draft rather than starting over, and both the writer and the editor see every
+earlier request, so a fix is not undone and the editor can't ask for the opposite. Was 1 rewrite
+from scratch: 13 of 17 final rejections (2026-10-04..07) were a second draft with one new small
+fault; replayed with the new loop, 17 of 17 passed.
 
 **Writer.** No emoji at all, only the "•" bullet. Bold first line, bold key words, the link
 last. It never copies a link: it writes `LINK` and the publisher fills in the product
@@ -209,8 +225,9 @@ waiting one is posted when a slot frees up.
 |---|---|
 | Sorter, dedup judge, story placement and gate, image and video analysts | `google/gemini-2.5-flash` |
 | Writer | `deepseek/deepseek-v3.2` |
-| Editor | `anthropic/claude-haiku-4.5`, fallback `google/gemini-3.5-flash-lite` (chosen 2026-10-07 with `tools/check_editor.py`) |
+| Editor | `anthropic/claude-haiku-5.5` at low thinking effort, fallback `google/gemini-3.5-flash-lite` (chosen 2026-10-07 with `tools/check_editor.py`; haiku-5.5 takes no temperature, see `NO_TEMPERATURE_MODELS` in `config.py`) |
 | Repeat check | `mistralai/mistral-medium-3.1` |
+| Link finder (tweets with no outside link) | `google/gemini-2.5-flash` with OpenRouter web search, ~2 cents a search |
 | Embeddings | `openai/text-embedding-3-small` |
 
 About **$9-10 a month** at ~120 items a day (estimated from two days of real volume on

@@ -311,10 +311,10 @@ def is_brief(item) -> bool:
 
 async def execute(item, has_image: bool = False, editor_feedback: str = "",
                   recent_posts: list[str] | None = None, persona: str = "",
-                  brief: str = "") -> str:
+                  brief: str = "", previous_draft: str = "") -> str:
     """Write post; return Telegram HTML or "" (never "publish nothing"). editor_feedback:
-    rewrite reason; recent_posts: channel history; brief: what's new/known; persona:
-    prompts/persona.md.
+    every rewrite request so far; previous_draft: the rejected draft, edited not redone;
+    recent_posts: channel history; brief: what's new/known; persona: prompts/persona.md.
     """
 
     title = item["title"] or ""
@@ -328,13 +328,19 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
         f"Text:\n{body}"
     )
 
+    # Writing from scratch on a rewrite fixed the named fault and added a new one
+    # ("free", "just launched"): 13 of 17 final rejections, 2026-10-04..07, were round 2.
     if editor_feedback:
+        draft = (f"Your previous draft:\n{previous_draft}\n\n" if previous_draft else "")
         user_message += (
             f"\n\n---\nREWRITE REQUEST\n"
-            f"The channel editor rejected your previous draft of this post for "
-            f"this specific reason: {editor_feedback}\n"
-            f"Write the post again, fixing exactly that problem. Do not change "
-            f"anything else about how you follow the rules above."
+            f"{draft}"
+            f"The channel editor rejected it. Its requests so far, all still binding:\n"
+            f"{editor_feedback}\n\n"
+            f"Edit the draft: change only the words those requests name and keep "
+            f"every other sentence as it is. Do not add any new claim, timing word "
+            f"(\"new\", \"just\", \"now\") or price word (\"free\") the source does "
+            f"not state outright."
         )
 
     # LENGTH by source material, not origin. Conflating sent 150c down 90w path →

@@ -134,10 +134,10 @@ async def execute(item, post_html: str, post_id: int, record: bool = True,
     memory = ""
     if previous_reason and config.EDITOR_REMEMBERS_REWRITES:
         memory = (
-            f"## YOUR EARLIER REJECTION of the previous draft of this post\n"
+            f"## YOUR EARLIER REJECTIONS of previous drafts of this post\n"
             f"{previous_reason}\n"
-            f"The writer was told to fix exactly that. Judge whether it did. Do not "
-            f"reverse your own instruction: if you asked for a word to be replaced and "
+            f"The writer was told to fix exactly those. Judge whether it did. Do not "
+            f"reverse your own instructions: if you asked for a word to be replaced and "
             f"it was, that replacement is not a new fault.\n\n"
         )
 

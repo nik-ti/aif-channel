@@ -36,6 +36,16 @@ class LLMError(RuntimeError):
     """Model call failed; item retries next cycle."""
 
 
+def _apply_model_settings(payload: dict) -> dict:
+    """Per-model quirks from config: drop temperature, set thinking effort."""
+    model = payload["model"]
+    if model in config.NO_TEMPERATURE_MODELS:
+        payload.pop("temperature", None)
+    if model in config.MODEL_REASONING_EFFORT:
+        payload["reasoning"] = {"effort": config.MODEL_REASONING_EFFORT[model]}
+    return payload
+
+
 async def _post(payload: dict) -> dict:
     """Send request with retries (see _RETRYABLE); raise LLMError when exhausted."""
     if not config.OPENROUTER_API_KEY:
@@ -118,11 +128,12 @@ def with_now(user):
 async def chat_text(
     *, model: str, system: str, user: str,
     temperature: float = 0.3, max_tokens: int = 900,
-    fallbacks: list[str] | None = None,
+    fallbacks: list[str] | None = None, web_search: bool = False,
 ) -> str:
     """Ask a model for prose, trying `fallbacks` if it fails.
 
     A cut-off answer is retried once against the same model, then gives up.
+    web_search lets the model search the web first (OpenRouter's web plugin).
     """
     user = with_now(user)
     chain = [model, *(fallbacks or [])]
@@ -130,7 +141,8 @@ async def chat_text(
     for position, candidate in enumerate(chain):
         try:
             return await _chat_text_once(model=candidate, system=system, user=user,
-                                         temperature=temperature, max_tokens=max_tokens)
+                                         temperature=temperature, max_tokens=max_tokens,
+                                         web_search=web_search)
         except LLMError as error:
             last = error
             if position + 1 < len(chain):
@@ -141,7 +153,7 @@ async def chat_text(
 
 async def _chat_text_once(
     *, model: str, system: str, user: str,
-    temperature: float = 0.3, max_tokens: int = 900,
+    temperature: float = 0.3, max_tokens: int = 900, web_search: bool = False,
 ) -> str:
     """One model's attempt at prose. Raises LLMError if it fails."""
     payload = {
@@ -153,6 +165,9 @@ async def _chat_text_once(
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+    if web_search:
+        payload["plugins"] = [{"id": "web", "max_results": 5}]
+    _apply_model_settings(payload)
 
     reason = ""
     for attempt in (1, 2):
@@ -270,6 +285,7 @@ async def _chat_json_once(
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+    _apply_model_settings(payload)
 
     if schema is not None:
         payload["response_format"] = {
@@ -305,6 +321,11 @@ async def _chat_json_once(
             log.warning("No endpoint for %s with these parameters — retrying "
                         "without require_parameters", model)
             payload.pop("provider", None)
+            data = await _post(payload)
+        # Safety net for a model missing from config.NO_TEMPERATURE_MODELS.
+        elif "temperature" in text and "deprecated" in text:
+            log.warning("Model %s does not take temperature — retrying without it", model)
+            payload.pop("temperature", None)
             data = await _post(payload)
         # Not every model understands strict mode.
         elif schema is not None and ("response_format" in text or "json_schema" in text):

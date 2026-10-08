@@ -175,6 +175,9 @@ ALLOW_FLAG_MARKS = False
 LINK_TO_PRODUCT = True
 PRODUCT_LINK_PAGES = ("ai-tldr.dev",)
 LINK_FALLBACK_TEXT = "Link"
+# A tweet with no outside link: this model searches the web for the maker's own page
+# before the post goes out (nodes/link_finder.py). Never links to X (nikita, 2026-10-08).
+LINK_FINDER_MODEL = _get("LINK_FINDER_MODEL", "google/gemini-2.5-flash")
 
 # One person writes this channel: no two posts open the same way.
 VARY_WRITING = True
@@ -263,16 +266,26 @@ WRITER_MODEL = _get("WRITER_MODEL", "deepseek/deepseek-v3.2")
 # haiku-4.5 105/110 (its one miss rejects an explained word: a rewrite, not a lost post),
 # gemini-3.5-flash-lite 105/110 (its miss lets an invented feature through), the old
 # mistral-medium-3.1 38/42 on the first 14 cases, rejecting faithful rewording.
-EDITOR_MODEL = _get("EDITOR_MODEL", "anthropic/claude-haiku-4.5")
+# Same day, haiku-5.5: effort low 101/110 (~$0.07 a run), medium 94-100, none 81 (let a
+# wrong number through 5/5). All low-effort misses are stricter-than-the-key: "next week"
+# for a date this week, an unstated privacy claim, a dropped "in our evaluation".
+EDITOR_MODEL = _get("EDITOR_MODEL", "anthropic/claude-haiku-5.5")
 EDITOR_FALLBACK_MODEL = _get("EDITOR_FALLBACK_MODEL", "google/gemini-3.5-flash-lite")
 EDITOR_TIMEOUT_SECONDS = _get_int("EDITOR_TIMEOUT_SECONDS", 60)
+
+# Per-model quirks, applied in utils/openrouter.py. haiku-5.5 returns 400 for any
+# temperature but 1, and thinks at "medium" unless told otherwise.
+NO_TEMPERATURE_MODELS = {"anthropic/claude-haiku-5.5"}
+MODEL_REASONING_EFFORT = {"anthropic/claude-haiku-5.5": "low"}
 
 # Alerts you if the editor starts rejecting an unusual share of posts.
 EDITOR_DECLINE_ALERT_RATE = _get_float("EDITOR_DECLINE_ALERT_RATE", 0.5)
 EDITOR_DECLINE_WINDOW = _get_int("EDITOR_DECLINE_WINDOW", 20)
 
-# A post rejected for a FIXABLE rule goes back to the writer once with the reason.
-MAX_REWRITES = _get_int("MAX_REWRITES", 1)
+# A post rejected for a FIXABLE rule goes back to the writer with the reason, up to
+# this many times. Was 1: 13 of 17 final rejections, 2026-10-04..07, were a second
+# draft with one small fixable fault left (nikita, 2026-10-08).
+MAX_REWRITES = _get_int("MAX_REWRITES", 3)
 
 # Dedup check 5: same event, different, or a continuation. 39/40 on real pairs.
 JUDGE_MODEL = _get("JUDGE_MODEL", "google/gemini-2.5-flash")
