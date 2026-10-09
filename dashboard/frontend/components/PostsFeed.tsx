@@ -7,7 +7,7 @@
 //
 // Two layouts share one expand/collapse state: a table from sm: up (a mouse
 // and a wide screen make a dense grid the fastest way to scan), and a card
-// per post below that (a 7-column table at 375px pushed Title/Story/Status
+// per post below that (a 7-column table at 375px pushed Title/Kind/Status
 // off the right edge with no visible hint it could scroll).
 "use client";
 
@@ -37,7 +37,12 @@ const PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 300;
 
 // The query params this tab owns; page.tsx clears them on a channel switch.
-export const POSTS_PARAMS = ["source", "status", "q"] as const;
+export const POSTS_PARAMS = ["source", "company", "kind", "status", "q"] as const;
+
+// "new_model" → "new model". Older items keep the pre-2026-10-09 kinds (launch, resource).
+function kindLabel(kind: string) {
+  return kind ? kind.replace(/_/g, " ") : "-";
+}
 
 function formatTime(iso: string | null) {
   if (!iso) return "-";
@@ -125,7 +130,7 @@ function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
         {item.body ? <Highlight text={item.body} terms={terms} /> : "(no body text)"}
       </p>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-5">
         <div>
           <dt className="text-ink-muted">{COPY.importance}</dt>
           <dd className="mt-0.5"><ImportanceDots value={item.importance} label={COPY.importance} /></dd>
@@ -135,8 +140,12 @@ function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
           <dd className="mt-0.5 text-ink-primary">{item.market || "-"}</dd>
         </div>
         <div>
-          <dt className="text-ink-muted">Story</dt>
-          <dd className="mt-0.5 text-ink-primary">{item.story_id != null ? `#${item.story_id}` : "none"}</dd>
+          <dt className="text-ink-muted">Kind</dt>
+          <dd className="mt-0.5 text-ink-primary">{kindLabel(item.topic)}</dd>
+        </div>
+        <div>
+          <dt className="text-ink-muted">Made by</dt>
+          <dd className="mt-0.5 text-ink-primary">{item.company || "-"}</dd>
         </div>
         <div>
           <dt className="text-ink-muted">Arrived</dt>
@@ -243,6 +252,12 @@ function PostCard({
             <span>{item.source_name}</span>
             <span aria-hidden>&middot;</span>
             <span>{formatTime(item.time)}</span>
+            {item.topic && (
+              <>
+                <span aria-hidden>&middot;</span>
+                <span>{kindLabel(item.topic)}{item.company && item.company !== "other" ? ` · ${item.company}` : ""}</span>
+              </>
+            )}
           </div>
           <p className="text-sm font-medium text-ink-primary">
             <Highlight text={item.title} terms={terms} />
@@ -270,6 +285,8 @@ function usePostFilters() {
   const searchParams = useSearchParams();
 
   const source = searchParams.get("source");
+  const company = searchParams.get("company");
+  const kind = searchParams.get("kind");
   const statusIds = useMemo(
     () => (searchParams.get("status") ?? "").split(",").filter((id) => STATUS_FILTERS.some((f) => f.id === id)),
     [searchParams]
@@ -289,11 +306,11 @@ function usePostFilters() {
     [router, pathname, searchParams]
   );
 
-  return { source, statusIds, q, update };
+  return { source, company, kind, statusIds, q, update };
 }
 
 export function PostsFeed() {
-  const { source, statusIds, q, update } = usePostFilters();
+  const { source, company, kind, statusIds, q, update } = usePostFilters();
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [searchText, setSearchText] = useState(q);
@@ -321,7 +338,7 @@ export function PostsFeed() {
   }, [q]);
 
   // Any filter change starts over at page one.
-  const filterKey = `${source}|${statusIds.join(",")}|${q}`;
+  const filterKey = `${source}|${company}|${kind}|${statusIds.join(",")}|${q}`;
   useEffect(() => {
     setPage(0);
   }, [filterKey]);
@@ -334,7 +351,7 @@ export function PostsFeed() {
 
   const { data: stats } = useStats();
   const { data, isFetching, dataUpdatedAt } = usePosts(
-    { source, statuses, q },
+    { source, company, kind, statuses, q },
     PAGE_SIZE,
     page * PAGE_SIZE
   );
@@ -366,11 +383,13 @@ export function PostsFeed() {
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const sources = stats?.sources_count.map((s) => s.source_name) ?? [];
+  const companies = stats?.companies.map((c) => c.company) ?? [];
+  const kinds = stats?.kinds.map((k) => k.kind) ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const firstShown = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const lastShown = Math.min(total, (page + 1) * PAGE_SIZE);
-  const hasFilters = Boolean(source || statusIds.length || q);
+  const hasFilters = Boolean(source || company || kind || statusIds.length || q);
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -414,6 +433,34 @@ export function PostsFeed() {
             </option>
           ))}
         </select>
+        <div className="flex gap-2">
+          <select
+            value={company ?? ""}
+            onChange={(e) => update({ company: e.target.value || null })}
+            aria-label="Company"
+            className="h-11 flex-1 rounded-md border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9 sm:flex-none"
+          >
+            <option value="">All companies</option>
+            {companies.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={kind ?? ""}
+            onChange={(e) => update({ kind: e.target.value || null })}
+            aria-label="Kind"
+            className="h-11 flex-1 rounded-md border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9 sm:flex-none"
+          >
+            <option value="">All kinds</option>
+            {kinds.map((name) => (
+              <option key={name} value={name}>
+                {kindLabel(name)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Status chips — scroll sideways on a phone rather than wrapping into
@@ -467,7 +514,7 @@ export function PostsFeed() {
                 type="button"
                 onClick={() => {
                   setSearchText("");
-                  update({ source: null, status: null, q: null });
+                  update({ source: null, company: null, kind: null, status: null, q: null });
                 }}
                 className="font-medium text-ink-primary underline-offset-2 hover:underline"
               >
@@ -480,7 +527,7 @@ export function PostsFeed() {
       </div>
 
       {/* Cards below sm: — a 7-column table at phone width pushed Title,
-          Story and Status off the right edge with no visible scroll hint. */}
+          Kind and Status off the right edge with no visible scroll hint. */}
       <div className="flex flex-col gap-3 sm:hidden">
         {data?.items.map((item) => (
           <PostCard
@@ -505,8 +552,9 @@ export function PostsFeed() {
               <TableHead>Time</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Impact</TableHead>
-              <TableHead>Story</TableHead>
+              <TableHead>Score</TableHead>
+              <TableHead>Kind</TableHead>
+              <TableHead>Made by</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -543,14 +591,15 @@ export function PostsFeed() {
                     <TableCell>
                       <ImportanceDots value={item.importance} />
                     </TableCell>
-                    <TableCell className="text-ink-muted">{item.story_id ?? "-"}</TableCell>
+                    <TableCell className="whitespace-nowrap text-ink-muted">{kindLabel(item.topic)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-ink-muted">{item.company || "-"}</TableCell>
                     <TableCell>
                       <StatusBadge status={item.status} />
                     </TableCell>
                   </TableRow>
                   {isOpen && (
                     <TableRow className="bg-surface-secondary/60 hover:bg-surface-secondary/60">
-                      <TableCell colSpan={7} className="whitespace-normal py-4">
+                      <TableCell colSpan={8} className="whitespace-normal py-4">
                         <p className="mb-2 font-semibold text-ink-primary">
                           <Highlight text={item.title} terms={terms} />
                           <span className="ml-2 text-xs font-normal text-ink-muted">#{item.id}</span>
@@ -564,7 +613,7 @@ export function PostsFeed() {
             })}
             {data?.items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-ink-muted">
+                <TableCell colSpan={8} className="py-8 text-center text-ink-muted">
                   No posts for this filter.
                 </TableCell>
               </TableRow>

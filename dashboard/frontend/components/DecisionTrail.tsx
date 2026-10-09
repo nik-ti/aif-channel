@@ -67,7 +67,11 @@ function outcomeVerdict(status: string): string {
     case "declined":
       return "not posted — the editor's rejection was final";
     case "held":
-      return "waiting inside its story for the next post";
+      return "not sent — the finished post repeated a recent one";
+    case "waiting_digest":
+      return "waiting for its company's evening digest";
+    case "merged":
+      return "went out as a line in a company digest";
     case "queued":
     case "written":
       return "still in progress";

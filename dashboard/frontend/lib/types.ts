@@ -15,7 +15,10 @@ export interface PostItem {
   status_reason: string;
   importance: number;
   market: string;
+  // The kind from the labeler (new_model, feature, tool...). Older items carry the
+  // pre-2026-10-09 kinds (launch, resource).
   topic: string;
+  company: string;
   // Why the sorter scored it as it did — the answer to "why did we cover this
   // at all", which status_reason only ever kept for items it REJECTED.
   sorter_reason: string;
@@ -45,45 +48,45 @@ export interface PostsResponse {
 
 export interface PostFilters {
   source: string | null;
+  company: string | null;
+  kind: string | null;
   statuses: string[];
   q: string;
 }
 
-export interface StoryPost {
+export interface CompanyToday {
+  company: string;
+  posts_today: number;
+  waiting: number;
+}
+
+export interface WaitingItem {
+  id: number;
+  title: string;
+  company: string;
+  kind: string;
+  importance: number;
+  time: string | null;
+  status_reason: string;
+}
+
+export interface DigestPost {
   id: number;
   item_id: number;
-  title: string;
-  body: string;
-  status: "published" | "merged" | "rejected" | "held";
-  status_reason: string;
-  sorter_reason: string;
+  sent_at: string | null;
+  company: string;
+  text: string;
   telegram_url: string | null;
-  editor_verdict: "approve" | "decline" | null;
-  editor_reason: string | null;
-  editor_confidence: number | null;
+  items: { id: number; title: string }[];
 }
 
-export interface Story {
-  id: number;
-  headline: string;
-  // Short human name for the whole thread, written when the story opens —
-  // this is what a reader should see as the card's title, not `headline`
-  // (that's just the raw first wire item).
-  name: string;
-  summary: string;
-  status: string;
-  item_count: number;
-  post_count: number;
-  declined_count: number;
-  state: string;
-  last_post_at: string | null;
-  first_at: string | null;
-  posts: StoryPost[];
-}
-
-export interface StoriesResponse {
+export interface CompaniesResponse {
   ready: boolean;
-  stories: Story[];
+  limit: number;
+  digest_hour_utc: number;
+  today: CompanyToday[];
+  waiting: WaitingItem[];
+  digests: DigestPost[];
 }
 
 export interface SourceCount {
@@ -116,7 +119,7 @@ export interface StatsSummary extends WindowTotals {
   median_minutes_to_publish: number | null;
   queued_now: number;
   held_now: number;
-  live_stories: number;
+  waiting_digest_now: number;
   last_published_at: string | null;
 }
 
@@ -153,6 +156,8 @@ export interface StatsResponse {
   sources: SourcePerformance[];
   importance: { importance: number; count: number; published: number }[];
   markets: { market: string; count: number; published: number }[];
+  kinds: { kind: string; count: number; published: number }[];
+  companies: { company: string; count: number; published: number }[];
   editor: { approve: number; decline: number; top_rules: { rule: string; count: number }[] };
   dedup: { rung: string; dropped: number; kept: number }[];
   hour_of_day: { hour: number; count: number }[];
@@ -176,6 +181,8 @@ export interface GraphResponse {
   ready: boolean;
   nodes: GraphNode[];
   edges: GraphEdge[];
+  // LangGraph's own drawing of the running graph (Mermaid, top to bottom).
+  mermaid: string;
 }
 
 export interface NodeInfo {

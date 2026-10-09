@@ -95,8 +95,8 @@ CREATE TABLE IF NOT EXISTS items (
 
     -- Pipeline progress
     topic_hint    TEXT    DEFAULT '',            -- what the source claims it is about
-    topic         TEXT    DEFAULT '',            -- what the AI decided it is about
-    market        TEXT    DEFAULT '',            -- which market has to reprice, or 'none'
+    topic         TEXT    DEFAULT '',            -- the KIND, from config.KINDS (nodes/labeler.py)
+    market        TEXT    DEFAULT '',            -- who can use it today, or 'none' (the sorter)
     importance    INTEGER NOT NULL DEFAULT 0,    -- 1-5; the queue posts the best first
     continuation_of INTEGER,                   -- parent item id, for threaded replies
     status        TEXT    NOT NULL DEFAULT 'queued',
@@ -109,17 +109,20 @@ CREATE TABLE IF NOT EXISTS items (
         --                 quiet or too trivial, and mixing it in with sport and
         --                 opinion columns would make it unreadable.
         -- written         a post exists, waiting on the editor or on room to send
-        -- held            it joined a running story, but the story had not moved.
-        --                 Its content still reaches that story's NEXT post, so
-        --                 this is "not yet", never "thrown away".
-        -- merged          covered by a story post whose posts row belongs to a
-        --                 different item of the same story
+        -- held            the repeat check found the finished post told the reader
+        --                 nothing new (and, while stories ran, an item filed in a
+        --                 story that had not moved)
+        -- merged          covered by a post whose posts row belongs to another
+        --                 item: a company digest (or, before 2026-10-09, a story)
         -- published       it went out
         -- expired         it sat in the queue too long and went stale
         -- failed          something broke repeatedly; see status_reason
-        -- skipped_stale   a tweet that was already too old when we read it
+        -- skipped_stale   a tweet already too old when we read it, or a feed
+        --                 article whose own page is dated too long ago
         -- skipped_backlog dropped because too many arrived at once
         -- skipped_handle  from an X account this channel does not follow
+        -- waiting_digest  its company already had its posts today; goes out in
+        --                 that company's evening digest (nodes/company_digest.py)
     status_reason TEXT    DEFAULT '',            -- ALWAYS filled in when status isn't 'queued'
     attempts      INTEGER NOT NULL DEFAULT 0,
     updated_at    TEXT    NOT NULL DEFAULT (datetime('now')),

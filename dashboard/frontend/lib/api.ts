@@ -8,7 +8,7 @@ import type {
   PostsResponse,
   StatsRange,
   StatsResponse,
-  StoriesResponse,
+  CompaniesResponse,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -49,6 +49,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 export function fetchPosts(filters: PostFilters, limit: number, offset: number) {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (filters.source) params.set("source", filters.source);
+  if (filters.company) params.set("company", filters.company);
+  if (filters.kind) params.set("kind", filters.kind);
   if (filters.statuses.length) params.set("status", filters.statuses.join(","));
   if (filters.q.trim()) params.set("q", filters.q.trim());
   return get<PostsResponse>(`/posts?${params.toString()}`);
@@ -70,8 +72,8 @@ export function markShouldNotHavePosted(itemId: number, note = "") {
   );
 }
 
-export function fetchStories() {
-  return get<StoriesResponse>("/stories");
+export function fetchCompanies() {
+  return get<CompaniesResponse>("/companies");
 }
 
 export function fetchStats(range: StatsRange = "7d") {

@@ -26,7 +26,9 @@ def _expire_stale() -> None:
     db.prune_memory_embeddings()
     trimmed = db.trim_queue(config.MAX_QUEUE_SIZE)
 
-    for story in db.close_stale_stories(config.STORY_IDLE_HOURS, config.STORY_MAX_HOURS):
+    stale_stories = (db.close_stale_stories(config.STORY_IDLE_HOURS, config.STORY_MAX_HOURS)
+                     if config.STORIES else [])
+    for story in stale_stories:
         if story["waiting"]:
             # The one way this design can quietly drop something: a story that
             # went silent while still holding unposted items. Visible on purpose.
@@ -89,12 +91,11 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
     """Do one round: expire stale items, then process a few. Returns the tally."""
     _expire_stale()
 
-    # Not being allowed to POST is not a reason to skip the round. Items still
-    # have to be filed into their stories, or they expire and the story never
-    # learns of them. Those rounds stop at placement and leave items queued.
+    # Not being allowed to POST is not a reason to skip the round: forced items still go,
+    # and with stories on, items are still filed. The rest wait queued.
     allowed, reason = publisher.check_limits()
     if not allowed:
-        log.info("Not posting this round (%s) — filing into stories only", reason)
+        log.info("Not posting this round (%s)", reason)
 
     batch_size = limit or config.MAX_POSTS_PER_TICK
     outcomes: dict[str, int] = {}
@@ -113,6 +114,12 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
             if outcome == "published":
                 published += 1
                 await publisher.pause_between_sends()
+
+    # A company's items held back by its daily limit, as one post in the evening.
+    if allowed and not config.STORIES:
+        from nodes import company_digest
+        for outcome, count in (await company_digest.run_due()).items():
+            outcomes[outcome] = outcomes.get(outcome, 0) + count
 
     # Look at more than we intend to publish; most get filtered out.
     # Selection is by importance; PROCESSING is chronological, because a story
@@ -134,6 +141,8 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
 
         if may_send and published >= batch_size:
             break
+        if not may_send and not forced and not config.STORIES:
+            continue        # nothing to file it into; it waits queued for a round that may post
         if not may_send and not forced and placed >= batch_size * 2:
             break
 
@@ -166,7 +175,7 @@ async def publish_once(limit: int | None = None) -> dict[str, int]:
     # their story; a story that goes quiet would hold them forever. This sweep
     # asks the gate once more, after they have waited a while, whether together
     # they add up to something the reader has not been told.
-    if allowed and published < batch_size:
+    if config.STORIES and allowed and published < batch_size:
         for due in db.stories_due_for_roundup(config.STORY_DIGEST_ITEMS,
                                               config.STORY_DIGEST_MINUTES,
                                               config.STORY_DIGEST_MAX_QUIET_HOURS):

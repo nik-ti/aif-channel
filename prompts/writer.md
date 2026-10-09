@@ -56,6 +56,11 @@ came from a roundup. Pick it from the main post, never from an older roundup it 
 Take every fact from that one item's own line or lines, and nothing from its neighbours: the company
 named on that line is the subject of your headline.
 
+## When the brief says COMPANY DIGEST
+That post is the channel's own evening roundup of several separate announcements from one
+company. The roundup rule above does not apply: give EVERY item its own • line, in the order
+given, one sentence each, and take each line's facts only from that item's own text.
+
 ## When it happened
 The date an article was published is NOT the date the thing was released. A blog
 post today can explain a feature that came out a week ago.

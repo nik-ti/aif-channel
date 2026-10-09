@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 import paths
-from api import actions, graph, nodes, posts, stats, stories
+from api import actions, companies, graph, nodes, posts, stats
 from db_connector import DatabaseUnavailableError
 
 app = FastAPI(title="AI Flow Dashboard API", version="2.0.0")
@@ -62,7 +62,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 app.include_router(actions.router, prefix="/api/v1", tags=["actions"])
 app.include_router(posts.router, prefix="/api/v1")
-app.include_router(stories.router, prefix="/api/v1")
+app.include_router(companies.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(graph.router, prefix="/api/v1")
 app.include_router(nodes.router, prefix="/api/v1")

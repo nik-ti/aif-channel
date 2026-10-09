@@ -1,10 +1,9 @@
 """The LangGraph state machine: which station runs after which, and where an item
 can go next. The work of each station is in pipeline/stations.py.
 
-The unit of work is the story, not the item. An item the gate holds does not
-become a post; it stays attached to its story as fuel for that story's next one.
-Placement runs every round even when the pacing limits forbid posting, because an
-item that expires before it is filed takes its content out of the story with it.
+Each item is labelled (kind and company), judged, and then held if its company has had
+its posts for the day; those wait for the evening digest (nodes/company_digest.py).
+The story stations from Market One are wired in only when config.STORIES is on.
 
 State is a plain dict rather than a database row, so it stays serialisable and a
 checkpointer can be added later.
@@ -16,6 +15,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+import config
 from pipeline import stations as s
 
 
@@ -34,6 +34,9 @@ class BrainState(TypedDict, total=False):
                                 # back by a daily limit; dedup and the sorter step aside
     sweep: bool                 # a roundup: the item was judged once already,
                                 # skip straight to its story and the gate
+    digest: bool                # a company digest: item is several waiting items
+                                # folded together; straight to the writer
+    digest_item_ids: list       # the items the digest covers
 
     # The live Story object, rebuilt from the database by story_organizer. It MUST
     # be declared here: LangGraph silently drops any state key the schema does
@@ -53,40 +56,53 @@ class BrainState(TypedDict, total=False):
     editor_feedback: str
     previous_editor_reason: str  # the editor's own rejection, shown to it on the rewrite
     rewrite_count: int
-    outcome: str                # published | duplicate | irrelevant | low_impact |
-                                # held | placed | declined | retry | failed
+    outcome: str                # published | duplicate | roundup | irrelevant |
+                                # low_impact | waiting_digest | held | placed |
+                                # declined | retry | failed
 
 
 def build_graph():
     """Wire the stations together and compile the graph."""
     g = StateGraph(BrainState)
-    for name, node in (
+    stations = [
         ("dedup", s.dedup_node),
-        ("fetch_article", s.fetch_article_node),   # before the sorter: feeds give thin snippets
+        ("fetch_article", s.fetch_article_node),   # before the labels: feeds give thin snippets
+        ("labeler", s.labeler_node),
         ("sorter", s.sorter_node),
-        ("story_organizer", s.story_organizer_node),
-        ("gatekeeper", s.gatekeeper_node),
+    ]
+    if config.STORIES:
+        stations += [("story_organizer", s.story_organizer_node), ("gatekeeper", s.gatekeeper_node)]
+    else:
+        stations += [("company_limit", s.company_limit_node)]
+    stations += [
         ("writer", s.writer_node),
         ("editor", s.editor_node),
         ("repeat_check", s.repeat_check_node),
         ("image_analyst", s.image_analyst_node),
         ("video_analyst", s.video_analyst_node),
         ("publish", s.publish_node),
-    ):
+    ]
+    for name, node in stations:
         g.add_node(name, node)
 
     g.add_edge(START, "dedup")
-    g.add_conditional_edges("dedup", s.route_after_dedup, {"drop": END, "sort": "fetch_article"})
-    g.add_edge("fetch_article", "sorter")
-    g.add_conditional_edges("sorter", s.route_after_sorter, {"place": "story_organizer", "end": END})
-    g.add_conditional_edges("story_organizer", s.route_after_story_organizer,
-                            {"gate": "gatekeeper", "end": END})
-    g.add_conditional_edges("gatekeeper", s.route_after_gatekeeper, {"write": "writer", "end": END})
-    g.add_conditional_edges("writer", s.route_after_writer, {"edit": "editor", "end": END})
+    g.add_conditional_edges("dedup", s.route_after_dedup, {"repeat": END, "new": "fetch_article"})
+    g.add_conditional_edges("fetch_article", s.route_after_fetch_article, {"page too old": END, "read": "labeler"})
+    g.add_conditional_edges("labeler", s.route_after_labeler, {"roundup": END, "labelled": "sorter"})
+    if config.STORIES:
+        g.add_conditional_edges("sorter", s.route_after_sorter, {"worth it": "story_organizer", "below the bar": END})
+        g.add_conditional_edges("story_organizer", s.route_after_story_organizer,
+                                {"gate": "gatekeeper", "end": END})
+        g.add_conditional_edges("gatekeeper", s.route_after_gatekeeper, {"write": "writer", "end": END})
+    else:
+        g.add_conditional_edges("sorter", s.route_after_sorter, {"worth it": "company_limit", "below the bar": END})
+        g.add_conditional_edges("company_limit", s.route_after_company_limit,
+                                {"under the limit": "writer", "waits for digest": END})
+    g.add_conditional_edges("writer", s.route_after_writer, {"draft": "editor", "failed": END})
     g.add_conditional_edges("editor", s.route_after_editor,
-                            {"publish": "repeat_check", "rewrite": "writer", "end": END})
+                            {"approved": "repeat_check", "fixable": "writer", "rejected": END})
     g.add_conditional_edges("repeat_check", s.route_after_repeat_check,
-                            {"send": "image_analyst", "end": END})
+                            {"new to reader": "image_analyst", "already told": END})
     g.add_edge("image_analyst", "video_analyst")
     g.add_edge("video_analyst", "publish")
     g.add_edge("publish", END)
@@ -97,9 +113,15 @@ def build_graph():
 graph = build_graph()
 
 
+def diagram() -> str:
+    """The graph as LangGraph draws it (Mermaid, top to bottom), for the dashboard."""
+    return graph.get_graph().draw_mermaid()
+
+
 async def run_item(item_row, *, dry_run: bool = False,
                    place_only: bool = False, sweep: bool = False,
-                   forced: bool = False, released: bool = False) -> dict[str, Any]:
+                   forced: bool = False, released: bool = False, digest: bool = False,
+                   digest_item_ids: list | None = None, brief: str = "") -> dict[str, Any]:
     """Run one queued item through the editorial graph.
 
     dry_run makes every decision for real but writes nothing and sends nothing.
@@ -113,6 +135,8 @@ async def run_item(item_row, *, dry_run: bool = False,
     two that judge whether the post is any good. Placement still runs, because
     the story needs to know this went out — otherwise the next item on the same
     story has no idea it was already covered.
+    digest is a company digest from nodes/company_digest.py: the item is several waiting
+    items folded together, and brief tells the writer to give each one a line.
     Returns the final state; state["outcome"] is the one-word result.
     """
     initial: BrainState = {
@@ -122,6 +146,9 @@ async def run_item(item_row, *, dry_run: bool = False,
         "sweep": sweep,
         "forced": forced,
         "released": released,
+        "digest": digest,
+        "digest_item_ids": digest_item_ids or [],
+        "story_brief": brief,
         "rewrite_count": 0,
         "editor_feedback": "",
         "outcome": "",

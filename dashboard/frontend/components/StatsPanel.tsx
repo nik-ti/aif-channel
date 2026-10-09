@@ -1,7 +1,7 @@
 // Stats tab: one /stats call per time window, drawn as a KPI row followed by
 // the views that answer "is the channel healthy, and why did things not
 // post": activity over time, where items end up, which sources earn their
-// place, what the market-impact scorer is doing, when posts go out, and the
+// place, what the usefulness scorer is doing, when posts go out, and the
 // two filters worth auditing (the editor and the dedup ladder).
 "use client";
 
@@ -278,7 +278,7 @@ function SourcesTable({ data }: { data: StatsResponse }) {
             <th className="w-40 py-2 pr-3 font-medium">Publish rate</th>
             <th className="py-2 pr-3 text-right font-medium" title="Marked duplicate">Dupes</th>
             <th className="py-2 pr-3 text-right font-medium" title="Low impact or irrelevant">Filtered</th>
-            <th className="py-2 text-right font-medium" title="Average market impact score, 1–5">Impact</th>
+            <th className="py-2 text-right font-medium" title="Average usefulness score, 1–5">Score</th>
           </tr>
         </thead>
         <tbody>
@@ -324,7 +324,7 @@ function ImportanceChart({ data }: { data: StatsResponse }) {
           <CartesianGrid stroke="var(--border-color)" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="score" stroke="var(--ink-muted)" fontSize={11} tickLine={false} axisLine={false} />
           <YAxis allowDecimals={false} stroke="var(--ink-muted)" fontSize={11} tickLine={false} axisLine={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "var(--surface-secondary)" }} labelFormatter={(v) => `Impact ${v}`} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "var(--surface-secondary)" }} labelFormatter={(v) => `Score ${v}`} />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "var(--ink-muted)" }} />
           <Bar isAnimationActive={false} dataKey="published" name="Published" stackId="a" fill={PUBLISHED} />
           <Bar isAnimationActive={false} dataKey="other" name="Not published" stackId="a" fill="#94a3b8" radius={[3, 3, 0, 0]} />
@@ -530,12 +530,12 @@ export function StatsPanel() {
           <Kpi
             label="In the pipeline"
             value={summary ? nf.format(summary.queued_now) : "–"}
-            sub={<span className="text-xs text-ink-muted">{summary ? `${nf.format(summary.held_now)} held as fuel` : ""}</span>}
+            sub={<span className="text-xs text-ink-muted">{summary ? `${nf.format(summary.held_now)} held as repeats` : ""}</span>}
           />
           <Kpi
-            label="Live stories"
-            value={summary ? nf.format(summary.live_stories) : "–"}
-            sub={<span className="text-xs text-ink-muted">being followed now</span>}
+            label="Waiting for digest"
+            value={summary ? nf.format(summary.waiting_digest_now) : "–"}
+            sub={<span className="text-xs text-ink-muted">over their company&apos;s daily limit</span>}
           />
         </div>
 
@@ -550,7 +550,7 @@ export function StatsPanel() {
           <Section title="Where items end up" description="Every item that arrived in this window, by what the pipeline did with it">
             {data ? <OutcomeBreakdown data={data} /> : <Empty>Loading…</Empty>}
           </Section>
-          <Section title="Market impact scores" description="How the sorter scored items 1–5, and how many of each went out">
+          <Section title="Usefulness scores" description="How the sorter scored items 1–5, and how many of each went out">
             {data ? <ImportanceChart data={data} /> : <Empty>Loading…</Empty>}
           </Section>
         </div>
@@ -560,7 +560,42 @@ export function StatsPanel() {
         </Section>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <Section title="Markets moved" description="Which market the sorter said has to reprice, by posts published">
+          <Section title="Kinds" description="What the labeler said each item is, by posts published">
+            {data ? (
+              <RankedList
+                rows={data.kinds.map((k) => ({
+                  key: k.kind,
+                  label: k.kind.replace(/_/g, " "),
+                  value: k.published ?? 0,
+                  sub: `of ${nf.format(k.count)}`,
+                }))}
+                color={ARRIVED}
+                empty="No labelled items in this window."
+              />
+            ) : (
+              <Empty>Loading…</Empty>
+            )}
+          </Section>
+          <Section title="Companies" description="Who made the thing, by posts published (at most 2 a day each, plus the digest)">
+            {data ? (
+              <RankedList
+                rows={data.companies.map((c) => ({
+                  key: c.company,
+                  label: c.company,
+                  value: c.published ?? 0,
+                  sub: `of ${nf.format(c.count)}`,
+                }))}
+                color={ARRIVED}
+                empty="No labelled items in this window."
+              />
+            ) : (
+              <Empty>Loading…</Empty>
+            )}
+          </Section>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Section title="Who can use it" description="The group the sorter said can use it today, by posts published">
             {data ? (
               <RankedList
                 rows={data.markets.map((m) => ({
@@ -570,7 +605,7 @@ export function StatsPanel() {
                   sub: `of ${nf.format(m.count)}`,
                 }))}
                 color={ARRIVED}
-                empty="No markets tagged in this window."
+                empty="Nothing scored in this window."
               />
             ) : (
               <Empty>Loading…</Empty>

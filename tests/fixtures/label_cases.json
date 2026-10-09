@@ -1,0 +1,752 @@
+[
+ {
+  "id": 534,
+  "source_name": "openai",
+  "origin": "rss",
+  "title": "Introducing GPT-6.1 Sol",
+  "body": "Meet GPT-6.1 Sol: near-Astra intelligence for coding, computer use, and professional work at one-fifth of Astra’s standard API input and output token prices.",
+  "article_text": "## Near-Astra intelligence for a fifth of the price\n\nWe’re introducing **GPT‑6.1 Sol**, an upgrade to GPT‑6 Sol that nearly matches GPT‑6 Astra’s intelligence on agentic coding, computer use, and professional work at one-fifth of Astra’s standard input and output token prices. Cached input costs just **$0.10 per million tokens**—95% less than standard input pricing and 50% less than GPT‑6 Sol’s cached input pricing—giving developers more room to build and run capable agents that reuse context across requests.\n\n## A more capable Sol across tasks\n\nGPT‑6.1 Sol offers a new balance of capability and cost for important everyday work. It delivers substantial improvements over GPT‑6 Sol across complex professional tasks, from writing and debugging code to understanding documents and executing multi-step business workflows. On several of these evaluations, it approaches GPT‑6 Astra’s performance at substantially lower cost.\n\n### Coding\n\nOn **DeepSWE v1.1**, which evaluates complex software-engineering tasks in real codebases, GPT‑6.1 Sol matches GPT‑6 Astra at roughly one-fifth of the cost, while eclipsing GPT‑6 Sol’s best score by 6.4 percentage points at a lower reasoning effort and cost.\n\n### Professional work\n\nOn **GDP.pdf**, which measures how accurately models answer professional questions using complex PDF documents, including tables, charts, diagrams, and fine-print details, GPT‑6.1 Sol scores higher than Opus 5.5 with fallbacks at less than half the cost per task across the tested reasoning settings. It also approaches GPT‑6 Astra’s state-of-the-art performance at roughly one-fifth the cost per task.\n\n_In_[_GDP.pdf_⁠(opens in a new window)](https://surgehq.ai/benchmarks/gdp-pdf)_, models must answer real-world prompts about complex PDFs pulled from professional workflo",
+  "kind": "new_model",
+  "company": "OpenAI"
+ },
+ {
+  "id": 535,
+  "source_name": "openai",
+  "origin": "rss",
+  "title": "Introducing dots",
+  "body": "Dots by OpenAI are proactive assistants that can keep working across complex projects and everyday tasks. Learn how dots help you stay in control while work moves forward.",
+  "article_text": "**Dots are remarkably capable, always-on agents built to handle everything.**They’re a whole new way to work with AI—one that gets to know what matters to you, is always working on your behalf, and takes important work off your plate so you get more of your time and attention back.\n\nDots are frontier intelligence that have your back. Powered by GPT‑6 Astra, they have their own cloud computer, learn from feedback over time, and can work towards your goals 24/7. Through our ecosystem of plugins, they can readily connect to over 4,000 apps, giving them the tools to help wherever you need them.\n\nYour dot is always within reach, whether it is through ChatGPT, Slack, or Teams. You can ask questions, explore ideas, and give feedback along the way; or you can simply hop on a voice call when you need to talk something out. The more you work together, the more your dot learns your preferences, how you think, and what good looks like to you.\n\nThe magic of dots is when they bring you work done the way you would do it, sometimes before you even think to ask. With dots alongside you, ambitious ideas and projects you haven’t had the time or support to pursue start to feel achievable.\n\nInside OpenAI, we’re getting a glimpse of what work looks like when intelligence is always working by your side. A bug appears in Slack, and dots immediately start investigating. A new design arrives, and dots turn it into a working app while the team focuses on customer feedback. A planning cycle gets underway, and dots keep everyone moving in sync toward the deadline. Outside OpenAI, an early tester’s dot noticed he’d forgotten to invoice a publication, prepared the invoice, and sent it after his approval.\n\nToday, you can start with your primary dot, give it a name, and make it your own. Over time, we ",
+  "kind": "new_product",
+  "company": "OpenAI"
+ },
+ {
+  "id": 542,
+  "source_name": "show_hn",
+  "origin": "rss",
+  "title": "Show HN: Audionaut – an open-source cross-platform multitrack audio editor",
+  "body": "Article URL: https://github.com/kvoltmer/Audionaut Comments URL: https://news.ycombinator.com/item?id=49931031 Points: 148 # Comments: 47",
+  "article_text": "A free, open-source multitrack audio editor that AI agents can drive over MCP.\naudionaut.app · Features · Discussions · Sponsor\nAudionaut is a free, open-source desktop application for effortless audio editing and recording. Whether you're working on music, podcasts, or multitrack recordings, it gives you precise cutting, per-track playlists, flexible multi-channel support, and clean exports — without the weight and complexity of a full DAW. Audionaut is written in modern C++ on the JUCE framework and runs natively on Windows, macOS, and Linux.\nAudionaut speaks MCP, so Claude and other agents can edit your sessions. With the app and Node.js 18+ installed:\nclaude mcp add audionaut -- npx -y audionaut-mcp\nKeep the project open in Audionaut and each edit arrives as one undo step. On macOS, keep projects in your Music folder. Claude Desktop setup and details: manual, chapter 11.\nMake sure to clone with submodules:\ngit clone --recursive https://github.com/kvoltmer/Audionaut.git\nor once cloned do:\ngit submodule update --init --recursive\nThe analysis features (BIC segmentation, onset detection, beat tracking) link against a static build of the Essentia submodule. Build it once after checking out the submodules:\n./Audionaut/Builds/build_essentia.sh\nThe script builds Essentia's 3rd-party dependencies statically (slow, skipped on re-runs; force with FORCE_3RDPARTY=1), then configures and builds Essentia itself with its waf build system into Submodules/essentia/build. It patches Essentia's Linux-oriented 3rd-party build scripts in the working tree as needed for macOS/Apple Silicon, so the essentia submodule will show as dirty afterwards — don't commit those changes.\nPrerequisites:\n- Python ≤ 3.11 — Essentia's bundled waf needs distutils , removed in Python 3.12. The script picks a",
+  "kind": "tool",
+  "company": "other"
+ },
+ {
+  "id": 548,
+  "source_name": "show_hn",
+  "origin": "rss",
+  "title": "Show HN: Lathoa, a math app for kids where the AI is wrong on purpose",
+  "body": "I made this for kids around 10 to 14. A robot called Errol solves a math problem step by step and one of the steps is wrong. The kid has to find it and say what's wrong with it. Sometimes nothing is wrong, so just saying \"there's a mistake\" every time doesn't work. The user needs to enter an explanation if she finds an error to gain more XP; speed matters also for more points. There is no direct interaction or chatting with an LLM. Lathoa's harness is stable and has many evaluation steps to catch inconsistencies and prompt injections. You can play one on the homepage without signing up. The part that surprised me: it's hard to get an LLM to be wrong on purpose. Half the time it gives you the right answer and calls it wrong, or a \"mistake\" that's actually correct. So every case gets checked before a kid sees it. Where it can, a plain arithmetic check redoes the math exactly. A second model also solves the problem without seeing Errol's work. If anything disagrees, the case is thrown away. The weak spot is that the second model can make the same mistake as the first. The arithmetic check is there for that, but it only works on English cases so far. German and Greek write decimals with a comma and I haven't got the parsing right yet. What I'd really like to know: does finding someone else's mistake teach anything that solving the problem yourself doesn't? I'm not sure, and I'd like to hear from people who teach. Comments URL: https://news.ycombinator.com/item?id=49909648 Points:",
+  "article_text": "Wrong on purpose. by design.\nYour kid stops taking answers on trust. Errol is a math companion for ages 10 to 14, and he's always wrong: find his bad step, explain why it breaks, earn detective rank. It's the one skill AI can't hand them.\nA movie starts at 3:45 and lasts 90 minutes. When does it end?\nErrol's solution, step by step\n↑ one step is wrong. Tap it.\nFive steps. One detective. One sneaky robot.\nEvery challenge follows the same beat. Errol works the problem out loud, your kid watches for slip-ups, then breaks down what went wrong in their own words.\nErrol solves it\nStep-by-step working, but one step is sneakily wrong.\nKid scans\nReads each step like a case file. No timer. No pressure.\nTap the slip\nHighlight the bad step. Confidence drops on Errol's face.\nWrite the why\nExplain what Errol got confused about, in their own words.\nThe reveal\nErrol reacts. Real solution shown side by side. Rank up.\nIn a world flooded with AI, the rare skill is knowing when it's lying.\nMost learning apps reward the right answer. We reward the right question. Because your kid will hear a hundred plausible answers a day, from chatbots, classmates, and confident strangers. Spotting the broken one is the superpower.\n- 1Calibrated wrongness Errors come in three tiers (Obvious, Sneaky, Expert) matched to age and skill. The sneakier the catch, the bigger the rank-up.\n- 2Always show the work Every solution Errol attempts is shown step-by-step. Kids learn pattern-matching for bad reasoning, not just bad answers.\n- 3Explain in their own words Submitting the catch isn't enough. Kids type a short explanation: the act that builds real understanding.\n- 4No grades. No leaderboard unless you switch it on. Just rank. Rookie → Inspector → Detective → Master Detective → Sherlock. Earned by catches, not sp",
+  "kind": "tool",
+  "company": "other"
+ },
+ {
+  "id": 556,
+  "source_name": "mindstudio",
+  "origin": "rss",
+  "title": "How to Use OpenAI Codex: Core Concepts Every Beginner Needs",
+  "body": "A beginner's guide to OpenAI Codex covering projects, agents.md, the agent loop, and slash goals for non-coders getting started.",
+  "article_text": "",
+  "kind": "guide",
+  "company": "OpenAI"
+ },
+ {
+  "id": 560,
+  "source_name": "mindstudio",
+  "origin": "rss",
+  "title": "How to Learn Anything Faster With AI: A 9-Role Framework",
+  "body": "A science-backed method for using AI as interviewer, mapmaker, Socratic questioner and examiner to learn skills faster through active recall.",
+  "article_text": "How can AI actually help you learn faster?\nAI speeds up learning when it forces you to produce knowledge instead of just consuming it. Most people use chatbots as explainers: they paste in a document and ask for a simpler summary. That’s passive reading with extra steps. Research on learning shows that actively recalling and testing information, rather than rereading it, is what makes it stick for weeks or months instead of minutes. AI becomes genuinely useful for learning when it plays roles that force recall, prediction, and explanation out of you, not just when it feeds you answers.\nTL;DR\n- Active recall beats rereading for long-term retention: testing yourself on material leads to far less memory decay over a week than simply reading a source document multiple times.\n- Most people only use AI as an explainer, which is a passive consumption role and just one of roughly ten distinct ways AI can support learning.\n- A full framework includes roles like interviewer, mapmaker, Socratic questioner, examiner, checker, listener, diagnostician, sparring partner, and clerk, each targeting a different stage of the learning process.\n- The interviewer role has AI question you first to figure out your actual goal and current knowledge, rather than assuming you need to learn a subject from scratch.\n- A mapmaker turns a shapeless subject into an ordered curriculum, which reduces the anxiety of not knowing what to study next and keeps you moving.\n- Spaced repetition, grounded in the Ebbinghaus forgetting curve, works well with AI because it can generate quizzes, flashcards, and review schedules that intervene right before memory decay sets in.\n- The diagnostician role has AI review your past study conversations to spot recurring mistakes, something that’s tedious to do manually but t",
+  "kind": "guide",
+  "company": "other"
+ },
+ {
+  "id": 570,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "OpenAI Fires 3 Safety Researchers for Sharing Data with AI Safety Group",
+  "body": "Source: wsj.com | Added to Future Tools: 2026-10-02T21:52:38.999Z | Release date: 2026-10-01 | Paywalled: yes",
+  "article_text": "",
+  "kind": "other",
+  "company": "OpenAI"
+ },
+ {
+  "id": 571,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Midjourney Alpha Adds Style Previews, Folder Defaults & Bug Fixes",
+  "body": "Source: updates.midjourney.com | Added to Future Tools: 2026-10-02T21:38:51.382Z | Release date: 2026-10-02 | Paywalled: no",
+  "article_text": "ICYMI – last week, we launched a few features on alpha.midjourney.com that we're really excited about: style previews in the sidebar so you can see what you’ll get before you generate, larger images in create, and setting default parameters in a folder. Mostly focused on bugs and cleanup this week, as we get ready to launch some new collaborative tools next week. As always, the goal is making the site easier to use without taking control away. A lot this week came from #alpha-ideas-and-bugs and office hours, so keep your thoughts coming!\nWHAT YOU SAID Now, sending a previewed style keeps your prompt-bar settings. Prompt parameters are saved per folder, within a tab's session. If you have 100K+ images, opening one deep in your history used to crash the site. Not anymore! We made scrolling/using arrow keys to scroll through images on the lightbox a lot clearer and easier. Filters clear when you switch between Organize and Create. Mac right click on create feed images works the old way. You can do sidebar style previews with profiles too – images coming next.\nPROMPT BAR & PILLS Mixing style references? All the srefs in your prompt now show as a single style pill with thumbnails, and hovering the pill will list the codes. You can also pin --exp as a default for a folder: click the advanced section of settings. By the way, we’re generating sample grids for more srefs every week.\nSEARCH Searching now starts the Create and Explore feeds from the top, and Back restores the page you were on.\nEDITING Edits now keep the base image's aspect ratio, so a stray --ar in your prompt won't stretch the result. Action rows in the edit view scroll when they don't fit your window.\nCREATE FEED List view keeps the prompt where it belongs, cards no longer get peek out from within the header, an",
+  "kind": "feature",
+  "company": "Midjourney"
+ },
+ {
+  "id": 572,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Suno Launches Speech Beta: AI Model That Generates Voice and Music Together",
+  "body": "Source: suno.com | Added to Future Tools: 2026-10-02T21:38:22.267Z | Release date: 2026-10-01 | Paywalled: no",
+  "article_text": "As new technologies make creation more accessible, more people can experience the joy of turning an idea into music, a story, or art, and get fulfillment from the simple act of making something. We call that creative entertainment, and we think it will define the next wave of consumer technology.\nMusic will always be at the heart of Suno and what we build. At the same time, our vision has always extended to other forms of human expression. Today, we’re expanding what's possible in Suno with Speech: the first audio model that generates voice and music together as one cohesive track.\nHow Speech Works\nSpeech lets you create spoken audio set to original background music. It's built right into Suno: type an idea, a poem or something you've written, then describe the voice and musical style you have in mind.\nAs we developed Speech, we kept stumbling into uses that made us laugh, or occasionally surprised us with how moving they could be. We turned friends’ texts into wildly overproduced dramatic readings. We gave ordinary voice notes unnecessarily epic scores. We made meditations, poems, pep talks, and bedtime stories for our kids.\nThat creativity is a natural extension of how people already use Suno. Every day, people make songs for birthdays, weddings, inside jokes, faith and worship, their kids, their friends, and moments that might mean absolutely nothing to anyone else but mean everything to them.\nSpeech opens up another canvas for that same kind of creativity.\nRolling Out to Our Community\nWe’ve spent the past month testing Speech with a small group of users. Now we’re opening the beta to everyone.\nAnd beta really does mean beta. Occasionally, British accents can wander off to Australia and back.. Dramatic pauses may be very dramatic. You will almost certainly discover u",
+  "kind": "new_model",
+  "company": "other"
+ },
+ {
+  "id": 629,
+  "source_name": "openai",
+  "origin": "rss",
+  "title": "Building advertising for the way people use AI",
+  "body": "OpenAI introduces a new visual ad format in ChatGPT and expands measurement tools, attribution partnerships, and brand suitability for advertisers.",
+  "article_text": "We’re introducing a new visual ad format in ChatGPT, expanding our measurement tools and partnerships, and developing new ways to understand brand suitability.\n\nChatGPT reaches 1.2 billion people each week, making it the world’s largest AI-native consumer platform. Advertising helps us bring the benefits of AI to more people. That broad access is central to our mission, and a strength of our business. It allows us to serve a much larger market than subscriptions alone, while giving businesses a new way to reach people as they explore ideas, make decisions and discover products and services relevant to what they’re trying to accomplish.\n\n## Bringing products and services to life\n\nOur new visual ad format helps people imagine how products and services could fit into their lives. Through images showing product inspiration, product usage, or the experiences they make possible, people can discover a new brand, understand what makes an offering distinctive, and decide what to buy. For advertisers, this creates new opportunities to tell their story through images.\n\nInitially, we’ll test this new ad format during image generation in ChatGPT. Ads will be clearly labeled, and remain separate from the image being created. As with our other ad formats, advertising does not influence the answers ChatGPT provides.\n\nTesting will begin later this month in the US with an initial group of advertisers.\n\n## Measuring the impact of ChatGPT Ads\n\nOur measurement philosophy for ChatGPT Ads is focused on supporting both in-house and partner-led measurement solutions. Today, w e’re expanding our measurement tools and partner ecosystem to help advertisers understand how ChatGPT Ads contribute to their business using the systems they already rely on.\n\nIntegrations with Hightouch, Tealium, and Live",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 693,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "OpenAI Boosts GPT-6 Astra and GPT-6.1 Sol Speed 50%, Reaching 50 Tokens Per Second",
+  "body": "Source: Tibo on X | Added to Future Tools: 2026-10-05T18:34:33.582Z | Release date: 2026-10-05 | Paywalled: no",
+  "article_text": "",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 695,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Trump Announces \"Super Intelligence Force\" to Lead U.S. AI Coordination Efforts",
+  "body": "Source: truthsocial.com | Added to Future Tools: 2026-10-05T18:46:53.172Z | Release date: 2026-10-04 | Paywalled: no",
+  "article_text": "",
+  "kind": "other",
+  "company": "other"
+ },
+ {
+  "id": 696,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Google Gemini Restricts Model Access for Free Users Starting October 2026",
+  "body": "Source: support.google.com | Added to Future Tools: 2026-10-05T18:45:55.786Z | Release date: 2026-10-04 | Paywalled: no",
+  "article_text": "Important:\n- For the best experience, make sure you've updated to the latest version of the Gemini mobile app.\nStarting in October 2026, there will be changes to model availability for Gemini Apps when you use a personal account.\nThese changes will start to take effect for users without an AI subscription on October 9th. For users with an AI Plus subscription, you should receive an email that explains when these changes will take effect for you.\nModel availability after these changes take effect:\nTips:\n- For each available model, you can also select the model’s effort level from low, medium, and high. This will increase the model’s ability to complete tasks and provide more thorough answers to queries, but will also use more of your limit.\n- If you have an AI Pro or AI Ultra subscription you’ll also have access to the Deep Think option for maximum parallel reasoning.\nManage your Google AI plan\nYou can subscribe to a Google AI plan, upgrade your current plan, change your plan, or cancel your plan at any time. Learn how to manage your Google AI plan from Gemini Apps.\nPrevious changes\nStarting on May 17, 2026 there were changes to usage limits and model availability for Gemini Apps for users over 18. These changes took effect for users under 18 on July 24, 2026.\nUsage limits for Gemini Apps\nGemini will move to compute-based usage limits that will refresh every 5 hours until you reach your weekly limit. Calculation of your usage will factor in the complexity of your prompt, the features you use, and the length of your chat. Paid users have higher limits than users without a Google AI subscription.\nPremium models and features require more usage and may cause you to reach your limit faster. This would include things like:\n- Media generation\n    \n  - Images, videos and music\n-",
+  "kind": "pricing",
+  "company": "Google"
+ },
+ {
+  "id": 698,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "a16z: Only 2% of US Households Currently Pay for AI Services",
+  "body": "Source: a16z on X | Added to Future Tools: 2026-10-05T19:02:19.611Z | Release date: 2026-10-01 | Paywalled: no",
+  "article_text": "",
+  "kind": "other",
+  "company": "other"
+ },
+ {
+  "id": 703,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Reflection AI Launches Beam: 501B Open-Weight Model Built for Coding & Agentic Tasks",
+  "body": "Source: reflection.ai | Added to Future Tools: 2026-10-05T20:11:10.988Z | Release date: 2026-10-05 | Paywalled: no",
+  "article_text": "We are introducing Beam, Reflection’s first open-weight model. Beam is a sparse Mixture-of-Experts model with 501 billion total parameters, 23 billion active, built for coding, reasoning, and agentic workloads.\nBeam’s capabilities come from major investments in both pretraining and reinforcement learning (RL). We pretrained the model on 23.8 trillion diverse, curated, high-quality tokens from the web and proprietary licensed datasets, matching or outperforming available similar-sized open base models. In parallel, we developed the algorithms, training environments, and infrastructure needed to sustain high-compute RL at exceptional scale. Our high-compute RL run generated over 100 million rollouts on 10.5K NVIDIA GB300 GPUs over 4 weeks of training.\nTogether, these efforts produced competitive open-weight performance with frontier inference compute efficiency.\nBeam is undergoing final red-teaming and evaluations. You can sign up here for early access to the model. We will release the weights, technical report, model card, and developer artifacts later this month.\nModel Capability\nWe trained Beam with a particular focus on coding and agentic performance. Beam advances the Western open-weight frontier and is competitive with larger open models like GLM 5.2 and approaching Qwen 3.8-Max on coding and agentic tasks. Where frontier open models like Kimi K3 remain ahead on raw capability, Beam's advantage is efficiency at inference time.\nThe below figure shows Beam's performance across a range of coding, agentic, reasoning, and STEM benchmarks. NR denotes scores that have not been reported.\nBeam pairs coding and agentic capabilities with highly efficient reasoning. On advanced reasoning benchmarks, it achieves scores comparable to GLM-5.2 while using 3–4× less inference comput",
+  "kind": "new_model",
+  "company": "other"
+ },
+ {
+  "id": 704,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "NVIDIA DGX Spark 64GB Launches at $4,999 With Clustering Support via Sync Assistant",
+  "body": "Source: blogs.nvidia.com | Added to Future Tools: 2026-10-05T22:33:27.236Z | Release date: 2026-10-02 | Paywalled: no",
+  "article_text": "Local AI is becoming more useful by the token.\nAs AI agents move from experiments into everyday development, increasingly capable open models are shrinking to fit on more devices, giving builders more to run locally.\nComing this month, NVIDIA DGX Spark will be available with 64GB of unified memory from top manufacturer partners — Acer, ASUS, Dell, Gigabyte, HP and MSI — giving developers, researchers and AI enthusiasts a new configuration with DGX OS and the NVIDIA AI software stack ready to use from day one.\nThe new SKU runs capable local agents on device — privately, without cloud dependency. And when workloads grow, two units can cluster together via NVIDIA Sync Cluster Assistant without any additional setup.\nA New Starting Point for Personal AI Supercomputing\nDGX Spark combines NVIDIA Grace Blackwell compute, unified memory, NVIDIA ConnectX-7 networking and an NVIDIA CUDA-accelerated AI software stack in one system. It’s a complete local AI platform for agents, inference, fine-tuning, data science and edge development.\nThe compact, personal AI supercomputer provides a place to experiment with models and developers’ own data without turning to a cloud instance for every task.\nThe new 64GB configuration, available exclusively from manufacturer partners, keeps the platform at an accessible price point while retaining the GB10 Grace Blackwell Superchip, DGX OS and full NVIDIA AI software stack — same as the 128GB model. It supports up to 100-billion-parameter models and the agentic applications built on them, fully on device.\nTwo 64GB units clustered together don’t just double the memory. In NVIDIA’s Qwen 3.8 27B test, two clustered 64 GB systems delivered up to 1.7x performance compared with a single system, with room to keep scaling as workloads demand.\nDGX Spark ship",
+  "kind": "other",
+  "company": "Nvidia"
+ },
+ {
+  "id": 736,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "Claude Code 2.1.290 — WebFetch reads past 100K characters, /loop survives compaction",
+  "body": "Claude Code stops losing long web pages and scheduled tasks, and gives mods more to read.",
+  "article_text": "Anthropic · 2026-10-05 · major\nClaude Code 2.1.290 — WebFetch reads past 100K characters, /loop survives compaction\nClaude Code 2.1.290 fixes WebFetch silently dropping page text past 100,000 characters and makes scheduled /loop tasks keep firing after compaction. WebSearch now refills at 100 calls an hour instead of stopping after 200.\nClaude Code stops losing long web pages and scheduled tasks, and gives mods more to read.\nQuick facts\nWhat is it?\nWebFetch in Claude Code 2.1.290 no longer cuts a page off at 100,000 characters without saying so. It now reports how much text was unread and takes an offset, so the agent can read the rest of a long page. Scheduled tasks set with /loop also keep coming back after a conversation is compacted or handed to the background.\nHow does it work?\nThe interactive session's WebSearch budget becomes a refilling one: 100 calls per hour, set by CLAUDE_CODE_WEB_SEARCH_REFILLS_PER_HOUR, where 0 turns refilling off. For plugin and mod authors, the turn.step hook now lists the tool calls the API ran itself, tool.check carries the subagent's agentId and the approval ceiling an organization requires, and claude attach and claude logs accept part of a session name.\nWhy does it matter?\nAgents that research from long docs pages or changelogs were quietly working from a truncated copy; this release makes the gap visible and readable. Long-running /loop jobs no longer stop after compaction, and several Bash permission checks that auto-approved wildcard-expanding read-only commands such as rg or git grep now ask first.\nWho is it for?\nClaude Code users, plugin and mod authors, admins of managed machines\nFrequently asked questions\n- How do I read a long page with WebFetch in Claude Code 2.1.290?\n- Claude Code 2.1.290 makes WebFetch say how much of a pa",
+  "kind": "feature",
+  "company": "Anthropic"
+ },
+ {
+  "id": 744,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "Mistral Large 4 — a 1T multimodal MoE with 49B active and 1M context",
+  "body": "Mistral's biggest model yet: a 1T-parameter multimodal MoE for coding, agents and security work.",
+  "article_text": "Mistral AI · 2026-10-06 · seismic\nMistral Large 4 — a 1T multimodal MoE with 49B active and 1M context\nMistral Large 4 is Mistral AI's new 1T-parameter multimodal MoE flagship with 49B active parameters. It is in public preview on Mistral Studio today, scores 61.7% on DeepSWE v1.1, and its open weights are due at the end of October.\nMistral's biggest model yet: a 1T-parameter multimodal MoE for coding, agents and security work.\nKey specs\nQuick facts\nBenchmarks\nPricing\nsource ↗\nWhat is it?\nMistral Large 4 is the new flagship from Mistral AI, released as a public preview on October 6, 2026. It reads text and images, handles a 1M-token context, and is aimed at coding, agentic workflows and security, finance and legal work in more than 160 languages. Mistral calls it \"ML4\" unofficially and \"le Chonk\" very officially.\nHow does it work?\nUnder the hood, Large 4 is a sparse mixture-of-experts: only 49B of its 1.05T parameters run for each token, and a 1.6B vision encoder handles images. Mistral trained it on 3,800 NVIDIA Grace Blackwell GPUs in its European datacenters. During reinforcement learning the pipeline generated 33 billion tokens a day, of which 16 billion were kept as trainable completions after filtering.\nWhy does it matter?\nMistral now has a trillion-parameter model in the same race as the top US and Chinese labs, and it plans to publish the weights. For security teams, a 93% Cybench score and 82% on the AA Cyber Index vulnerability-reproduction test put it among the strongest open-weight options. European companies also get a frontier model trained and served in Europe.\nWho is it for?\ndevelopers building coding and security agents, European enterprises\nFrequently asked questions\n- When will Mistral Large 4 weights be released?\n- Mistral's launch post for Mistral L",
+  "kind": "new_model",
+  "company": "Mistral"
+ },
+ {
+  "id": 746,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Google Launches EmbeddingGemma 2: 740M-Param Multimodal On-Device Embedding Model",
+  "body": "Source: blog.google | Added to Future Tools: 2026-10-06T16:49:31.488Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "EmbeddingGemma 2: an open, lightweight multimodal embedding model\nWe introduced EmbeddingGemma last year to provide a lightweight option for high-quality text embeddings, to help your apps organize, search, and connect information directly on consumer hardware. The developer community’s response blew past our expectations. With more than 20 million downloads, builders have used it to power smarter on-device search tools and privacy-first retrieval augmented generation (RAG) pipelines.\nToday, we’re launching EmbeddingGemma 2, expanding beyond text to unify code, images, video, and audio in a shared embedding space. Built on the Gemma 4 architecture and released under a commercially permissive Apache 2.0 license, EmbeddingGemma 2 has 740 million parameters, making it optimal for on-device inference. It can help find a specific video clip from a voice memo, or search through hours of audio recordings based on a text query, all processed by a single, natively multimodal model.\nBuilt from the same technology as Gemini Embedding models, EmbeddingGemma 2 is:\n- Best-in-class for its size: Achieves leading scores among sub-1B multimodal embedders for its size across benchmarks like MTEB (Massive Text Embedding Benchmark) Code and MAEB (Massive Audio Embedding Benchmark), while matching or outperforming many larger models across text, vision, and audio tasks.\n- Modular by design: Requires as little as 270M parameters for text-only workloads with optional vision (170M) and audio (300M) encoders for full multimodal support.\n- Storage-efficient: Using Matryoshka Representation Learning (MRL), developers can dynamically truncate output vectors from 768 dimensions down to 512, 256, or 128 dimensions. This provides up to 6x storage reduction for local vector databases and memory usage.",
+  "kind": "new_model",
+  "company": "Google"
+ },
+ {
+  "id": 748,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Hark Launches \"Hark Pro\" AI Operating System Designed to Manage Your Entire Life",
+  "body": "Source: youtube.com | Added to Future Tools: 2026-10-06T16:57:28.964Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "Zurück  [ ![](https://www.youtube.com/watch?v=i3mfnrEwaA0) ](https://www.youtube.com/)\nSuchen \n[ ![](https://www.youtube.com/watch?v=i3mfnrEwaA0) ](https://www.youtube.com/ \"YouTube-Startseite\") DE \nMelde dich an, damit wir sehen, dass du kein Bot bist\nDadurch möchten wir unsere Community schützen\n[Anmelden](https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dde%26next%3D%252Fwatch%253Fv%253Di3mfnrEwaA0%2526utm_source%253Dfuturetools.io%2526utm_medium%253Dnewspage&hl=de)[Weitere Informationen](https://support.google.com/youtube/answer/3037019#zippy=%2Ccheck-that-youre-signed-into-youtube)\n### \nNaN / NaN\nMehr anzeigen",
+  "kind": "tool",
+  "company": "other"
+ },
+ {
+  "id": 750,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Pinterest AI Beauty Guides Turn Hair and Nail Pins Into Salon-Ready Action Plans",
+  "body": "Source: techcrunch.com | Added to Future Tools: 2026-10-06T16:54:28.384Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "Pinterest on Tuesday showed off a new feature that will leverage AI to take action on your saved inspiration from beauty-related Pins, like hair and nail ideas, and turn them into actionable plans you can take with you to the salon.\n“Beauty Guides,” which are powered by the company’s visual intelligence and generative AI technology, Pinterest Intelligence, will translate Pins into terms and phrases used by stylists and nail artists that everyday users may not know, like “balayage,” “root melt,” or “almond nails.”\nThe feature is a small but practical way to introduce AI into users’ everyday lives, as it slots into something that people are already doing: bringing a photo of their inspiration to the salon. That’s useful to a large extent, but having the right terminology at hand while you discuss what parts of the look you want to edit or change can be useful as well.\nPlus, the guides offer the sort of information that can help users plan for their visit, like the time each part of the process may take and the cost. (Balayage goes into the hundreds of dollars, so that’s information you might like to have up front!)\nThe action guides will show up when you tap on the “Get the Guide” button within the app, and will then offer details about what, specifically, you should ask for to achieve the same look, the time it takes, price range, and maintenance requirements, like how often you’ll need to trim, tone, or touch up, for instance.\nAt launch, the feature will work across Pins related to hairstyle, color, nail shape, and finish.",
+  "kind": "feature",
+  "company": "other"
+ },
+ {
+  "id": 767,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "OpenAI Simplifies API Rate Limit Tiers From Five to Three, Cuts Top Tier Cost to $500",
+  "body": "Source: OpenAI Developers on X | Added to Future Tools: 2026-10-06T22:16:20.348Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "",
+  "kind": "pricing",
+  "company": "OpenAI"
+ },
+ {
+  "id": 769,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "OpenAI Makes Auto-Review Feature Free for All ChatGPT Users",
+  "body": "Source: Tibo on X | Added to Future Tools: 2026-10-06T22:13:38.010Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "",
+  "kind": "pricing",
+  "company": "OpenAI"
+ },
+ {
+  "id": 770,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "ChatGPT Launches AI Meeting Note-Taker Plugin for Mac Desktop App in Beta",
+  "body": "Source: ChatGPT on X | Added to Future Tools: 2026-10-06T22:13:26.142Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 771,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "OpenAI Launches Decisions API in Public Beta for Real-Time App Routing",
+  "body": "Source: OpenAI Developers on X | Added to Future Tools: 2026-10-06T22:12:52.065Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 776,
+  "source_name": "openai",
+  "origin": "rss",
+  "title": "How Jump Trading is scaling quant research with ChatGPT",
+  "body": "Jump Trading uses OpenAI to expand quantitative research. See how longer-running AI workflows combine multiple data sources with human review.",
+  "article_text": "As a quantitative trading firm, Jump Trading creates predictive models that use market data, news and events, and a range of alternative data sources to make the best possible predictions about asset prices. Because markets are complex, noisy, and changing over time, it is rarely possible to anticipate exactly what will happen. But according to Lucas Baker, Head of LLM R&D at Jump, predicting even slightly better than a coin flip at scale is enough to result in a successful strategy.\n\nBaker leads agentic research and development, and he’s focused on building the agents, harnesses, and infrastructure that let quantitative researchers explore their ideas in greater breadth and depth. Adding GPT‑6 Astra has dramatically expanded the scale and complexity of workflows that can be handed off to agents, from day-to-day coding to advanced quantitative studies to validate new hypotheses.\n\n> “With the GPT-6 series, especially GPT-6 Astra, OpenAI has unlocked a new tier of autonomy for long-horizon tasks that require flexible agent coordination and extreme persistence on complex workflows. Where we used to require frequent human guidance and intervention, we can now focus fully on defining a secure and well-monitored environment with clear goals and letting the agents find their own way.”\n\n—Lucas Baker, Head of LLM R&D, Jump Trading\n\n## From short snippets of code to comprehensive analysis\n\nOver the past year, AI has transformed from a helpful tool, useful for writing one-off code snippets or finding small bugs into a capable, versatile system that can develop entire codebases and services by itself. Now, Baker and his team find that AI works best when treated more like a colleague. Researchers can define a key problem, a work environment, and a way of evaluating the quality and s",
+  "kind": "other",
+  "company": "OpenAI"
+ },
+ {
+  "id": 786,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "DAILY AI BRIEF 🗞 — Oct 7",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107752334000337001):\nDAILY AI BRIEF 🗞 — Oct 7\n\nMISTRAL 🔥:\n* Mistral released Mistral Large 4 \"Le Chonk\", a 1T-parameter (49B active) multimodal model, with open weights planned in about three weeks.\n\nGOOGLE 🔥:\n* Nano Banana 2.1 is rolling out across the Gemini app, AI Mode, AI Studio, the Gemini API, Flow and Stitch.\n* Google released EmbeddingGemma 2, a 740M-parameter open multimodal embedding model under Apache 2.0.\n* Google AI Edge launched Foresight, an on-device note-taking app for Mac.\n\nOPENAI 🔥:\n* OpenAI launched the Decisions API in beta with gpt-6-luna, returning typed answers 10x faster than the Responses API.\n* Auto-review in Codex is now free for everyone signed in with ChatGPT, day two of the 28-day pledge.\n* OpenAI published new math results from an unreleased internal frontier model, with many proofs formalized in Lean.\n* OpenAI cut its API usage tiers from five to three: Build, Launch and Grow.\n\nANTHROPIC 🔥:\n* Claude for Google Workspace is in public beta, adding a Claude sidebar to Docs, Sheets and Slides.\n* Anthropic's expanded Claude for Startups program gives qualifying startups a free year of Claude Team and $1,000 in API credits.\n* Claude Code 2.1.292 lets Claude run sub-agents at a chosen effort level.\n\nHARK 🔥:\n* Hark, Brett Adcock's new startup, launched Hark Pro widely as a free computer-use AI assistant, with a paid tier for heavy users.\n\nSESAME 🔥:\n* Sesame's voice assistant got a new",
+  "article_text": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107752334000337001):\nDAILY AI BRIEF 🗞 — Oct 7\n\nMISTRAL 🔥:\n* Mistral released Mistral Large 4 \"Le Chonk\", a 1T-parameter (49B active) multimodal model, with open weights planned in about three weeks.\n\nGOOGLE 🔥:\n* Nano Banana 2.1 is rolling out across the Gemini app, AI Mode, AI Studio, the Gemini API, Flow and Stitch.\n* Google released EmbeddingGemma 2, a 740M-parameter open multimodal embedding model under Apache 2.0.\n* Google AI Edge launched Foresight, an on-device note-taking app for Mac.\n\nOPENAI 🔥:\n* OpenAI launched the Decisions API in beta with gpt-6-luna, returning typed answers 10x faster than the Responses API.\n* Auto-review in Codex is now free for everyone signed in with ChatGPT, day two of the 28-day pledge.\n* OpenAI published new math results from an unreleased internal frontier model, with many proofs formalized in Lean.\n* OpenAI cut its API usage tiers from five to three: Build, Launch and Grow.\n\nANTHROPIC 🔥:\n* Claude for Google Workspace is in public beta, adding a Claude sidebar to Docs, Sheets and Slides.\n* Anthropic's expanded Claude for Startups program gives qualifying startups a free year of Claude Team and $1,000 in API credits.\n* Claude Code 2.1.292 lets Claude run sub-agents at a chosen effort level.\n\nHARK 🔥:\n* Hark, Brett Adcock's new startup, launched Hark Pro widely as a free computer-use AI assistant, with a paid tier for heavy users.\n\nSESAME 🔥:\n* Sesame's voice assistant got a new voice model, a dedicated computer for each agent, and Google app and MCP connections.\n\nMICROSOFT 🔥:\n* GitHub stacked pull requests are now generally available.\n\n* Used Grok to compose this brief, cherry-picking the news and doing some post-editing.\n\nQUOTED POST by @testingcatalog (https://x.com/tes",
+  "kind": "roundup",
+  "company": "other"
+ },
+ {
+  "id": 787,
+  "source_name": "btibor91",
+  "origin": "x",
+  "title": "ChatGPT release notes have been updated with \"Audio uploads in ChatGPT\" for paid ChatGPT subscriptions and workspaces, to create transcripts, summarize recordings and ask questions about their content",
+  "body": "POST by @btibor91 on X (https://x.com/btibor91/status/2107765800035873147):\nChatGPT release notes have been updated with \"Audio uploads in ChatGPT\" for paid ChatGPT subscriptions and workspaces, to create transcripts, summarize recordings and ask questions about their contents (now removed again) https://x.com/btibor91/status/2107765800035873147/photo/1",
+  "article_text": "",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 788,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "e2e 0.18 — TesterArmy's AI testing framework tops GitHub trending",
+  "body": "Write the goal, not the selectors: e2e lets an agent click through your app, then caches what worked.",
+  "article_text": "TesterArmy · 2026-10-06 · notable\ne2e 0.18 — TesterArmy's AI testing framework tops GitHub trending\ne2e is an Apache-2.0 TypeScript framework where an agent drives web or mobile apps toward plain-English goals and verified steps replay with no model calls. Version 0.18.0 makes MCP sessions headless and masks secrets everywhere.\nWrite the goal, not the selectors: e2e lets an agent click through your app, then caches what worked.\nKey specs\nWhat is it?\ne2e is an open-source end-to-end testing framework for web and mobile apps from TesterArmy. A test says what the user wants, such as 'upgrade the workspace to the Pro plan', an agent drives the app to do it, and normal locators and assertions check the result. Release 0.18.0 shipped on 6 October 2026 while the repo gained about 1,700 stars in a day on GitHub trending.\nHow does it work?\nWhen a later assertion verifies an agent step, the framework records the agent's actions and replays them on the next run with no model calls, until the app changes. Web tests run through Playwright on Chromium, Firefox and WebKit; mobile tests run on iOS simulators and Android emulators. In 0.18.0, `e2e mcp` sessions start headless by default, TypeScript loads through a new oxc-based loader, and secrets are masked in traces, console output and MCP responses.\nWhy does it matter?\nSelector-based UI tests break whenever a screen is redesigned, and fully AI-driven tests cost a model call on every run. The record-and-replay cache aims for the middle: agent flexibility when the app changes, deterministic cost-free runs when it does not. Models are bring-your-own, including local ones.\nWho is it for?\nQA engineers and web or mobile app teams\nTry it\nnpx e2e init",
+  "kind": "tool",
+  "company": "other"
+ },
+ {
+  "id": 803,
+  "source_name": "hf_blog",
+  "origin": "rss",
+  "title": "Introducing Falcon ASR",
+  "body": "",
+  "article_text": "English · العربية\nArabic WER: 20.92% · Parameters: 1.6B · Emirati WER (TII evaluation): 22.73%\nWe’re introducing Falcon-ASR, our 1.6 billion parameter speech recognition model for Arabic, with a particular focus on the Emirati dialect. Developed at the Technology Innovation Institute (TII) in Abu Dhabi, it also supports English, French, Spanish and Portuguese.\nIn our evaluation, Falcon-ASR achieved an average word error rate of 20.92% across six Arabic test sets, compared with the best published result of 23.17% in the leaderboard snapshot we used. On our internal Emirati evaluation, it recorded the lowest word and character error rates among the systems we compared.\nWe also support word-level timestamps for transcriptions, linking each transcribed word to its position in the audio.\nYou can try Falcon-ASR in our Hugging Face Demo.\nRecognising spoken Arabic\nArabic speech varies by region, speaker and setting. A model that handles a formal news broadcast may still struggle with a conversation in Emirati or with speech recorded over a phone line. Dialectal Arabic also has fewer transcribed resources than Modern Standard Arabic (MSA), which makes training and evaluation harder.\nWe trained Falcon-ASR on Emirati, MSA, other Gulf and Arabic dialects, and English. Our aim is to transcribe the words people use in everyday speech, including dialectal forms and changes between languages.\nArabic benchmark results\nThe Open Universal Arabic ASR Leaderboard, maintained by the ELM Research Center, ranks systems by the equal-weight average WER across six test sets. It also reports character error rate (CER). Lower values are better for both metrics. Our Falcon-ASR evaluation follows this protocol.\nWER = Word Error Rate; CER = Character Error Rate. A lower value indicates better performa",
+  "kind": "new_model",
+  "company": "other"
+ },
+ {
+  "id": 807,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "GOOGLE 🔥: A new Playground experiment is now available in the US.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107858810173792336):\nGOOGLE 🔥: A new Playground experiment is now available in the US. \n\nUsers on paid plans can generate, while everyone can play games available in the gallery. \nhttps://x.com/GoogleLabs/status/2107800195748737042/video/1",
+  "article_text": "",
+  "kind": "new_product",
+  "company": "Google"
+ },
+ {
+  "id": 808,
+  "source_name": "openai",
+  "origin": "rss",
+  "title": "Helping teens learn, plan, and shape the future of AI",
+  "body": "College Planner is coming to ChatGPT for Teens to help students manage college applications, alongside new flashcards, quizzes, and a teen AI council.",
+  "article_text": "Since we introduced [ChatGPT for Teens](https://openai.com/index/chatgpt-for-teens/)[—](https://openai.com/index/chatgpt-for-teens/)the default experience automatically applied to accounts identified as under 18—we’ve seen young people use it to learn, explore ideas and solve everyday problems. Today, we’re sharing early progress on ChatGPT for Teens, including how teens are using its learning tools, along with new ways for teens to study and prepare for college.\n\nChatGPT’s 1.2 billion users span many countries, communities and backgrounds. That reach makes it especially important to build tools that help young people with different resources and opportunities learn and prepare for their futures.\n\n## What we’re seeing so far\n\nChatGPT for Teens is designed to help young people learn, think critically and deepen their understanding. As ChatGPT for Teens became available to more teens globally, those with access sent about 2.7 million more learning-related messages on average, than those who didn’t have it yet.\n\nOnce enrolled, teens use ChatGPT for Teens’ learning tools at scale. The most selected conversation starter prompts are “ask questions to develop my ideas,” “give feedback on my draft,” and “help me check my evidence.” In one week, nearly 1.2 million teens used Learning Visualizations to better understand math and science concepts, and more than 180,000 used Study Mode for step-by-step learning support.\n\nChatGPT for Teens includes [built-in reminders](https://openai.com/index/why-teens-deserve-access-safe-ai/) to encourage teens to take breaks. On average, teens spend under 15 minutes a day on ChatGPT. While less than 2% of teens spend more than three consecutive hours on ChatGPT, in almost half of teen conversations with a break reminder, teens took a break or end",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 809,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "SpaceXAI is working on a \"Meetings\" feature for Grok Bot.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107872133057503400):\nSpaceXAI is working on a \"Meetings\" feature for Grok Bot. \n\n&gt; \"Give your Bot links to join Google Meet or Zoom\"\n\nImagine having a daily standup with your Grok Bots every morning.  \n\nThe future 👀 https://x.com/testingcatalog/status/2107872133057503400/photo/1",
+  "article_text": "",
+  "kind": "feature",
+  "company": "xAI"
+ },
+ {
+  "id": 814,
+  "source_name": "claudeai",
+  "origin": "x",
+  "title": "Introducing Claude Haiku 5.5: the cheapest, fastest, and most capable small model we’ve ever released.",
+  "body": "POST by @claudeai on X (https://x.com/claudeai/status/2107894039626277339):\nIntroducing Claude Haiku 5.5: the cheapest, fastest, and most capable small model we’ve ever released.\n\nOn average, it costs around 75% less to run than Claude Haiku 4.5. https://x.com/claudeai/status/2107894039626277339/video/1",
+  "article_text": "",
+  "kind": "new_model",
+  "company": "Anthropic"
+ },
+ {
+  "id": 815,
+  "source_name": "openai",
+  "origin": "x",
+  "title": "GPT-6 and Intelligent UI, now rolling out in ChatGPT for everyone.",
+  "body": "POST by @openai on X (https://x.com/OpenAI/status/2107894997538525580):\nGPT-6 and Intelligent UI, now rolling out in ChatGPT for everyone.\n\nIntelligent UI in ChatGPT delivers fast, interactive answers that make everyday questions more visual, complex topics easier to grasp, and interactive tools for your task available on the spot. https://x.com/OpenAI/status/2107894997538525580/video/1",
+  "article_text": "",
+  "kind": "new_model",
+  "company": "OpenAI"
+ },
+ {
+  "id": 820,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "Two Minute Papers — 'DeepMind's New AI Just Cracked The Code Of Life'",
+  "body": "Károly Zsolnai-Fehér walks through DeepMind's precomputed map of every possible single-letter DNA change.",
+  "article_text": "Two Minute Papers · 2026-10-07 · notable\nTwo Minute Papers — 'DeepMind's New AI Just Cracked The Code Of Life'\nTwo Minute Papers covers AlphaGenome Atlas, Google DeepMind's 1-petabyte set of predicted effects for all 9 billion single-letter DNA changes in the human genome.\nKároly Zsolnai-Fehér walks through DeepMind's precomputed map of every possible single-letter DNA change.\nWhat is it?\n'DeepMind's New AI Just Cracked The Code Of Life' went up on Two Minute Papers on 7 October 2026. The video description links Google DeepMind's AlphaGenome Atlas announcement as its source and thanks DeepMind for the invite.\nHow does it work?\nAlphaGenome Atlas is the AlphaGenome model's output stored ahead of time: predicted molecular effects for all 9 billion single-letter changes in the human genome, across hundreds of human and mouse cell types and tissues, in a 1-petabyte dataset.\nWhy does it matter?\nFinding out what a DNA change outside the genes actually does is a slow step in rare-disease research. With the answers precomputed, researchers can look a variant up instead of running the model, which is the idea the video explains for a general audience.\nWho is it for?\nanyone curious about AI in genomics",
+  "kind": "other",
+  "company": "Google"
+ },
+ {
+  "id": 826,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Google Launches Playground: AI-Powered Game Creation Platform Requiring No Coding",
+  "body": "Source: blog.google | Added to Future Tools: 2026-10-07T19:48:25.613Z | Release date: 2026-10-07 | Paywalled: no",
+  "article_text": "Introducing Playground: Create and play custom games\nGames are one of the most creative forms of expression, and the gaming community keeps growing. But game creation has historically been limited to a select group of people who have technical experience and knowledge of complex game engines.\nToday, we’re introducing Playground, an experimental gaming platform that lets you create, play, and share custom games. Playground lowers the barriers to creation, so bringing game ideas to life can now be as easy as describing it through a few prompts — no coding experience required.\nCreate your custom game\nWith Playground’s conversational interface, you can direct the game just by typing what you want to build. Start from a blank canvas, remix starter prompts, or use guided support to shape your concept — and then test it right away. Want to tweak the physics, rewrite the rules, customize the characters, or overhaul the environment? Just ask. You stay in complete control of the creative direction from rough concept to final product.\nCreate games in Playground using text prompts\nPlay, compete, and share across devices\nThe fun doesn’t stop at creation. Playground is home to an ever-growing catalog of community games. And because it’s browser-based, you can play these games on your phone or laptop.\nOnce your game is ready, you can keep your game private, drop a shareable link to challenge friends and family, or publish it to the Playground Explore gallery for the broader Playground community. To have fun with your friends, Playground games support in-game leaderboards and multiplayer gameplay in select genres. With a Play Games profile, you can claim a custom handle, like your favorite games, battle for the top spot, and follow creators to catch their latest releases.\nOur gallery u",
+  "kind": "new_product",
+  "company": "Google"
+ },
+ {
+  "id": 831,
+  "source_name": "claudedevs",
+  "origin": "x",
+  "title": "Computer use and browser use toolsets are now built into the Python and TypeScript SDKs for Claude.",
+  "body": "POST by @claudedevs on X (https://x.com/ClaudeDevs/status/2107925762720326090):\nComputer use and browser use toolsets are now built into the Python and TypeScript SDKs for Claude.\n\nThe API tells you what Claude wants to click or type.\n\nPreviously, you had to write your own loop and map  clicks and keystrokes to commands, but the SDKs now run the loop and send actions to drivers.",
+  "article_text": "",
+  "kind": "feature",
+  "company": "Anthropic"
+ },
+ {
+  "id": 832,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "MICROSOFT 🔥: Copilot for Windows is getting Hybrid intelligence through local context from your Windows PC and local models that power Copilot tasks.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107939082571559421):\nMICROSOFT 🔥: Copilot for Windows is getting Hybrid intelligence through local context from your Windows PC and local models that power Copilot tasks.\n\n> \"With intelligent routing, powerful local models, and a performant runtime, Windows lets work run in the right place for each task — local or cloud. We’re bringing frontier-class capabilities to local PCs and enabling services like GitHub to route intelligently on Windows.\"\n\n> \"With your permission, Copilot will be able to use local context from your PC, take action on your behalf, and tap into local models, bringing you more capability while helping your tokens go further.\"\n\nWindows testing time! 👀 https://x.com/satyanadella/status/2107919668514295908/video/1",
+  "article_text": "",
+  "kind": "feature",
+  "company": "Microsoft"
+ },
+ {
+  "id": 834,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "Envato has launched “Burst Mode”, a feature that turns one idea or reference into up to 6 visual directions for 1 credit, up to 10x faster.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107942182405521535):\nEnvato has launched “Burst Mode”, a feature that turns one idea or reference into up to 6 visual directions for 1 credit, up to 10x faster.\n\nEnvato is a creative asset marketplace founded in 2006, offering commercially licensed photos, video, music, fonts, templates, and 3D to millions of creative professionals.\n\n> Users can start from a rough idea, a half-formed thought, or a reference image.\n\n> References, moodboards, and a creativity control from focused to wild steer each batch.\n\n> Users can vary promising directions with “More like this,” then polish and take them further.\n\nQUOTED POST by @envato (https://x.com/envato/status/2107924147435115006):\nMost AI tools expect you to know exactly what you want.\n\nBut creative work often starts with a brief, a reference, or just a hunch.\n\nThat’s why we built Burst mode.\n\nTurn the start of an idea into up to six image directions at once, up to 10× faster, for just one AI credit.\n\nMore directions to explore. More chances to find the one worth pursuing. https://elements.envato.com/lp/burst-mode/",
+  "article_text": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107942182405521535):\nEnvato has launched “Burst Mode”, a feature that turns one idea or reference into up to 6 visual directions for 1 credit, up to 10x faster.\n\nEnvato is a creative asset marketplace founded in 2006, offering commercially licensed photos, video, music, fonts, templates, and 3D to millions of creative professionals.\n\n> Users can start from a rough idea, a half-formed thought, or a reference image.\n\n> References, moodboards, and a creativity control from focused to wild steer each batch.\n\n> Users can vary promising directions with “More like this,” then polish and take them further.\n\nQUOTED POST by @envato (https://x.com/envato/status/2107924147435115006):\nMost AI tools expect you to know exactly what you want.\n\nBut creative work often starts with a brief, a reference, or just a hunch.\n\nThat’s why we built Burst mode.\n\nTurn the start of an idea into up to six image directions at once, up to 10× faster, for just one AI credit.\n\nMore directions to explore. More chances to find the one worth pursuing. https://elements.envato.com/lp/burst-mode/\n\nLINKED PAGE 1: https://elements.envato.com/lp/burst-mode/\nMore to explore, more to compare\nExperiment freely and see more possibilities before you commit your time and credits to one creative direction.\nExplore more without sacrificing quality\nStart with an idea, not the final output. Guide directions with style, mood and composition so you’re exploring directions you can actually take forward, not concepts you’ll have to rethink later.Take a look\nTake more creative risks\nTry the weird direction, the safe one, the what-if. With up to 6 directions for 1 credit, and generations up to 10× faster, there's less reason not to explore another possibility.Tak",
+  "kind": "feature",
+  "company": "other"
+ },
+ {
+  "id": 835,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Microsoft Surface Laptop Ultra launches with Nvidia RTX Spark chip, starting at $2,600",
+  "body": "Source: techcrunch.com | Added to Future Tools: 2026-10-07T21:24:19.669Z | Release date: 2026-10-07 | Paywalled: no",
+  "article_text": "Back in June, Nvidia announced that it had secured agreements with Microsoft and a host of other PC makers to develop AI- and agent-ready PCs for Windows based on its RTX Spark chip, but details on the machines were scant at the time.\nOn Wednesday, at an event held in San Francisco during the city’s Tech Week, Microsoft revealed the specs and price for its new Surface Laptop Ultra. The PC comes in two base models, one that starts at $2,600 and one with a more powerful chip that starts at $3,700. Prices rise from there with options for more memory and storage, up to $5,900. (Microsoft says the highest-end device is already out of stock.)\nMicrosoft also revealed its new workstation powered by the RTX Spark chip: the Surface RTX Spark Dev Box, which starts priced at $6,000 and comes equipped with Microsoft dev tools like VS Code, GitHub Copilot CLI, WSL, and PowerShell 7.\nThe pitch for both this PC and workstation is that they are designed to run AI models on-device locally (and for free) with the CPU, GPU, unified memory, and other hardware modifications, like superior cooling, necessary to handle them.\nPlus, they are running a revamped version of Windows 11 that includes a feature called “Execution Containers.” This makes it easier to sandbox AI agents, the company says. That feature will be available for all Windows 11 users, Microsoft CEO Satya Nadella said at the event.\nNadella explained: “One of the things we realized in the last 3-4 years is that just having a model doesn’t do much for anything. You really do need to orchestrate, and you need to have memory outside of the model. You need to have this harnessed layer that is able to take multiple models plus context, plus memory, and the action space.”\nHe added that Microsoft is enabling that “not just for our apps b",
+  "kind": "other",
+  "company": "Microsoft"
+ },
+ {
+  "id": 836,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "SPACEXAI 🔥: Grok Bot can now search X!",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107953994588983361):\nSPACEXAI 🔥: Grok Bot can now search X! \n\nEarlier, Grok Bot would have to rely on web search or the X connector; with this release, it can match Grok's capabilities, where one prompt can trigger analysis of more than 100 X posts. \n\nI use Grok Bot on a daily basis to compose a Daily AI Brief - looks like it will get much better tomorrow. \n\nTesting time! 👀 https://x.com/bot/status/2107949161878606089/video/1",
+  "article_text": "",
+  "kind": "feature",
+  "company": "xAI"
+ },
+ {
+  "id": 857,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "DAILY AI BRIEF 🗞 — Oct 8",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2108108547741405596):\nDAILY AI BRIEF 🗞 — Oct 8\n\nANTHROPIC 🔥:\n* Anthropic launched Claude Haiku 5.5 with a 1M-token context window and adjustable effort, priced at $0.10/$0.50 per million tokens.\n* Prompt cache reads on Claude Sonnet 5.5 now cost half as much, dropping from $0.20 to $0.10 per million tokens.\n\nOPENAI 🔥:\n* A new GPT-6 version with Intelligent UI is rolling out to all ChatGPT users, bringing interactive visual answers.\n* ChatGPT for Teens is getting a College Planner that tracks application and financial aid deadlines.\n\nMICROSOFT 🔥:\n* Copilot on Copilot+ PCs will be able to use your PC's files, take actions in Windows, and run local models, starting in the coming months.\n* Microsoft Execution Containers, a policy-based sandbox for AI agents on Windows, are now generally available.\n* Windows Search is getting thousands of quick actions from the taskbar, starting with Windows Insiders.\n* MAI Code 1.1 Flash is coming to local PCs in a 3-bit version that's nearly 80% smaller.\n* Surface Laptop Ultra with NVIDIA RTX Spark is up for pre-order from $2,599 and ships October 16.\n* GitHub Copilot's local sandboxing is now generally available across the CLI, the Copilot app, and VS Code.\n* GitHub Copilot CLI can now find and use local models from a running Ollama instance.\n\nSPACEXAI 🔥:\n* Grok Bot can now use Claude Opus 5.5, and Elon Musk says it will pick the best model for each task.\n* Grok Bot can now searc",
+  "article_text": "",
+  "kind": "roundup",
+  "company": "other"
+ },
+ {
+  "id": 866,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "Odyssey has launched Odyssey-3, its most powerful foundation world model to date, and opened a research preview to the public.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2108246975883751665):\nOdyssey has launched Odyssey-3, its most powerful foundation world model to date, and opened a research preview to the public.\n\nOdyssey-3 builds an environment from a prompt and predicts changes in real time as a person moves through it or triggers events.\n\n> Odyssey-3 Pro scored 66.1 on Physics-IQ Verified video-to-video with best-of-8 sampling. This is the highest reported result.\n\n> Users can walk through scenes in first or third person. The camera can also move independently.\n\n> Odyssey adapted the model to robot arms, humanoids, and a car on real roads in India. Each system uses its own trained policy.\n\nQUOTED POST by @odysseyml (https://x.com/odysseyml/status/2108238378751967385):\nToday we're launching Odyssey-3, the most powerful foundation world model yet.\n\nIt sets a new state of the art on Physics-IQ, and powers robots, trains AIs, and generates interactive experiences. It's really cool.\n\nExperience the model today, all for free! https://x.com/odysseyml/status/2108238378751967385/video/1",
+  "article_text": "",
+  "kind": "new_model",
+  "company": "other"
+ },
+ {
+  "id": 875,
+  "source_name": "anthropic",
+  "origin": "rss",
+  "title": "2026 Usage Policy update",
+  "body": "2026 Usage Policy update",
+  "article_text": "2026 Usage Policy update\nEach year, Anthropic updates its Usage Policy in response to the evolving capabilities of our models, and the feedback we’ve received from our customers. We're publishing a new version of the policy today. In this post, we summarize the changes we’ve made.\nMost of the updates in the latest version are intended to clarify existing rules. In the year since our last refresh, Claude has taken on longer, more independent work. This update provides new examples that show how our rules apply to Claude’s new capabilities. It draws on new patterns of misuse in influence operations, weapons development, and surveillance that we’ve observed in the past year (as we’ve documented in our latest threat intelligence report). We’ve also made updates to clarify our requirements for high-risk use cases in areas like health and finance, to add controls for when Claude is used to autonomously take physical actions, and to address abusive behavior toward our models.\nThe updated policy takes effect on November 12. The full Usage Policy and Supported Regions Policy can be found on their respective pages.\nA new section on deceptive activity\nAs we wrote about last month, we’ve seen examples of state media outlets, government propaganda offices, and commercial firms using Claude to run networks of fake accounts and fabricated news sites. Our policy already prohibited this activity, but the restrictions were scattered across our elections, fraud, privacy, and disinformation sections.\nWe've consolidated those rules into a new section titled Do Not Engage in Deceptive Campaigns or Artificial Activity, which applies to deceptive activity of any kind (whether political or commercial). It covers efforts to obscure who is behind a message or amplify content through fake accounts",
+  "kind": "other",
+  "company": "Anthropic"
+ },
+ {
+  "id": 881,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "Voyager has launched a desktop app that lets AI agents work inside creative tools like After Effects, DaVinci Resolve, Blender, and Unity on a Mac.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2108264326977270074):\nVoyager has launched a desktop app that lets AI agents work inside creative tools like After Effects, DaVinci Resolve, Blender, and Unity on a Mac.\n\nIt reads project files, operates creative apps, and outputs editable results.\n\n> Video edits, motion graphics, and color grading in the apps creators already use.\n\n> 3D scenes in Blender and game prototypes in Unity.\n\n> Built-in skills, custom skills, and a memory that learns how each user works.\n\nQUOTED POST by @anvisha (https://x.com/anvisha/status/2108252061209088159):\nIntroducing Voyager: the open harness for S-tier video, graphics and games.\n\nThe Codex for creative work.\n\nMost AI tools are built for coding. Voyager is designed to get the best creative results from models like Opus, Astra and DeepSeek.\n\nIt comes with free graphics, music and video editing tools - or, it can drive Blender, Resolve, After Effects, Ableton and 100+ others.\n\nEverything in this thread was made with Voyager. A few of our favorites:",
+  "article_text": "",
+  "kind": "tool",
+  "company": "other"
+ },
+ {
+  "id": 882,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "OPENAI 🔥: GPT-6.1 Sol Ultrafast is rolling out on ChatGPT Work, Codex, and the API.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2108265185106391234):\nOPENAI 🔥: GPT-6.1 Sol Ultrafast is rolling out on ChatGPT Work, Codex, and the API. \n\n> GPT-6.1 Sol in Ultrafast mode is $12 per million input tokens and $60 per million output tokens.\n\n> Ultrafast mode delivers 8x faster speeds than Sol Standard. \n\nUltrafast testing time 👀 https://x.com/OpenAIDevs/status/2108262812489531498/video/1",
+  "article_text": "",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 884,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Google Launches Universal Gemini Agent for Work Across Workspace and Enterprise",
+  "body": "Source: cloud.google.com | Added to Future Tools: 2026-10-08T18:31:10.803Z | Release date: 2026-10-08 | Paywalled: no",
+  "article_text": "Thomas Kurian\nCEO, Google Cloud\nEditor’s note: This article is adapted from Thomas Kurian’s keynote address at Gemini at Work 2026. It includes a number of announcements:\n- \nGemini, a single, universal agent for work that answers your questions, handles your knowledge work, creates your images and media, and writes and runs code.\n- \nInline in Workspace, Gemini works directly inside Gmail, Drive, Docs, Slides, Sheets, Chat, and Calendar, carrying the same memory, skills, and controls it has everywhere else.\n- \nNew data and analytics skills that allow both technical teams and everyday business users to use plain-language questions to get to actionable operational insights in minutes.\n- \nIndustry-specific specialization with tools, skills, connectors and knowledge specific for financial services and legal teams.\n- \nHow we secure and govern agents through identity and policy management, authorization and permission controls, secure sandboxing, network gateways, and more.\n- \nLeading cost controls through multi-model orchestration, Smart Routing, real-time spend caps, and more.\n- \nCustomer use cases that showcase the breadth and depth of our customers around the world.\nBringing the best technology to all of you is what drives us at Google Cloud. In the last year, nearly 500 Google Cloud customers each processed more than one trillion tokens. Today, nearly 80% of all Google Cloud customers are using our AI products, and nearly 90% of the Fortune 100 use Gemini Enterprise. At that kind of scale, organizations have moved past experimentation and are running their business on it.\nWork now starts in the prompt window.\nTo meet this moment, today we are excited to announce the Gemini agent: your new single, universal agent for work. It has all of your business context and can be use",
+  "kind": "new_product",
+  "company": "Google"
+ },
+ {
+  "id": 891,
+  "source_name": "claudeai",
+  "origin": "x",
+  "title": "Claude Dashboards and Claude Motion are in beta today.",
+  "body": "POST by @claudeai on X (https://x.com/claudeai/status/2108271552991252810):\nClaude Dashboards and Claude Motion are in beta today.\n\nAsk Claude to turn your data into live dashboards and your ideas into animated explainers. https://x.com/claudeai/status/2108271552991252810/video/1",
+  "article_text": "",
+  "kind": "new_product",
+  "company": "Anthropic"
+ },
+ {
+  "id": 893,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Anthropic Launches OSS Scanner: Free AI Vulnerability Detection for Open-Source Projects",
+  "body": "Source: anthropic.com | Added to Future Tools: 2026-10-08T19:37:04.530Z | Release date: 2026-10-08 | Paywalled: no",
+  "article_text": "Subscribe to the Frontier Red Team newsletter\nGet updates on our latest red-teaming research and findings.\nWe’re launching OSS Scanner, an opt-in vulnerability scanner for the open-source ecosystem informed by our experience using Claude to find vulnerabilities during Project Glasswing. Projects that join will receive thorough, periodic security scans by our strongest models at no cost.\nLanguage models have rapidly advanced in their ability to discover vulnerabilities, as we have reported extensively on this blog. On CyberGym, one academic vulnerability-finding benchmark, LLMs have gone from finding under 20% of vulnerabilities at the beginning of last year to finding over 85% this year. As a result, open source maintainers have gone from receiving mostly slop from LLMs to receiving high-quality bug reports.\nOver the last six months, we’ve used our latest models to scan for vulnerabilities in some of the world’s most important software projects. We have discovered over 29,000 candidate vulnerabilities, but have only been able to manually review and triage approximately 6,000 of these. While 6,000 vulnerabilities is significant, we remain bottlenecked on our human capacity to validate these findings.\nWe are working on scaling our vulnerability disclosures. Meanwhile, with increasing frequency, maintainers who receive our first reports simply ask us for a bulk submission of all the unverified reports with proposed patches: to date, we have sent nearly 5,000 reports directly to maintainers after they asked to receive everything we had—even if it wasn’t validated. Since exploits can now be developed in minutes, projects that can find and address vulnerabilities faster can better secure their software against attackers who are racing to find and leverage these same weaknesse",
+  "kind": "new_product",
+  "company": "Anthropic"
+ },
+ {
+  "id": 896,
+  "source_name": "claudedevs",
+  "origin": "x",
+  "title": "ICYMI we've cut the price of Sonnet 5.5 cache reads in half.",
+  "body": "POST by @claudedevs on X (https://x.com/ClaudeDevs/status/2108287358374482381):\nICYMI we've cut the price of Sonnet 5.5 cache reads in half.\n\nIn the Claude Platform, it's now $0.10 per million tokens (input is $2, output is $10). \n\nThis means Sonnet 5.5 now runs ~20% cheaper on most agentic work. \n\n(API only, no change to Claude Code usage limits.)",
+  "article_text": "",
+  "kind": "pricing",
+  "company": "Anthropic"
+ },
+ {
+  "id": 904,
+  "source_name": "claudedevs",
+  "origin": "x",
+  "title": "How to build automations with Claude Managed Agents:",
+  "body": "POST by @claudedevs on X (https://x.com/ClaudeDevs/status/2108320296323477683):\nHow to build automations with Claude Managed Agents: https://claude.dev/blog/building-effective-agent-automations/\n\nDeploy an agent that reads Slack/GitHub on a schedule (with credentials and memory) and posts updates. You can set it up with a Claude Code command and use the new API credits included in Max and Team.",
+  "article_text": "POST by @claudedevs on X (https://x.com/ClaudeDevs/status/2108320296323477683):\nHow to build automations with Claude Managed Agents: https://claude.dev/blog/building-effective-agent-automations/\n\nDeploy an agent that reads Slack/GitHub on a schedule (with credentials and memory) and posts updates. You can set it up with a Claude Code command and use the new API credits included in Max and Team.\n\nLINKED PAGE 1: https://claude.dev/blog/building-effective-agent-automations/\nA reference implementation walkthrough with common failure modes\nAs AI accelerates our work, it's getting harder to keep up. At Anthropic, simple agent automations are frequently used to help. They often run on a schedule, gather context in the background, and proactively tell us what we need to know. But it’s difficult to build effective agent automations: they can lose access to a source without anyone noticing or fail to follow our preferences.\nUsing Claude Managed Agents (beta), we built a reference implementation that reads custom sources (e.g., Slack and GitHub repos) on a schedule, tracks what changed since the last run, and posts what you need to know (e.g., to Slack). In this article, we walk through each step, share a reference implementation, and provide a command to run in Claude Code that configures the agent for you.\nThe reference implementation is here. For an interactive walkthrough, run the command below in Claude Code. The claude-api skill can help set up the agent following the guidance in this article:\n/claude-api managed-agents-onboard https://claude.dev/blog/building-effective-agent-automations/\nFor this reference implementation, you need a Slack app (create it from the manifest) and a GitHub token. The provided files (shown below) are configuration for Claude API resources, includ",
+  "kind": "guide",
+  "company": "Anthropic"
+ },
+ {
+  "id": 906,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "ATOMIC 🔥: A new open-source Atomic Agent Desktop app is now available for macOS, Windows, and Linux!",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2108327626523697464):\nATOMIC 🔥: A new open-source Atomic Agent Desktop app is now available for macOS, Windows, and Linux!\n\nThe app lets users run open models like Qwen and Gemma locally.\n\nThe app is free, requires no account, and connects to a cloud model only when selected.\n\n> A setup wizard checks the machine's RAM and suggests which models will run well.\n\n> Fusion lets a cloud model plan a task while up to 8 local agents carry it out.\n\n> You can import setups from Claude Code, Codex, Hermes, and OpenClaw in a few clicks.\n\nQUOTED POST by @atomicagent_io (https://x.com/atomicagent_io/status/2108325479082270746):\nMeet Atomic Agent Desktop!\n\n✦ Local AI-first agent for Mac, Windows &amp; Linux\n✦ 4x bigger context window on local models with TurboQuant\n✦ Atomic Fusion orchestrates cloud and local models to reduce costs\n\nDownload Free &amp; Private Agent → https://atomicagent.io https://x.com/atomicagent_io/status/2108325479082270746/video/1",
+  "article_text": "",
+  "kind": "tool",
+  "company": "other"
+ },
+ {
+  "id": 607,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "299 google-agents-cli-observability google/agents-cli 901",
+  "body": "google-agents-cli-observability\nSet up tracing, logging, and monitoring for deployed ADK agents across Cloud Trace, BigQuery, and third-party platforms.\n- Four observability tiers: Cloud Trace (always enabled, distributed tracing), Prompt-Response Logging (GenAI interactions to GCS/BigQuery), BigQuery Agent Analytics (structured agent events), and third-party integrations (AgentOps, Phoenix, MLflow, Weave, Freeplay, and others)\n- For Agent Runtime deployments, run agents-cli infra single-project before first deploy to provision Terraform-managed infrastructure (service account, GCS bucket, BigQuery dataset); post-deployment setup requires manual IAM and env var configuration\n- Cloud Trace works out of the box with OpenTelemetry spans tracking invocation flow, LLM calls, and tool execution; accessible via Cloud Console Trace explorer\n- Prompt-response logging is privacy-preserving by default (metadata only via OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=NO_CONTENT ); disabled locally unlessLOGS_BUCKET_NAME is set\n- Includes troubleshooting guide covering missing traces, privacy misconfiguration, BigQuery setup, and cost optimization strategies\nObservability Guide\nCloud Trace works out of the box — no infrastructure needed. Prompt-response logging and BigQuery Agent Analytics require Terraform-provisioned infrastructure (service account, GCS bucket, BigQuery dataset). Run agents-cli infra single-project --apply --project PROJECT_ID to provision these resources. Go projec",
+  "article_text": "google-agents-cli-observability\nSet up tracing, logging, and monitoring for deployed ADK agents across Cloud Trace, BigQuery, and third-party platforms.\n- Four observability tiers: Cloud Trace (always enabled, distributed tracing), Prompt-Response Logging (GenAI interactions to GCS/BigQuery), BigQuery Agent Analytics (structured agent events), and third-party integrations (AgentOps, Phoenix, MLflow, Weave, Freeplay, and others)\n- For Agent Runtime deployments, run agents-cli infra single-project before first deploy to provision Terraform-managed infrastructure (service account, GCS bucket, BigQuery dataset); post-deployment setup requires manual IAM and env var configuration\n- Cloud Trace works out of the box with OpenTelemetry spans tracking invocation flow, LLM calls, and tool execution; accessible via Cloud Console Trace explorer\n- Prompt-response logging is privacy-preserving by default (metadata only via OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=NO_CONTENT ); disabled locally unlessLOGS_BUCKET_NAME is set\n- Includes troubleshooting guide covering missing traces, privacy misconfiguration, BigQuery setup, and cost optimization strategies\nObservability Guide\nCloud Trace works out of the box — no infrastructure needed. Prompt-response logging and BigQuery Agent Analytics require Terraform-provisioned infrastructure (service account, GCS bucket, BigQuery dataset). Run agents-cli infra single-project --apply --project PROJECT_ID to provision these resources. Go projects get the BigQuery telemetry stack too; the GCS completion upload behind prompt-response logging and the BigQuery Agent Analytics plugin are Python only. See references/cloud-trace-and-logging.md for details, env vars, and verification commands. If your project isn't scaffolded yet, see /google-age",
+  "kind": "skill",
+  "company": "Google"
+ },
+ {
+  "id": 655,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "337 security-audit cloudflare/security-audit-skill 908",
+  "body": "security-audit\nSecurity Audit\nFind vulnerabilities that violate a real trust boundary, then give owners the source evidence, safe reproduction, priority, and smallest effective fix. This is a defensive, source-first workflow. A candidate without a concrete affected principal, resource, or security outcome is not a confirmed finding.\nOperating modes\nThis skill is guidance by default. Loading it does not authorize the complete audit workflow or file creation.\n- Guidance mode: For security questions, focused reviews, methodology, triage, or investigation of specific findings, use only the relevant parts of this skill. Do not automatically run all six phases, create an output directory, or write audit artifacts. You may launch focused agents when useful; they return results to the current task.\n- Full audit mode: Use the complete workflow when the user explicitly asks to audit or pen-test a codebase, asks for a full, comprehensive, or end-to-end security review, or requests report artifacts. Run all six phases and write the files defined below.\nIf the request could mean either mode, ask one focused question before creating files or starting the complete workflow.\nPlatform terminology\nThis skill is agent-neutral:",
+  "article_text": "security-audit\nSecurity Audit\nFind vulnerabilities that violate a real trust boundary, then give owners the source evidence, safe reproduction, priority, and smallest effective fix. This is a defensive, source-first workflow. A candidate without a concrete affected principal, resource, or security outcome is not a confirmed finding.\nOperating modes\nThis skill is guidance by default. Loading it does not authorize the complete audit workflow or file creation.\n- Guidance mode: For security questions, focused reviews, methodology, triage, or investigation of specific findings, use only the relevant parts of this skill. Do not automatically run all six phases, create an output directory, or write audit artifacts. You may launch focused agents when useful; they return results to the current task.\n- Full audit mode: Use the complete workflow when the user explicitly asks to audit or pen-test a codebase, asks for a full, comprehensive, or end-to-end security review, or requests report artifacts. Run all six phases and write the files defined below.\nIf the request could mean either mode, ask one focused question before creating files or starting the complete workflow.\nPlatform terminology\nThis skill is agent-neutral:",
+  "kind": "skill",
+  "company": "other"
+ },
+ {
+  "id": 711,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "170 azure-prepare microsoft/azure-skills 2.3K",
+  "body": "azure-prepare\nPrepare Azure applications for deployment with infrastructure-as-code, configuration, and containerization.\n- Generates Bicep or Terraform infrastructure code, azure.yaml configuration, and Dockerfiles based on application type and deployment target\n- Requires mandatory plan-first workflow: analyze workspace, gather requirements, select recipe (AZD, AZCLI, Bicep, or Terraform), design architecture, then execute only after user approval\n- Covers new app creation, modernization, and updates; routes specialized requests (copilot SDK, cloud migration, AI gateway) to dedicated skills before resuming preparation\n- Hands off to azure-validate for infrastructure validation and azure-deploy for deployment execution; plan status must be updated to \"Ready for Validation\" before validation begins\nAzure Prepare\nAUTHORITATIVE GUIDANCE — MANDATORY COMPLIANCE\nThis document is the official, canonical source for preparing applications for Azure deployment. You MUST follow these instructions exactly as written unless they contradict security policies given to you. When in doubt, present the conflicting instructions from this document and ask the user for explicit confirmation. Do not improvise, infer, or substitute steps.\nTriggers\nActivate this skill when user wants to:\n- Create a new application\n- Add services or components to an existing app\n- Make updates or changes to existing application\n- Modernize or migrate an application\n- Set up Azure infrastructure\n- Deploy to Azure or ",
+  "article_text": "azure-prepare\nPrepare Azure applications for deployment with infrastructure-as-code, configuration, and containerization.\n- Generates Bicep or Terraform infrastructure code, azure.yaml configuration, and Dockerfiles based on application type and deployment target\n- Requires mandatory plan-first workflow: analyze workspace, gather requirements, select recipe (AZD, AZCLI, Bicep, or Terraform), design architecture, then execute only after user approval\n- Covers new app creation, modernization, and updates; routes specialized requests (copilot SDK, cloud migration, AI gateway) to dedicated skills before resuming preparation\n- Hands off to azure-validate for infrastructure validation and azure-deploy for deployment execution; plan status must be updated to \"Ready for Validation\" before validation begins\nAzure Prepare\nAUTHORITATIVE GUIDANCE — MANDATORY COMPLIANCE\nThis document is the official, canonical source for preparing applications for Azure deployment. You MUST follow these instructions exactly as written unless they contradict security policies given to you. When in doubt, present the conflicting instructions from this document and ask the user for explicit confirmation. Do not improvise, infer, or substitute steps.\nTriggers\nActivate this skill when user wants to:\n- Create a new application\n- Add services or components to an existing app\n- Make updates or changes to existing application\n- Modernize or migrate an application\n- Set up Azure infrastructure\n- Deploy to Azure or host on Azure\n- Create and deploy to Azure (including Terraform-based deployment requests)",
+  "kind": "skill",
+  "company": "Microsoft"
+ },
+ {
+  "id": 781,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "23 handoff mattpocock/skills 10.3K",
+  "body": "handoff\nSummarize conversations into handoff documents for seamless agent-to-agent transitions.\n- Compacts current conversation context into a structured document saved to the OS temp directory, enabling fresh agents to resume work without re-reading full chat history\n- Automatically suggests relevant skills the next agent should invoke based on conversation content\n- Avoids duplication by referencing existing artifacts (PRDs, plans, ADRs, issues, commits, diffs) by path or URL rather than repeating their content\n- Redacts sensitive data including API keys, passwords, and personally identifiable information before handoff\n- Tailors handoff focus based on user-provided arguments describing the next session's goals\nWrite a handoff document summarising the current conversation so a fresh agent can continue the work. Save to the temporary directory of the user's OS ($TMPDIR, else /tmp; %TEMP% on Windows) - not the current workspace.\nInclude a \"suggested skills\" section in the document, naming which skills the next agent should call the Skill tool for.\nDo not duplicate content already captured in other artifacts (specs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.\nRedact any sensitive information, such as API keys, passwords, or personally identifiable information.\nIf the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.",
+  "article_text": "handoff\nSummarize conversations into handoff documents for seamless agent-to-agent transitions.\n- Compacts current conversation context into a structured document saved to the OS temp directory, enabling fresh agents to resume work without re-reading full chat history\n- Automatically suggests relevant skills the next agent should invoke based on conversation content\n- Avoids duplication by referencing existing artifacts (PRDs, plans, ADRs, issues, commits, diffs) by path or URL rather than repeating their content\n- Redacts sensitive data including API keys, passwords, and personally identifiable information before handoff\n- Tailors handoff focus based on user-provided arguments describing the next session's goals\nWrite a handoff document summarising the current conversation so a fresh agent can continue the work. Save to the temporary directory of the user's OS ($TMPDIR, else /tmp; %TEMP% on Windows) - not the current workspace.\nInclude a \"suggested skills\" section in the document, naming which skills the next agent should call the Skill tool for.\nDo not duplicate content already captured in other artifacts (specs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.\nRedact any sensitive information, such as API keys, passwords, or personally identifiable information.\nIf the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.",
+  "kind": "skill",
+  "company": "other"
+ },
+ {
+  "id": 590,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "192 higgsfield-product-photoshoot higgsfield-ai/skills 1.2K",
+  "body": "higgsfield-product-photoshoot\nProfessional product photography generation across 10 specialized modes via GPT Image 2.\n- Supports 10 modes covering studio shots, lifestyle scenes, closeups with people, Pinterest pins, hero banners, social carousels, ad packs, virtual try-ons, conceptual/surreal products, and image restyling\n- Backend prompt enhancer automatically assembles mode-specific photography vocabulary and structural templates; never requires manual prompt writing\n- Accepts product photos or existing images as references; generates 1–10 coordinated variants with locked visual consistency across multi-slide modes\n- Pre-generation interview asks 3–4 labeled questions to clarify intent, skipping obvious answers; delivers results as clean image URLs only\nProduct Photoshoot\nBrand-image generation via the higgsfield product-photoshoot create command. The CLI calls a backend prompt enhancer that holds mode-specific photography vocabulary and structural templates, then submits to gpt_image_2 and returns image URLs.\nStep 0 — Bootstrap\nBefore any other command:\n- If higgsfield is not on$PATH , install it:curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh\n- If higgsfield account status fails withSession expired /Not authenticated , ask the user to runhiggsfield auth login (interactive) and wait for confirmation.",
+  "article_text": "higgsfield-product-photoshoot\nProfessional product photography generation across 10 specialized modes via GPT Image 2.\n- Supports 10 modes covering studio shots, lifestyle scenes, closeups with people, Pinterest pins, hero banners, social carousels, ad packs, virtual try-ons, conceptual/surreal products, and image restyling\n- Backend prompt enhancer automatically assembles mode-specific photography vocabulary and structural templates; never requires manual prompt writing\n- Accepts product photos or existing images as references; generates 1–10 coordinated variants with locked visual consistency across multi-slide modes\n- Pre-generation interview asks 3–4 labeled questions to clarify intent, skipping obvious answers; delivers results as clean image URLs only\nProduct Photoshoot\nBrand-image generation via the higgsfield product-photoshoot create command. The CLI calls a backend prompt enhancer that holds mode-specific photography vocabulary and structural templates, then submits to gpt_image_2 and returns image URLs.\nStep 0 — Bootstrap\nBefore any other command:\n- If higgsfield is not on$PATH , install it:curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh\n- If higgsfield account status fails withSession expired /Not authenticated , ask the user to runhiggsfield auth login (interactive) and wait for confirmation.",
+  "kind": "skill",
+  "company": "other"
+ },
+ {
+  "id": 728,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "326 deploy-to-vercel vercel-labs/agent-skills 979",
+  "body": "deploy-to-vercel\nDeploy applications and websites to Vercel with automatic git integration and preview URLs.\n- Supports three deployment paths: git-push (ideal for linked projects), direct CLI deployment, and no-auth fallback for sandboxed environments\n- Automatically detects project state (linked via .vercel/project.json or.vercel/repo.json , git remote presence, CLI authentication) and chooses the best deployment method\n- Handles team selection for multi-team accounts and uses --scope to deploy to the correct team\n- Provides preview URLs for all deployments; linked projects with git remotes enable automatic deployments on future pushes\n- Includes fallback scripts for claude.ai and Codex sandboxes that require no authentication, returning both preview and claim URLs\nDeploy to Vercel\nDeploy any project to Vercel. Always deploy as preview (not production) unless the user explicitly asks for production.\nThe goal is to get the user into the best long-term setup: their project linked to Vercel with git-push deploys. Every method below tries to move the user closer to that state.\nStep 1: Gather Project State\nRun all four checks before deciding which method to use:\n# 1. Check for a git remote\ngit remote get-url origin 2>/dev/null\n# 2. Check if locally linked to a Vercel project (either file means linked)\ncat .vercel/project.json 2>/dev/null || cat .vercel/repo.json 2>/dev/null\n# 3. Check if the Vercel CLI is installed and authenticated\nvercel whoami 2>/dev/null",
+  "article_text": "deploy-to-vercel\nDeploy applications and websites to Vercel with automatic git integration and preview URLs.\n- Supports three deployment paths: git-push (ideal for linked projects), direct CLI deployment, and no-auth fallback for sandboxed environments\n- Automatically detects project state (linked via .vercel/project.json or.vercel/repo.json , git remote presence, CLI authentication) and chooses the best deployment method\n- Handles team selection for multi-team accounts and uses --scope to deploy to the correct team\n- Provides preview URLs for all deployments; linked projects with git remotes enable automatic deployments on future pushes\n- Includes fallback scripts for claude.ai and Codex sandboxes that require no authentication, returning both preview and claim URLs\nDeploy to Vercel\nDeploy any project to Vercel. Always deploy as preview (not production) unless the user explicitly asks for production.\nThe goal is to get the user into the best long-term setup: their project linked to Vercel with git-push deploys. Every method below tries to move the user closer to that state.\nStep 1: Gather Project State\nRun all four checks before deciding which method to use:\n# 1. Check for a git remote\ngit remote get-url origin 2>/dev/null\n# 2. Check if locally linked to a Vercel project (either file means linked)\ncat .vercel/project.json 2>/dev/null || cat .vercel/repo.json 2>/dev/null\n# 3. Check if the Vercel CLI is installed and authenticated\nvercel whoami 2>/dev/null",
+  "kind": "skill",
+  "company": "other"
+ },
+ {
+  "id": 582,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "89 remotion-multimedia remotion-dev/skills 3.1K",
+  "body": "remotion-multimedia\nMediabunny is a multimedia library for dealing with audio and video in the browser. Here is a compact overview of its capabilities: https://mediabunny.dev/llms.txt\nGetting audio duration\nSee get-audio-duration.md for getting the duration of an audio file in seconds with Mediabunny.\nGetting video dimensions\nSee get-video-dimensions.md for getting the width and height of a video file with Mediabunny.\nGetting video duration\nSee get-video-duration.md for getting the duration of a video file in seconds with Mediabunny.",
+  "article_text": "remotion-multimedia\nMediabunny is a multimedia library for dealing with audio and video in the browser. Here is a compact overview of its capabilities: https://mediabunny.dev/llms.txt\nGetting audio duration\nSee get-audio-duration.md for getting the duration of an audio file in seconds with Mediabunny.\nGetting video dimensions\nSee get-video-dimensions.md for getting the width and height of a video file with Mediabunny.\nGetting video duration\nSee get-video-duration.md for getting the duration of a video file in seconds with Mediabunny.",
+  "kind": "skill",
+  "company": "other"
+ },
+ {
+  "id": 921,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "323 lark-slides larksuite/cli 1.1K",
+  "body": "lark-slides\nInstallation\nSummary\nCreate and edit Lark Office slides with XML protocol, supporting presentation creation, page management, and content modification.\n- Supports three creation workflows: one-step creation for simple slides, two-step creation (empty presentation + page-by-page addition) for complex content, and block-level editing of existing pages without reordering\n- Handles slide operations including create, read, delete, and replace at both presentation and individual page levels; automatically parses /slides/ and/wiki/ URLs to extract presentation tokens\n- Requires planning layer (slide_plan.json) before XML generation for new presentations or major rewrites; includes visual planning (layout_type, visual_focus, text_density) and asset planning with fallback strategies\n- Enforces strict XML validation: text must use <content><p>...</p></content> , images require uploaded file_tokens (no external URLs), and all complex content undergoes post-creation verification against validation checklist\n- Provides template search, summarization, and extraction via template_tool.py to avoid boilerplate; prioritizes user identity (--as user ) for personal content operations\nSKILL.md\nslides (v1)\n本技能文档较长，务必使用 Read 工具阅读两次，必须阅读完整全文。\n权威经验\n权威经验是全局硬约束和高频易错点，必须牢记并严格遵守。",
+  "article_text": "lark-slides\nInstallation\nSummary\nCreate and edit Lark Office slides with XML protocol, supporting presentation creation, page management, and content modification.\n- Supports three creation workflows: one-step creation for simple slides, two-step creation (empty presentation + page-by-page addition) for complex content, and block-level editing of existing pages without reordering\n- Handles slide operations including create, read, delete, and replace at both presentation and individual page levels; automatically parses /slides/ and/wiki/ URLs to extract presentation tokens\n- Requires planning layer (slide_plan.json) before XML generation for new presentations or major rewrites; includes visual planning (layout_type, visual_focus, text_density) and asset planning with fallback strategies\n- Enforces strict XML validation: text must use <content><p>...</p></content> , images require uploaded file_tokens (no external URLs), and all complex content undergoes post-creation verification against validation checklist\n- Provides template search, summarization, and extraction via template_tool.py to avoid boilerplate; prioritizes user identity (--as user ) for personal content operations\nSKILL.md\nslides (v1)\n本技能文档较长，务必使用 Read 工具阅读两次，必须阅读完整全文。\n权威经验\n权威经验是全局硬约束和高频易错点，必须牢记并严格遵守。",
+  "kind": "skill",
+  "company": "other"
+ },
+ {
+  "id": 555,
+  "source_name": "mindstudio",
+  "origin": "rss",
+  "title": "How to Run Kolibri-1 Locally: Aleph Alpha's German-English MoE Model",
+  "body": "Kolibri-1 is Aleph Alpha's 78B MoE model with 3.46B active params. Here's what hardware you need and how to serve it with vLLM.",
+  "article_text": "",
+  "kind": "guide",
+  "company": "other"
+ },
+ {
+  "id": 766,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Musubi Releases PolicyLM-1.7B: Open-Weight Content Policy Classifier Under 100ms",
+  "body": "Source: musubilabs.ai | Added to Future Tools: 2026-10-06T21:38:16.861Z | Release date: 2026-10-06 | Paywalled: no",
+  "article_text": "PolicyLM-1.7B is for Trust & Safety teams that need to act on every message right away, such as in live chat, game lobbies, DMs, usernames, or anywhere a decision has to come back before the conversation moves on.\nFixed classifiers are fast and cheap, but they can't read your platform’s unique policy, so every rule change means annotating data and waiting for the model to be retrained. And if you’re using a commercial fixed classifier, you rely entirely on your vendor’s taxonomy and have no room to add your own labels or categories as you need to. On the flip side, an LLM will read your policy well, but most are too slow and expensive for live chat.\nPolicyLM-1.7B is a decision model that gives you a good decision against your own policy and taxonomy right out of the box, at classifier speed and cost.\nBecause PolicyLM-1.7B reads your policy with every message, it's a good fit for teams whose rules don't map neatly onto anyone's off-the-shelf taxonomy, and where policy changes are frequent enough that you can’t wait on annotation and engineering for every update.\nWe’re releasing it as open weights (Apache 2.0), so it's free to download and use however you like. It's already proven itself in production: a custom fine-tuned version of PolicyLM runs on a platform that handles more than a million messages a day.\n- Fast. Under 100 ms, which is quick enough to keep a live conversation moving. (A median of 35 ms per short chat message on a 24 GB L4 with 6 categories.)\n- Cheap. Score all of your traffic instead of sampling it. Runs on a laptop or on a single 24 GB GPU.\n- Multi-label. Returns all labels and scores at once.\n- Accurate for its size. On our custom-policy benchmark, it beat every other model we ran under 20B parameters. PolicyLM-1.7B ships with two score cutoff preset",
+  "kind": "new_model",
+  "company": "other"
+ },
+ {
+  "id": 772,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "EmbeddingGemma 2 — Google's open 740M embedding model adds images, audio and video",
+  "body": "One small open model that turns text, code, pictures, sound and video into vectors you can search together, on device.",
+  "article_text": "",
+  "kind": "new_model",
+  "company": "Google"
+ },
+ {
+  "id": 778,
+  "source_name": "skills_trending",
+  "origin": "rss",
+  "title": "26 twitter-automation 101-skills/superpowers 10.2K",
+  "body": "[](https://vercel.com \"Made with love by Vercel\")[Skills](https://www.skills.sh/)\n[Packs](https://www.skills.sh/packs)[Topics](https://www.skills.sh/topic)[Official](https://www.skills.sh/official)[Audits](https://www.skills.sh/audits)[Docs](https://www.skills.sh/docs)\nNavigate\n[Packs](https://www.skills.sh/packs)[Topics](https://www.skills.sh/topic)[Official](https://www.skills.sh/official)[Audits](https://www.skills.sh/audits)[Docs](https://www.skills.sh/docs)\n[skills](https://www.skills.sh/)/[101-skills](https://www.skills.sh/101-skills)/[superpowers](https://www.skills.sh/101-skills/superpowers)/twitter-automation\n# twitter-automation\nOriginally from[inference-sh/skills](https://www.skills.sh/inference-sh/skills/twitter-automation)\nInstallation\nCommandPrompt\n`$ npx skills add https://github.com/101-skills/superpowers --skill twitter-automation`\nSKILL.md\n> **Install the belt CLI skill:** `npx skills add belt-sh/cli`\n# Twitter/X Automation\nAutomate Twitter/X via [inference.sh](https://inference.sh) CLI.\n![Twitter/X Automation](https://www.skills.sh/api/image-proxy?url=https%3A%2F%2Fcloud.inference.sh%2Fapp%2Ffiles%2Fu%2F4mg21r6ta37mpaz6ktzwtt8krr%2F01kgad3pxsh3z3hnfpjyjpx4x4.jpeg&s=f8491ab1a817dfbf)\n## Quick Start\n> Requires inference.sh CLI (`belt`). [Install instructions](https://raw.githubusercontent.com/inference-sh/skills/refs/heads/main/cli-install.md)\n\n```\nbelt login\n\n# Post a tweet\nbelt app run x/post-tweet --input '{\"text\": \"Hello from inference.sh!\"}'\n\n```\n\nShow m",
+  "article_text": "[](https://vercel.com \"Made with love by Vercel\")[Skills](https://www.skills.sh/)\n[Packs](https://www.skills.sh/packs)[Topics](https://www.skills.sh/topic)[Official](https://www.skills.sh/official)[Audits](https://www.skills.sh/audits)[Docs](https://www.skills.sh/docs)\nNavigate\n[Packs](https://www.skills.sh/packs)[Topics](https://www.skills.sh/topic)[Official](https://www.skills.sh/official)[Audits](https://www.skills.sh/audits)[Docs](https://www.skills.sh/docs)\n[skills](https://www.skills.sh/)/[101-skills](https://www.skills.sh/101-skills)/[superpowers](https://www.skills.sh/101-skills/superpowers)/twitter-automation\n# twitter-automation\nOriginally from[inference-sh/skills](https://www.skills.sh/inference-sh/skills/twitter-automation)\nInstallation\nCommandPrompt\n`$ npx skills add https://github.com/101-skills/superpowers --skill twitter-automation`\nSKILL.md\n> **Install the belt CLI skill:** `npx skills add belt-sh/cli`\n# Twitter/X Automation\nAutomate Twitter/X via [inference.sh](https://inference.sh) CLI.\n![Twitter/X Automation](https://www.skills.sh/api/image-proxy?url=https%3A%2F%2Fcloud.inference.sh%2Fapp%2Ffiles%2Fu%2F4mg21r6ta37mpaz6ktzwtt8krr%2F01kgad3pxsh3z3hnfpjyjpx4x4.jpeg&s=f8491ab1a817dfbf)\n## Quick Start\n> Requires inference.sh CLI (`belt`). [Install instructions](https://raw.githubusercontent.com/inference-sh/skills/refs/heads/main/cli-install.md)\n\n```\nbelt login\n\n# Post a tweet\nbelt app run x/post-tweet --input '{\"text\": \"Hello from inference.sh!\"}'\n\n```\n\nShow more\nInstalls\n684.2K\nRepository\n[101-skills/superpowers](https://github.com/101-skills/superpowers \"101-skills/superpowers\")\nGitHub Stars\n5\nFirst Seen\nAug 31, 2026\nSecurity Audits\n[ Gen Agent Trust HubPass ](https://www.skills.sh/101-skills/superpowers/twitter-automation/security/agent-trust-hub)[ So",
+  "kind": "skill",
+  "company": "other"
+ },
+ {
+  "id": 806,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "ICYMI 👀: Google released a new Google AI Edge Foresight app for macOS, powered by Gemma 4 and EmbeddingGemma2 for recording voice notes.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2107853628656496657):\nICYMI 👀: Google released a new Google AI Edge Foresight app for macOS, powered by Gemma 4 and EmbeddingGemma2 for recording voice notes. \n\n> The app can connect to your Google Drive in order to build a knowledge graph. \n\n> When transcription is active, it uses local models, Gemma 4 E4B or Gemma 4 12B, to transcribe voice notes and convert them into a new document.\n\nQUOTED POST by @testingcatalog (https://x.com/testingcatalog/status/2107522559109476786):\nGoogle released EmbeddingGemma 2 open  weight model under Apache 2 license! \n\n> “Our lightweight, multimodal embedding model maps text, code, images, video, and audio into a single, unified embedding space.“\n\n> 740M parameter form factor with modular encoders and 8K context window.\n\nEmbedded testing time 👀 https://x.com/googledevs/status/2107502392250183720/video/1",
+  "article_text": "",
+  "kind": "new_product",
+  "company": "Google"
+ },
+ {
+  "id": 811,
+  "source_name": "hf_blog",
+  "origin": "rss",
+  "title": "Multimodal open d1 decision models for the edge",
+  "body": "",
+  "article_text": "- Best decision model under 10B on the Decision Index 0.2.1: d1-3B scores 48.57, ahead of every 4B and 9B model and of Decider 35B-A3B (47.11).\n- Multimodal: d1-3B supports text and images, while d1-omni-600M supports text and images or text and audio\n- Fast: d1-3B answers a question in 16 ms on an NVIDIA Jetson AGX Thor, 26 ms on a Jetson AGX Orin, and 50ms on a Jetson Orin Nano\nThese open d1 decision models are built on our Liquid Foundation Models (LFMs). Unlike our generative models, decision models don’t produce tokens but answer in a single forward pass.\nd1-3B and d1-omni-600M are trained from two very different backbones:\n- d1-3B is trained from LFM2.5-VL-3B, our latest VLM, which is decoder-only. It accepts text and images as inputs.\n- d1-omni-600M is trained from LFM2.5-Encoder-350M, a bidirectional encoder. It adds vision and audio encoders to handle all three modalities. It accepts either text and image, or text and audio as inputs. This model is currently in an early research release and is undergoing further development.\nWe benchmarked d1-3B and d1-omni-600M on seven public datasets spanning reading comprehension, toxicity detection, intent classification, medical QA, and cross-lingual understanding. d1-3B achieves a mean score of 82.9, the highest in the table and above Decider 4B. d1-omni-600M scores 78.4, surpassing Decider 2B (77.1) with only a quarter of the parameters.\nWe validated that d1-3B retains the vision capabilities of its LFM2.5-VL-3B backbone on standard vision benchmarks, and that d1-omni-600M handles all three modalities. We do not report any vision or audio benchmarks, as the Decision Index v0.3 includes only a private vision split and audio decision benchmarks are currently an open problem.\nIn collaboration with NVIDIA, we evaluated d1-3",
+  "kind": "new_model",
+  "company": "other"
+ },
+ {
+  "id": 813,
+  "source_name": "openai",
+  "origin": "rss",
+  "title": "Radisson Hotel Group brings hotel discovery into ChatGPT",
+  "body": "Radisson partnered with Accenture to build a ChatGPT plugin using OpenAI technology, helping travelers find, compare, and book hotels while planning their trips.",
+  "article_text": "Travelers increasingly turn to AI to decide where to stay, often shortlisting hotels or building an entire itinerary before they ever visit a hotel website. Through its partnership with Accenture Song, Radisson Hotel Group is using OpenAI technology to reach guests earlier in that planning journey. The [Radisson Hotels ChatGPT plugin⁠(opens in a new window)](https://chatgpt.com/plugins/plugin_asdk_app_6a9a8d3450b88191835993047364a53b) helps travelers compare hotels and explore travel options through an interactive experience, and early results show booking conversion approximately 1.5 times that of Radisson’s organic search. Alongside the plugin, Radisson is among the hospitality pioneers running [sponsored advertising in ChatGPT⁠(opens in a new window)](https://ads.openai.com/), bringing its branded plugin and paid advertising together as part of an integrated discovery strategy.\n\n## A new front door for hotel discovery\n\nRadisson Hotel Group brings together ten distinctive hotel brands across EMEA and APAC, with more than 1,640 hotels in operation and under development. For the past seven years, Accenture has helped Radisson grow bookings through its direct digital channel, combining digital media strategy and execution with a transformation roadmap for its core digital capabilities. A stronger direct digital channel helps Radisson attract guests more efficiently and build relationships that encourage repeat stays. For hotel owners, this translates into stronger commercial performance and greater long-term value from their partnership with Radisson Hotel Group.\n\nThis work meant Accenture had a front-row seat to AI’s transformative impact on the travel industry. “Almost overnight, there was a new surface where prospects were getting inspired, comparing different alterna",
+  "kind": "other",
+  "company": "OpenAI"
+ },
+ {
+  "id": 842,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "Docker Agent 1.149 — Docker's YAML agent runtime loads skills from GitHub",
+  "body": "Write an agent as a YAML file, give it MCP tools, and run or share it like a container.",
+  "article_text": "Docker · 2026-10-07 · notable\nDocker Agent 1.149 — Docker's YAML agent runtime loads skills from GitHub\nDocker Agent is Docker's Apache-2.0 tool for building AI agents and agent teams in YAML and running them with `docker agent run`. Version 1.149.0 loads skills from public GitHub repos and adds an evaluator backend.\nWrite an agent as a YAML file, give it MCP tools, and run or share it like a container.\nKey specs\nWhat is it?\nRelease 1.149.0 of Docker Agent, out on 7 October 2026, lets a `skills:` entry point straight at a public GitHub repository and adds a dedicated evaluator service as an alternative to LLM-as-judge. Docker Agent itself is Docker Engineering's agent builder and runtime, a plugin for the docker CLI that Docker Desktop 4.63+ already includes. It reached the Hacker News front page the same day.\nHow does it work?\nEach agent in a Docker Agent YAML file has a model, a description, an instruction and toolsets; a root agent can delegate work to specialist agents. Tools come from built-in think, todo and memory tools or any MCP server, including ones that run as Docker containers. Models can be OpenAI, Anthropic, Gemini, Bedrock, Mistral, xAI or local ones through Docker Model Runner, and finished agents can be pushed to and pulled from any OCI registry.\nWhy does it matter?\nTeams that already use Docker get an agent runtime inside a tool they know, with agents that are versioned files rather than code. Loading skills by GitHub URL removes a copy step when reusing shared skill libraries, and the new evaluator backend gives agent tests a judge that does not depend on another LLM call.\nWho is it for?\ndevelopers already working with Docker who want to build agents\nTry it\ndocker agent run",
+  "kind": "feature",
+  "company": "other"
+ },
+ {
+  "id": 861,
+  "source_name": "testingcatalog",
+  "origin": "x",
+  "title": "GOOGLE 🔥: A new Gemini Agent for Gemini Enterprise has been announced as a part of Gemini at Work updates.",
+  "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2108201283777700103):\nGOOGLE 🔥: A new Gemini Agent for Gemini Enterprise has been announced as a part of Gemini at Work updates.\n\n- Gemini, a single, universal agent for work that answers your questions, handles your knowledge work, creates your images and media, and writes and runs code. \n\n- Inline in Workspace, Gemini works directly inside Gmail, Drive, Docs, Slides, Sheets, Chat, and Calendar, carrying the same memory, skills, and controls it has everywhere else.\n\n- New data and analytics skills that allow both technical teams and everyday business users to use plain-language questions to get to actionable operational insights in minutes. \n\n- Industry-specific specialization with tools, skills, connectors and knowledge specific for financial services and legal teams.",
+  "article_text": "",
+  "kind": "new_product",
+  "company": "Google"
+ },
+ {
+  "id": 878,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "Microsoft Execution Containers (MXC) — Windows agent sandbox goes GA",
+  "body": "Windows now gives AI agents an OS-enforced sandbox, and Microsoft is pushing more models to run locally on PCs.",
+  "article_text": "Microsoft · 2026-10-07 · major\nMicrosoft Execution Containers (MXC) — Windows agent sandbox goes GA\nMicrosoft Execution Containers (MXC) is now generally available on Windows 11. It runs AI agents under a declared file, network and UI policy. Microsoft also showed local models on Windows, including a 3-bit MAI-Code-1.1-Flash.\nWindows now gives AI agents an OS-enforced sandbox, and Microsoft is pushing more models to run locally on PCs.\nQuick facts\nWhat is it?\nMicrosoft Execution Containers (MXC) reached general availability on Windows 11 on 7 October 2026, at Microsoft's Windows and Surface event. Developers declare which files and network destinations an agent or its generated code may use, and Windows enforces that policy at runtime. The SDK and schema are open source under MIT at microsoft/mxc.\nHow does it work?\nOne JSON policy is mapped onto a backend per OS: AppContainer process containers on Windows, Seatbelt on macOS and Bubblewrap on Linux, plus Windows-only session containers, WSL containers and an experimental microVM. The policy sits outside the workload, so an agent cannot give itself more access. A learning mode blocks ungranted actions and writes a JSON report to help write the policy.\nWhy does it matter?\nAgents that run shell commands on a laptop are a growing security risk, and MXC moves the guard rail into the operating system instead of each agent. GitHub Copilot, OpenAI Codex, OpenClaw, Replit, LM Studio and Unsloth AI already support it, with Claude Code, Manus and Perplexity named as coming. The same event added llama.cpp support to Windows ML and showed local models such as MAI-Code-1.1-Flash and DeepSeek V4 Flash.\nWho is it for?\ndevelopers shipping local agents, Windows IT and security teams\nFrequently asked questions\n- Which AI agents support Mic",
+  "kind": "new_product",
+  "company": "Microsoft"
+ },
+ {
+  "id": 887,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Grok Bot Gains X Search and Monitoring Capabilities for All Users",
+  "body": "Source: Grok Bot on X | Added to Future Tools: 2026-10-08T18:44:12.243Z | Release date: 2026-10-07 | Paywalled: no",
+  "article_text": "",
+  "kind": "feature",
+  "company": "xAI"
+ },
+ {
+  "id": 899,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "GPT-6.1 Sol Ultrafast Released Alongside Instant Steering for Real-Time Model Adjustments",
+  "body": "Source: Tibo on X | Added to Future Tools: 2026-10-08T20:47:12.201Z | Release date: 2026-10-08 | Paywalled: no",
+  "article_text": "",
+  "kind": "feature",
+  "company": "OpenAI"
+ },
+ {
+  "id": 901,
+  "source_name": "futuretools",
+  "origin": "rss",
+  "title": "Claude Science Helps Create First Complete UV Light Map of the Entire Sky",
+  "body": "Source: anthropic.com | Added to Future Tools: 2026-10-08T20:45:30.302Z | Release date: 2026-10-08 | Paywalled: no",
+  "article_text": "Subscribe to Anthropic Science\nFeatures on AI-assisted discoveries, practical workflows, and field notes across the sciences.\nHere, Brice Ménard, an astrophysicist at Johns Hopkins University and a researcher at Anthropic, explains how he worked with Claude Science to produce the first complete map of the sky in UV light. The map will be a valuable educational tool, allowing students to see in detail the rich structure of the Milky Way visible at this wavelength.\nThe entire sky, with the galactic center in the middle, in the ultraviolet (combining far-UV 154 nm and near-UV 232 nm). About a third of this map, including much of the galactic plane, was predicted with Claude Science using the method outlined in this post. Additional layers of the map label each pixel as “measured” or “predicted” and provide uncertainty estimates; you can see it here.\n \n \nWhen I teach astrophysics, I often begin by showing my students that the sky looks completely different depending on the wavelength you observe it in. Each brings out different features. In visible light, one mainly sees stars. Switching to infrared reveals the glow of tiny grains of dust concentrated in a band along the Milky Way. In radio waves, the stars and dust fade and hydrogen gas—the raw material from which new stars form—becomes visible. And in X-rays, one can see violent phenomena, like stars exploding, or matter spiraling into a black hole. Together, these features let astronomers understand how gas collapses into stars, how stars seed the galaxy with dust, and how galaxies like ours take shape.\nWhen talking about UV light and how it reveals dust illuminated by starlight, from the clouds around young stars to the rings left by stellar explosions, I have always had to apologize. The only UV map I could show was fu",
+  "kind": "other",
+  "company": "Anthropic"
+ },
+ {
+  "id": 551,
+  "source_name": "ai_tldr",
+  "origin": "rss",
+  "title": "Strata v0.1.39 — Qwen3.8-Flash-Next 125B on a 12 GB gaming GPU",
+  "body": "A one-click engine that splits a 125B open model across your GPU, RAM, CPU and SSD so it runs on a normal gaming PC.",
+  "article_text": "",
+  "kind": "tool",
+  "company": "other"
+ }
+]

@@ -4,7 +4,7 @@ The reader is a regular person who uses AI to get things done: a freelancer, a s
 
 So the test is never "is this important to the AI industry?". It is: **can our reader do something new today because of this?** Try a new feature, use a free tool, save time with a guide, pay less. A story can be huge for the industry and still fail that test. Most AI news fails it.
 
-For each item, decide five things.
+Each item arrives already labelled with its KIND (new_model, feature, tool, skill, guide...) and the COMPANY that made it. Those labels are context for you; they are not your job. For each item, decide four things.
 
 ## 1. Is it news, or a genuinely useful new resource?
 Something must have been RELEASED, LAUNCHED, ANNOUNCED or PUBLISHED: a model, a feature, an app, a tool, a plugin, a price, or a new guide or course from the people who make the product.
@@ -24,21 +24,13 @@ Mark relevant=false for:
   writing marketing copy, a sales framework, a productivity system, a design process. The test: is the
   news about something AI can NEWLY do, or a new AI product? "A structured way to edit your marketing
   copy in seven steps" and "how sales leaders should decide how their company sells" are relevant=false,
-  topic "other", even when they come from an AI skills site.
+  even when they come from an AI skills site.
 
-A real release that is too small or too technical for this channel is still news: mark relevant=true and score it low in step 4.
+A real release that is too small or too technical for this channel is still news: mark relevant=true and score it low in step 3.
 
-## 2. Which kind is it?
-* "launch"   — a well-known AI company ships or updates its own model or product: a new ChatGPT, Claude, Gemini, Grok, Copilot, Midjourney, Suno, ElevenLabs, Runway or Canva AI feature, model or plan
-* "tool"     — a new app, website, browser extension, plugin, open-source project or template that someone made and you can use
-* "skill"    — a skill, skill pack or prompt pack that teaches an AI assistant (Claude, ChatGPT, Codex) a new job.
-               Use "skill" for these, never "tool": the channel limits how many skills it posts a day
-* "resource" — a guide, prompt pack, free course, cheat sheet or playbook, NEW, and best when it comes from the company that makes the product
-* "other"    — everything else, including research papers, benchmarks, funding, business deals, company drama and hardware
+Judge by the CONTENT, not the source. OpenAI's news feed posts customer stories as well as launches.
 
-Judge by the CONTENT, not the source. OpenAI's news feed posts customer stories ("other") as well as launches ("launch").
-
-## 3. Who can use it today? — answer this BEFORE you score
+## 2. Who can use it today? — answer this BEFORE you score
 
 Name the ONE group who can actually use this, today, without special skills:
 
@@ -53,7 +45,7 @@ Name the ONE group who can actually use this, today, without special skills:
 
 "none" caps the score at 3, which means the item is not published. That is this field's purpose.
 
-## 4. Usefulness (1-5)
+## 3. Usefulness (1-5)
 
 * 5 — Something a large share of our readers will use this week.
       A new main model or a big new ability in ChatGPT, Claude or Gemini that ordinary users get now.
@@ -114,39 +106,39 @@ If you are hesitating between 3 and 4, it is a 3.
 ### Worked examples
 
 "OpenAI releases ChatGPT Images 2.5 for all users, adds Sketch and templates"
-    → topic "launch", who_can_use "everyone", importance 5.
+    → who_can_use "everyone", importance 5.
 
 "Free open-source icon library: 900 icons in five styles, commercial use allowed"
-    → topic "tool", who_can_use "creators", importance 4.
+    → who_can_use "creators", importance 4.
 
 "A prompt that turns ChatGPT or Claude into a refund assistant"
-    → topic "tool", who_can_use "everyone", importance 4.
+    → who_can_use "everyone", importance 4.
 
 "Unity releases an official Claude Code plugin with 29 game-dev skills"
-    → topic "tool", who_can_use "developers", importance 4. A known company, a big new ability.
+    → who_can_use "developers", importance 4. A known company, a big new ability.
 
 "Claude Code 2.1.288 — resumes after timeouts, adds a --max-findings option"
-    → topic "launch", who_can_use "developers", importance 3. A version update with fixes.
+    → who_can_use "developers", importance 3. A version update with fixes.
 
 "How to install and build Claude Code mods: a setup guide" (MindStudio)
-    → topic "resource", who_can_use "developers", importance 3. A third party's guide to a release.
+    → who_can_use "developers", importance 3. A third party's guide to a release.
 
 "FLUX 3 Image: place objects with boxes, 4K output; available now on the BFL API, open weights later"
-    → topic "launch", who_can_use "developers", importance 4. A new model from a major image-AI company.
+    → who_can_use "developers", importance 4. A new model from a major image-AI company.
 
 "Quantized Qwen 27B keeps quality at 4 bits, fits on an RTX 4090"
-    → topic "other", who_can_use "none", importance 3. Model files and a benchmark.
+    → who_can_use "none", importance 3. Model files and a benchmark.
 
 "Show HN: Offrun – manage every coding agent from one workspace"
-    → topic "tool", who_can_use "developers", importance 3. An unknown tool for programmers.
+    → who_can_use "developers", importance 3. An unknown tool for programmers.
 
 "Anthropic invests $100 million to train 10,000 engineers"
-    → topic "other", who_can_use "none", importance 2. Company news, nothing to use.
+    → who_can_use "none", importance 2. Company news, nothing to use.
 
 "ChatGPT Dots vs Meta Muse vs Grok: Which Always-On AI Assistant Wins?"
     → relevant=false. A third-party comparison.
 
-## 5. Why?
+## 4. Why?
 One short sentence. If you scored it below 4, say what it lacks: "a benchmark result, nothing to try", "waitlist only", "needs a GPU and a terminal". That sentence is read by a human reviewing this filter, so be concrete.
 
 ## Important

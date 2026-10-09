@@ -10,12 +10,13 @@
 import { Suspense, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { CompaniesView } from "@/components/CompaniesView";
 import { GraphViewer } from "@/components/GraphViewer";
 import { Header } from "@/components/Header";
 import { NodesViewer } from "@/components/NodesViewer";
 import { PostsFeed } from "@/components/PostsFeed";
 import { StatsPanel } from "@/components/StatsPanel";
-import { StoriesView } from "@/components/StoriesView";
+
 import { TabNav, TABS, type Tab } from "@/components/TabNav";
 import { Button } from "@/components/ui/button";
 import { useHealth } from "@/hooks/useApi";
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 
 const TAB_CONTENT: Record<Tab, React.ComponentType> = {
   Posts: PostsFeed,
-  Stories: StoriesView,
+  Companies: CompaniesView,
   Stats: StatsPanel,
   Graph: GraphViewer,
   Nodes: NodesViewer,

@@ -1,7 +1,7 @@
-"""GET /api/v1/graph — the pipeline's stations in order, plus live health per
-station (last invocation time, error count) read from the database every request.
-Stations without a dedicated health query report zero errors and an unknown last
-invocation. With no database yet it returns "ready": false.
+"""GET /api/v1/graph — the pipeline's stations in order, with live health per station
+(last invocation time, error count), plus the diagram LangGraph draws of the running graph
+(saved in the meta table by the channel at every start). With no database yet it
+returns "ready": false.
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ router = APIRouter()
 # What each station is called and what it does, for the diagram.
 _STATION_INFO: dict[str, tuple[str, str]] = {
     "dedup": ("Dedup", "Have we already covered this? Five checks, ending in an LLM that reads both texts."),
-    "fetch_article": ("Fetch article", "Reads the full page BEFORE the sorter (plain, then browser, then reader service), finds the product link, pictures and video players."),
+    "fetch_article": ("Fetch article", "Reads the full page first (plain, then browser, then reader service), finds the product link, pictures and video players. A feed article whose page is dated too long ago is dropped."),
+    "labeler": ("Labeler", "Picks the kind (new model, feature, tool, skill, guide...) and the company that made it, from fixed lists. A roundup is dropped here."),
     "sorter": ("Sorter", "Can a regular person use this today? Scores usefulness 1-5; the bar is 4. 'Nobody can use it' caps at 3."),
-    "story_organizer": ("Story organizer", "One product = one story. Same company or same event is not enough."),
-    "gatekeeper": ("Gatekeeper", "Has the story moved? Post, hold, or this is the wrong story."),
+    "company_limit": ("Company limit", "A company's 3rd post of the day waits for its evening digest. A 5/5 always goes."),
     "writer": ("Writer", "Bold first line, • lines, bold key words, link last. No emoji. Simple enough for a 12-year-old."),
     "editor": ("Editor", "Checks the post against the source, including JARGON. Sees its own earlier reason on the rewrite."),
     "repeat_check": ("Repeat check", "The exit. Refuses a finished post that tells the reader what a recent post already did."),
@@ -72,13 +72,16 @@ def _known_node_health(node_id: str) -> dict | None:
             "last_invocation": _max_value("items", "updated_at", "WHERE article_text != ''"),
             "error_count": 0,
         }
-    if node_id == "story_organizer":
+    if node_id == "labeler":
         return {
-            "last_invocation": _max_value("items", "updated_at", "WHERE story_id IS NOT NULL"),
-            "error_count": _sum_counter("story_place_failed"),
+            "last_invocation": _max_value("items", "updated_at", "WHERE company != ''"),
+            "error_count": _sum_counter("label_failed"),
         }
-    if node_id == "gate":
-        return {"last_invocation": _max_value("stories", "last_item_at"), "error_count": 0}
+    if node_id == "company_limit":
+        return {
+            "last_invocation": _max_value("items", "updated_at", "WHERE status = 'waiting_digest'"),
+            "error_count": 0,
+        }
     if node_id == "writer":
         failed = query_one("SELECT COUNT(*) AS n FROM items WHERE status = 'failed'")
         return {
@@ -100,7 +103,7 @@ def _known_node_health(node_id: str) -> dict | None:
 def get_graph():
 
     if not paths.database_ready():
-        return {"ready": False, "nodes": [], "edges": []}
+        return {"ready": False, "nodes": [], "edges": [], "mermaid": ""}
 
     node_ids = list(paths.STATIONS)
 
@@ -119,4 +122,6 @@ def get_graph():
         )
     edges = [{"source": a, "target": b} for a, b in zip(node_ids, node_ids[1:])]
 
-    return {"ready": True, "nodes": nodes, "edges": edges}
+    saved = query_one("SELECT value FROM meta WHERE key = 'graph_mermaid'")
+    return {"ready": True, "nodes": nodes, "edges": edges,
+            "mermaid": saved["value"] if saved else ""}

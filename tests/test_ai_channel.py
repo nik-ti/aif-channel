@@ -531,7 +531,8 @@ def a_third_partys_article_is_never_written_as_just_released():
 @test
 async def the_article_is_read_before_the_sorter_judges():
     from pipeline import graph, stations
-    assert ("fetch_article", "sorter") in {(e.source, e.target) for e in graph.graph.get_graph().edges}
+    edges = {(e.source, e.target) for e in graph.graph.get_graph().edges}
+    assert ("fetch_article", "labeler") in edges and ("labeler", "sorter") in edges
     from nodes import article, sorter
 
     async def fetched(item):
@@ -589,7 +590,7 @@ def _sent_post(topic: str, minutes_ago: int) -> None:
 @test
 def guides_and_skills_are_capped_per_day_and_spaced_out():
     from pipeline import stations
-    assert "skill" in config.VALID_TOPICS and config.TOPIC_LIMITS["resource"][0] == 2
+    assert config.TOPIC_LIMITS["guide"][0] == 2
     assert config.TOPIC_LIMITS["skill"][0] == 2
     db.conn().execute("DELETE FROM posts"); db.conn().commit()
     assert stations.topic_limit_reason("skill") == ""
@@ -599,7 +600,7 @@ def guides_and_skills_are_capped_per_day_and_spaced_out():
     assert stations.topic_limit_reason("skill") == ""                 # spaced enough, 1 of 2 today
     _sent_post("skill", 300)
     assert "2 a day" in stations.topic_limit_reason("skill")          # the day's two are used
-    assert stations.topic_limit_reason("launch") == ""                # launches are not limited
+    assert stations.topic_limit_reason("feature") == ""               # features are not limited
 
 
 @test
@@ -872,6 +873,54 @@ async def the_link_finder_keeps_only_a_real_page_off_x():
         "https://experience.odyssey.systems"
     assert link_finder.demo_link('<a href="https://other.com/try">Try it</a>', "https://odyssey.systems/x") == ""
 
+    async def announcement(**kwargs):
+        return "https://openai.com/index/introducing-something/"
+    openrouter.chat_text, link_finder._loads = announcement, loads
+    try:
+        assert await link_finder.find(item, "<b>Something</b>") == ""
+    finally:
+        openrouter.chat_text, link_finder._loads = real
+
+
+
+# ── A page's own date catches old news ──
+
+@test
+async def an_old_page_is_neither_news_nor_the_link():
+    from nodes import article, link_finder
+    from pipeline import stations
+    from utils import openrouter
+    old = '<meta property="article:published_time" content="2026-05-28"/>'
+    assert article.page_date(old).strftime("%Y-%m-%d") == "2026-05-28"
+    assert article.page_date('{\\"datePublished\\":\\"2026-05-28\\"}').day == 28
+    assert article.page_date("<p>no date</p>") is None
+    assert article.is_old(article.page_date(old), 48) and not article.is_old(None, 48)
+
+    async def fake(**kwargs):
+        return "https://claude.com/blog/introducing-dynamic-workflows-in-claude-code"
+
+    async def loads(url):
+        return url, old
+    real = openrouter.chat_text, link_finder._loads
+    openrouter.chat_text, link_finder._loads = fake, loads
+    item_id = db.insert_item(origin="x", source_name="claudedevs", external_id="dynwf",
+                             url="https://x.com/ClaudeDevs/status/3", title="Dynamic workflows")
+    try:
+        assert await link_finder.find(dict(db.get_item(item_id)), "<b>Dynamic workflows</b>") == ""
+    finally:
+        openrouter.chat_text, link_finder._loads = real
+
+    async def plain(url):
+        return "The article text. " * 40, old
+    real_plain, article._plain = article._plain, plain
+    item_id = db.insert_item(origin="rss", source_name="futuretools", external_id="relisted",
+                             url="https://www.anthropic.com/news/relisted", title="Relisted launch")
+    try:
+        state = await stations.fetch_article_node({"item": dict(db.get_item(item_id))})
+    finally:
+        article._plain = real_plain
+    assert state == {"outcome": "stale"}, state
+    assert db.get_item(item_id)["status"] == "skipped_stale"
 
 # ── A rewrite edits the rejected draft, with every request so far ──
 

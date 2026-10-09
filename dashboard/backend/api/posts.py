@@ -2,7 +2,7 @@
 
 Reads the `items` table (not `posts` — an item may never reach the posts
 table, e.g. if it was rejected before writing), which is what carries all the
-columns the frontend table needs: source, title, story link, status. `body`
+columns the frontend table needs: source, title, kind, company, status. `body`
 and `status_reason` are included too, so the frontend's expandable row can
 show the full item text and the pipeline's reason without a second request.
 
@@ -42,6 +42,8 @@ def get_posts(
     source: str | None = Query(default=None, description="Filter by source_name"),
     status: str | None = Query(default=None, description="Comma-separated item statuses"),
     q: str | None = Query(default=None, max_length=200, description="Keywords, all must match"),
+    company: str | None = Query(default=None, description="Filter by the company that made it"),
+    kind: str | None = Query(default=None, description="Filter by kind (stored in items.topic)"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
@@ -63,6 +65,12 @@ def get_posts(
     if source:
         clauses.append("source_name = ?")
         params.append(source)
+    if company:
+        clauses.append("company = ?")
+        params.append(company)
+    if kind:
+        clauses.append("topic = ?")
+        params.append(kind)
     for term in (q or "").split()[:_MAX_TERMS]:
         pattern = f"%{_escape_like(term)}%"
         clauses.append("(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')")
@@ -91,7 +99,7 @@ def get_posts(
     rows = query(
         f"""
         SELECT id, fetched_at AS time, source_name, title, body, url, story_id,
-               status, status_reason, importance, market, topic, sorter_reason,
+               status, status_reason, importance, market, topic, company, sorter_reason,
                (SELECT p.telegram_message_id FROM posts p
                  WHERE p.item_id = items.id AND p.status = 'sent'
                    AND p.telegram_message_id IS NOT NULL

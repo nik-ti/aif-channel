@@ -14,8 +14,8 @@ from typing import Any
 
 import config
 from utils import persona_loader
-from nodes import (article, dedup, echo, editor, image_analyst, link_finder, media, publisher,
-                   sorter, stories, video_analyst, writer)
+from nodes import (article, company_digest, dedup, echo, editor, image_analyst, labeler,
+                   link_finder, media, publisher, sorter, stories, video_analyst, writer)
 from utils import db, semantic_memory, logger as log_setup
 
 log = log_setup.get("pipeline")
@@ -34,25 +34,42 @@ EDITORIAL_RULES = frozenset({"NO_NEWS", "WRONG_TOPIC"})
 
 # Routing: outcome set means journey over (empty = continue).
 
+# The words returned here are the arrow labels on the dashboard's graph.
+
 def route_after_dedup(state: dict) -> str:
-    return "drop" if state.get("outcome") else "sort"
+    return "repeat" if state.get("outcome") else "new"
 
 
 def route_after_sorter(state: dict) -> str:
-    return "end" if state.get("outcome") else "place"
+    return "below the bar" if state.get("outcome") else "worth it"
+
+
+def route_after_labeler(state: dict) -> str:
+    return "roundup" if state.get("outcome") else "labelled"
+
+
+def route_after_company_limit(state: dict) -> str:
+    return "waits for digest" if state.get("outcome") else "under the limit"
 
 
 async def fetch_article_node(state: dict) -> dict[str, Any]:
     """Read article (writer needs more than headline). Runs on sorter-kept items only.
     Fails open: no article = headline post.
     """
-    if state.get("dry_run") or state.get("sweep"):
+    if state.get("dry_run") or state.get("sweep") or state.get("digest"):
         return {}
-    text = await article.fetch_for(state["item"])
+    try:
+        text = await article.fetch_for(state["item"])
+    except article.StalePage:
+        return {"outcome": "stale"}
     if not text:
         return {}
     # Carried on the item, so a sorter placed after this station reads the article.
     return {"item": {**state["item"], "article_text": text}}
+
+
+def route_after_fetch_article(state: dict) -> str:
+    return "page too old" if state.get("outcome") else "read"
 
 
 def route_after_story_organizer(state: dict) -> str:
@@ -67,17 +84,17 @@ def route_after_gatekeeper(state: dict) -> str:
 
 
 def route_after_writer(state: dict) -> str:
-    return "end" if state.get("outcome") else "edit"
+    return "failed" if state.get("outcome") else "draft"
 
 
 def route_after_repeat_check(state: dict) -> str:
-    return "end" if state.get("outcome") else "send"
+    return "already told" if state.get("outcome") else "new to reader"
 
 
 def route_after_editor(state: dict) -> str:
     if state.get("outcome"):
-        return "end"
-    return "rewrite" if state.get("rewrite_requested") else "publish"
+        return "rejected"
+    return "fixable" if state.get("rewrite_requested") else "approved"
 
 
 async def dedup_node(state: dict) -> dict[str, Any]:
@@ -85,7 +102,7 @@ async def dedup_node(state: dict) -> dict[str, Any]:
     all stories).
     """
     item = state["item"]
-    if state.get("sweep") or state.get("released"):
+    if state.get("sweep") or state.get("released") or state.get("digest"):
         return {}          # judged when it first arrived
     verdict, matched_id, score = await dedup.classify(
         item, with_meaning=True, persist=not state.get("dry_run", False))
@@ -104,6 +121,9 @@ async def dedup_node(state: dict) -> dict[str, Any]:
             db.set_item_status(item["id"], "duplicate", reason)
             db.bump_counter("deduped_fuzzy" if score >= 100 else "deduped_meaning")
         return {"outcome": "duplicate"}
+
+    if not config.STORIES:
+        return _drop_repeat_without_stories(item, matched_id, dry)
 
     # The judge ruled "same event" on two items written differently. Different
     # words carry different facts, and dropping the later one destroyed them: on
@@ -136,13 +156,71 @@ async def dedup_node(state: dict) -> dict[str, Any]:
     return {}
 
 
+# What the item an item repeats ended up as. Only these count: the reader saw it, is
+# about to, or it waits for a digest. A repeat of an item the sorter or editor turned
+# down is let through, since a fuller account of the same news may pass where it did not.
+_COVERED = ("published", "queued", "written", "waiting_digest", "capped", "duplicate",
+            "held", "merged")
+
+
+def _drop_repeat_without_stories(item, matched_id, dry: bool) -> dict[str, Any]:
+    """Drop a same-event repeat of a covered item; let a repeat of a rejected one through."""
+    matched = db.get_item(matched_id)
+    if matched is None or matched["status"] not in _COVERED:
+        log.info("Item %s matches item %s (%s), which never went out — letting it through",
+                 item["id"], matched_id, matched["status"] if matched else "gone")
+        if not dry:
+            db.bump_counter("deduped_let_through")
+        return {}
+    if not dry:
+        db.set_item_status(item["id"], "duplicate",
+                           f"same event as item {matched_id} ({matched['status']})")
+        db.bump_counter("deduped_meaning")
+    return {"outcome": "duplicate"}
+
+
+async def labeler_node(state: dict) -> dict[str, Any]:
+    """Label the kind and the company. A roundup stops here: its items arrive on their own."""
+    item = state["item"]
+    if state.get("sweep") or state.get("released") or state.get("digest") or state.get("forced"):
+        return {}          # labelled when it first arrived
+    dry = state.get("dry_run", False)
+    labels = await labeler.execute(item)
+    if not dry:
+        db.set_item_labels(item["id"], labels["kind"], labels["company"])
+    if labels["kind"] == "roundup":
+        if not dry:
+            db.set_item_status(item["id"], "irrelevant",
+                               f"a roundup of several news items; each arrives on its own: "
+                               f"{labels['reason']}")
+            db.bump_counter("roundup")
+        return {"outcome": "roundup"}
+    return {"item": {**item, "topic": labels["kind"], "company": labels["company"]}}
+
+
+async def company_limit_node(state: dict) -> dict[str, Any]:
+    """Hold a company's third post of the day for its evening digest (nodes/company_digest.py)."""
+    if state.get("forced") or state.get("released") or state.get("digest") or state.get("sweep"):
+        return {}
+    item = state["item"]
+    company = item.get("company") or ""
+    reason = company_digest.limit_reason(company, item.get("importance") or 0)
+    if not reason:
+        return {}
+    if not state.get("dry_run"):
+        db.set_item_status(item["id"], "waiting_digest", reason)
+        db.bump_counter("waiting_digest")
+    log.info("Item %s waits for the %s digest: %s", item["id"], company, reason)
+    return {"outcome": "waiting_digest"}
+
+
 async def sorter_node(state: dict) -> dict[str, Any]:
     """Score the item and apply the importance gate."""
     item = state["item"]
     item_id = item["id"]
     dry = state.get("dry_run", False)
 
-    if state.get("sweep") or state.get("forced") or state.get("released"):
+    if state.get("sweep") or state.get("forced") or state.get("released") or state.get("digest"):
         # A roundup was judged when it first arrived. A forced item was judged
         # too, and a human disagreed — asking the same model again would only
         # produce the same answer that is being overruled.
@@ -644,7 +722,8 @@ async def publish_node(state: dict) -> dict[str, Any]:
         return {"outcome": "approved"}
 
     item = state["item"]
-    if config.LINK_TO_PRODUCT and not item.get("link_url") and publisher.is_x_link(item.get("url", "")):
+    if (config.LINK_TO_PRODUCT and not state.get("digest") and not item.get("link_url")
+            and publisher.is_x_link(item.get("url", ""))):
         item = {**item, "link_url": await link_finder.find(item, state["post_html"])}
     story = state.get("story")
     reply_to = story.first_message_id if story and story.posts else None
@@ -662,5 +741,8 @@ async def publish_node(state: dict) -> dict[str, Any]:
             # nothing else the story was holding.
             covers_others=not state.get("forced", False),
         )
+
+    if sent and state.get("digest"):
+        company_digest.mark_covered(state.get("digest_item_ids") or [], item["id"])
 
     return {"outcome": "published" if sent else "retry"}

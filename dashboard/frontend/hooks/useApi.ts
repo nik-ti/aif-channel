@@ -11,7 +11,7 @@ import {
   fetchNodes,
   fetchPosts,
   fetchStats,
-  fetchStories,
+  fetchCompanies,
   forcePublish,
   markShouldNotHavePosted,
 } from "@/lib/api";
@@ -21,17 +21,17 @@ export const POLL_INTERVAL_MS = 10_000;
 
 export function usePosts(filters: PostFilters, limit: number, offset: number) {
   return useQuery({
-    queryKey: ["posts", filters.source, filters.statuses, filters.q, limit, offset],
+    queryKey: ["posts", filters.source, filters.company, filters.kind, filters.statuses, filters.q, limit, offset],
     queryFn: () => fetchPosts(filters, limit, offset),
     refetchInterval: POLL_INTERVAL_MS,
     placeholderData: keepPreviousData,
   });
 }
 
-export function useStories() {
+export function useCompanies() {
   return useQuery({
-    queryKey: ["stories"],
-    queryFn: () => fetchStories(),
+    queryKey: ["companies"],
+    queryFn: () => fetchCompanies(),
     refetchInterval: POLL_INTERVAL_MS,
     placeholderData: keepPreviousData,
   });

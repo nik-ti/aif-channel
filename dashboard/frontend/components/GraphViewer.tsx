@@ -1,23 +1,22 @@
-// Graph tab: the pipeline as a Mermaid diagram (node color = health), plus
-// the full workflow write-up underneath. Mermaid only runs in the browser
-// (it touches `document`), so it's dynamically imported inside an effect
-// rather than imported at module scope.
+// Graph tab: the pipeline as LangGraph itself draws it (top to bottom, dotted lines for
+// the routes an item can take), shrunk to a preview until you expand it, plus the
+// workflow write-up underneath. A station that is failing is tinted amber or red; click
+// one to see its numbers. Mermaid only runs in the browser (it touches `document`), so
+// it's imported inside an effect.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { EmptyState } from "@/components/EmptyState";
 import { useGraph } from "@/hooks/useApi";
 import type { GraphNode } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { WORKFLOW_EXPLANATION } from "@/lib/workflowExplanation";
 
-const HEALTH_CLASS: Record<GraphNode["health"], string> = {
-  ok: "healthy",
-  degraded: "warning",
-  error: "unhealthy",
-};
+const EXPANDED_KEY = "aif-graph-expanded";
 
 function formatTime(iso: string | null) {
   if (!iso) return "never";
@@ -25,26 +24,16 @@ function formatTime(iso: string | null) {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
 
-// Builds Mermaid flowchart source from the live node list: 7 boxes in a
-// row, an arrow to the next stage, colored by health, each clickable via
-// the window callback wired up in the effect below.
-function buildDiagram(nodes: GraphNode[]): string {
-  if (nodes.length === 0) return "flowchart LR\n  empty[No data yet]";
-
-  const lines = ["flowchart LR"];
-  nodes.forEach((node, i) => {
-    const label = node.label.replace(/"/g, "'");
-    lines.push(`  ${node.id}["${label}"]:::${HEALTH_CLASS[node.health]}`);
-    if (i < nodes.length - 1) {
-      lines.push(`  ${node.id} --> ${nodes[i + 1].id}`);
-    }
-  });
-  nodes.forEach((node) => {
-    lines.push(`  click ${node.id} call marketOneGraphNodeClick("${node.id}")`);
-  });
-  lines.push("  classDef healthy fill:#10B981,stroke:#059669,color:#ffffff,stroke-width:2px");
-  lines.push("  classDef warning fill:#F59E0B,stroke:#D97706,color:#ffffff,stroke-width:2px");
-  lines.push("  classDef unhealthy fill:#DC2626,stroke:#B91C1C,color:#ffffff,stroke-width:2px");
+// LangGraph's diagram, plus a click handler on every station and a tint on the
+// unhealthy ones. Its own colours (lavender boxes) are kept as they are.
+function buildDiagram(mermaid: string, nodes: GraphNode[]): string {
+  const lines = [mermaid.trim()];
+  for (const node of nodes) {
+    lines.push(`\tclick ${node.id} call aifGraphNodeClick("${node.id}")`);
+    if (node.health !== "ok") lines.push(`\tclass ${node.id} ${node.health}`);
+  }
+  lines.push("\tclassDef degraded fill:#FDE68A,stroke:#D97706");
+  lines.push("\tclassDef error fill:#FCA5A5,stroke:#B91C1C");
   return lines.join("\n");
 }
 
@@ -52,22 +41,43 @@ export function GraphViewer() {
   const { data, isFetching } = useGraph();
   const [selected, setSelected] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const nodes = data?.nodes ?? [];
+  const mermaidSource = data?.mermaid ?? "";
   const selectedNode = nodes.find((n) => n.id === selected) ?? null;
 
   useEffect(() => {
-    (window as unknown as Record<string, unknown>).marketOneGraphNodeClick = (id: string) => {
+    try {
+      setExpanded(localStorage.getItem(EXPANDED_KEY) === "1");
+    } catch {
+      // Storage unavailable: start collapsed.
+    }
+  }, []);
+
+  function toggleExpanded() {
+    setExpanded((prev) => {
+      try {
+        localStorage.setItem(EXPANDED_KEY, prev ? "0" : "1");
+      } catch {
+        // Not remembered; fine.
+      }
+      return !prev;
+    });
+  }
+
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).aifGraphNodeClick = (id: string) => {
       setSelected((prev) => (prev === id ? null : id));
     };
     return () => {
-      delete (window as unknown as Record<string, unknown>).marketOneGraphNodeClick;
+      delete (window as unknown as Record<string, unknown>).aifGraphNodeClick;
     };
   }, []);
 
   useEffect(() => {
-    if (nodes.length === 0 || !containerRef.current) return;
+    if (!mermaidSource || !containerRef.current) return;
     let cancelled = false;
 
     import("mermaid").then(async ({ default: mermaid }) => {
@@ -75,7 +85,7 @@ export function GraphViewer() {
       try {
         const { svg, bindFunctions } = await mermaid.render(
           `pipeline-graph-${Date.now()}`,
-          buildDiagram(nodes)
+          buildDiagram(mermaidSource, nodes)
         );
         if (cancelled || !containerRef.current) return;
         containerRef.current.innerHTML = svg;
@@ -93,7 +103,7 @@ export function GraphViewer() {
     };
     // Re-render whenever node health/labels change (e.g. after a poll).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(nodes)]);
+  }, [mermaidSource, JSON.stringify(nodes)]);
 
   const notReady = data ? !data.ready : false;
 
@@ -105,17 +115,56 @@ export function GraphViewer() {
         <EmptyState />
       ) : (
         <>
-          {nodes.length > 0 && (
-            <p className="text-xs text-ink-muted sm:hidden">Swipe sideways to see the whole pipeline →</p>
-          )}
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface-primary p-4">
+          <div className="rounded-lg border border-border bg-surface-primary">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+              <p className="text-sm font-semibold text-ink-primary">The pipeline</p>
+              <button
+                type="button"
+                onClick={toggleExpanded}
+                aria-expanded={expanded}
+                className="inline-flex h-11 items-center gap-1 rounded-md px-3 text-xs font-medium text-ink-primary hover:bg-surface-secondary sm:h-8"
+              >
+                {expanded ? (
+                  <>
+                    Collapse <ChevronUp className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    Expand <ChevronDown className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </div>
             {renderError ? (
-              <p className="text-sm text-status-rejected">Diagram failed to render: {renderError}</p>
+              <p className="p-4 text-sm text-status-rejected">Diagram failed to render: {renderError}</p>
+            ) : !mermaidSource ? (
+              <p className="p-4 text-sm text-ink-muted">
+                The diagram appears once the channel has restarted on this version.
+              </p>
             ) : (
-              <div
-                ref={containerRef}
-                className="flex min-w-[560px] justify-center [&_svg]:h-auto [&_svg]:max-w-none"
-              />
+              <div className="relative">
+                <div
+                  className={cn("overflow-hidden px-4 py-3 transition-[max-height]", expanded ? "max-h-none" : "max-h-80")}
+                >
+                  <div
+                    ref={containerRef}
+                    className={cn(
+                      "mx-auto flex justify-center [&_svg]:h-auto [&_svg]:max-w-full",
+                      expanded ? "max-w-xl" : "max-w-md"
+                    )}
+                  />
+                </div>
+                {!expanded && (
+                  <button
+                    type="button"
+                    onClick={toggleExpanded}
+                    aria-label="Expand the pipeline diagram"
+                    className="absolute inset-x-0 bottom-0 flex h-20 items-end justify-center bg-gradient-to-t from-surface-primary to-transparent pb-2 text-xs font-medium text-ink-muted"
+                  >
+                    Show the whole pipeline
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -130,7 +179,7 @@ export function GraphViewer() {
               <p className="text-ink-muted">Error count: {selectedNode.error_count}</p>
             </div>
           ) : (
-            <p className="text-xs text-ink-muted">Click a node in the diagram to see its metrics.</p>
+            <p className="text-xs text-ink-muted">Click a station in the diagram to see its numbers.</p>
           )}
         </>
       )}

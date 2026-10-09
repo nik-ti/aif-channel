@@ -4,7 +4,7 @@
 
 import { cn } from "@/lib/utils";
 
-export const TABS = ["Posts", "Stories", "Stats", "Graph", "Nodes"] as const;
+export const TABS = ["Posts", "Companies", "Stats", "Graph", "Nodes"] as const;
 export type Tab = (typeof TABS)[number];
 
 export function TabNav({

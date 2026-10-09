@@ -1,4 +1,4 @@
-// Status pill used by the Posts table and Stories cards. Colors map 1:1 to
+// Status pill used by the Posts table and cards. Colors map 1:1 to
 // SPEC.md's status color table.
 import { statusInfo } from "@/lib/status";
 import { cn } from "@/lib/utils";

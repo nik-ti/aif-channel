@@ -70,9 +70,22 @@ VIDEO_RUBRIC_PATH = PROMPTS / "video_rubric.md"
 # The sorter scores 1-5; only items at or above this are posted.
 MIN_IMPORTANCE = _get_int("MIN_IMPORTANCE", 4)
 
-# MUST match rubric.md: the provider enforces these lists.
-TOPICS = ("launch", "tool", "skill", "resource", "other")
+# The hint each source and X account gives about what it usually posts (SOURCES, X_ACCOUNTS).
 VALID_TOPICS = ("launch", "tool", "skill", "resource")
+
+# LABELS (nodes/labeler.py, prompts/labeler.md). Fixed lists: a model answer that is not
+# exactly on them is stored as "other", so "Open-AI" can never become a new bucket.
+# The kind is stored in items.topic and posts.topic.
+KINDS = ("new_product", "new_model", "feature", "pricing", "tool",
+         "skill", "guide", "roundup", "other")
+# Who MADE the thing, not who posted about it. Picked from the names seen in the first
+# 712 items (2026-10-04..09); everything else is "other" and is never limited.
+COMPANIES = ("OpenAI", "Anthropic", "Google", "Microsoft", "xAI", "Meta", "Apple", "Amazon",
+             "Nvidia", "Mistral", "DeepSeek", "Alibaba", "Perplexity", "Midjourney", "Cursor",
+             "other")
+# Cheap on purpose: two picks from fixed lists. ~$0.0007 an item.
+LABELER_MODEL = _get("LABELER_MODEL", "google/gemini-3.5-flash-lite")
+LABELER_PROMPT_PATH = PROMPTS / "labeler.md"
 
 # The sorter's third question, "who can use this today?". "none" caps the score at 3.
 # Stored in the items.market column.
@@ -82,7 +95,7 @@ SORTER_AXIS_VALUES = ("everyone", "creators", "business", "students", "developer
 # Guides and skill packs: useful, but a channel full of them reads like a list
 # (six skills.sh posts went out in 16 minutes on 2026-10-05). At most 2 of each a
 # day, at least 3 hours apart: {topic: (max posts in 24 hours, min hours between)}.
-TOPIC_LIMITS = {"resource": (2, 3), "skill": (2, 3)}
+TOPIC_LIMITS = {"guide": (2, 3), "skill": (2, 3)}
 
 # How long an item held back by TOPIC_LIMITS waits for a free slot (nodes/reserve.py).
 RESERVE_DAYS = _get_int("RESERVE_DAYS", 3)
@@ -178,6 +191,9 @@ LINK_FALLBACK_TEXT = "Link"
 # A tweet with no outside link: this model searches the web for the maker's own page
 # before the post goes out (nodes/link_finder.py). Never links to X (nikita, 2026-10-08).
 LINK_FINDER_MODEL = _get("LINK_FINDER_MODEL", "google/gemini-2.5-flash")
+# A found page dated older than this is an earlier launch, not this news: on 2026-10-09
+# a fresh Managed Agents tweet got the May 28 "dynamic workflows" blog post.
+LINK_MAX_AGE_DAYS = _get_int("LINK_MAX_AGE_DAYS", 14)
 
 # One person writes this channel: no two posts open the same way.
 VARY_WRITING = True
@@ -246,11 +262,13 @@ FUZZY_WINDOW_HOURS = _get_int("FUZZY_WINDOW_HOURS", 24)
 # different 0.785-0.900 (overlap), so it only shortlists; check 5 decides.
 COSINE_SHORTLIST = _get_float("COSINE_SHORTLIST", 0.72)
 COSINE_CERTAIN = _get_float("COSINE_CERTAIN", 0.95)  # Near-verbatim; merge without check 5.
-COSINE_WINDOW_HOURS = _get_int("COSINE_WINDOW_HOURS", 48)
+COSINE_WINDOW_HOURS = _get_int("COSINE_WINDOW_HOURS", 168)
 DEDUP_TOP_K = _get_int("DEDUP_TOP_K", 3)
 
-# Duplicates in a sample landed within 10.1h; false merges were 24h apart (recurring reports).
-DUPLICATE_MAX_GAP_HOURS = _get_int("DUPLICATE_MAX_GAP_HOURS", 12)
+# How far back checks 4 and 5 look. Was 12h for Market One's recurring market figures;
+# AI launches are re-reported for days (nikita, 2026-10-09). Checks 1-3 stay at 24h:
+# "DAILY AI BRIEF — Oct 7" and "— Oct 8" read 95% alike but are different news.
+DUPLICATE_MAX_GAP_HOURS = _get_int("DUPLICATE_MAX_GAP_HOURS", 168)
 
 EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 
@@ -295,7 +313,20 @@ JUDGE_TIMEOUT_SECONDS = _get_int("JUDGE_TIMEOUT_SECONDS", 40)
 PERSONA_RECENT_POSTS = _get_int("PERSONA_RECENT_POSTS", 15)
 
 
-# STORIES: items join a story; a story posts when it has moved.
+# STORIES: OFF since 2026-10-09. Built for Market One's running events; on AI Flow they
+# made no threads and mostly re-filed what dedup caught. The code stays (nodes/stories.py)
+# until about 2026-10-16, then goes; a copy is in archive/market-one/code/stories/.
+STORIES = False
+
+# ONE COMPANY, AT MOST 2 POSTS A DAY (nodes/company_digest.py). The rest wait, and at
+# DIGEST_HOUR_UTC each company's waiting items go out as one bullet post. A 5/5 item and
+# "other" companies are never held. Days are UTC days.
+COMPANY_DAILY_LIMIT = _get_int("COMPANY_DAILY_LIMIT", 2)
+DIGEST_HOUR_UTC = _get_int("DIGEST_HOUR_UTC", 18)
+DIGEST_MAX_WAIT_HOURS = _get_int("DIGEST_MAX_WAIT_HOURS", 30)
+DIGEST_MAX_ITEMS = _get_int("DIGEST_MAX_ITEMS", 6)
+
+# Used only while STORIES is on.
 
 STORY_MODEL = _get("STORY_MODEL", "google/gemini-2.5-flash")
 STORY_TIMEOUT_SECONDS = _get_int("STORY_TIMEOUT_SECONDS", 45)
@@ -380,6 +411,12 @@ def check(require_telegram: bool = False, require_openrouter: bool = False) -> l
         if topic not in VALID_TOPICS:
             problems.append(f"X account '{handle}' has unknown topic "
                             f"'{topic}' (expected {VALID_TOPICS})")
+
+    for kind in TOPIC_LIMITS:
+        if kind not in KINDS:
+            problems.append(f"TOPIC_LIMITS names '{kind}', which is not one of KINDS")
+    if not 0 <= DIGEST_HOUR_UTC <= 23:
+        problems.append(f"DIGEST_HOUR_UTC must be 0-23, not {DIGEST_HOUR_UTC}")
 
     if not 1 <= MIN_IMPORTANCE <= 5:
         problems.append(f"MIN_IMPORTANCE must be between 1 and 5, not {MIN_IMPORTANCE}")

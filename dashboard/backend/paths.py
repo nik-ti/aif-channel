@@ -22,10 +22,9 @@ ROOT_DIR = project_root()
 ENV_PATH = ROOT_DIR / ".env"
 PROMPTS_DIR = ROOT_DIR / "prompts"
 
-# The stations in the order pipeline/graph.py runs them (the article is read before
-# the sorter, the video analyst runs after the image analyst).
+# The stations in the order pipeline/graph.py runs them (a test checks they match).
 STATIONS = [
-    "dedup", "fetch_article", "sorter", "story_organizer", "gatekeeper",
+    "dedup", "fetch_article", "labeler", "sorter", "company_limit",
     "writer", "editor", "repeat_check", "image_analyst", "video_analyst", "publish",
 ]
 

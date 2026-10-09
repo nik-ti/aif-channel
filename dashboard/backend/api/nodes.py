@@ -24,9 +24,8 @@ CONFIG_PATH = paths.ROOT_DIR / "config.py"
 # Pipeline station -> the LLM step shown for it. fetch_article and publish use no model.
 STATION_TO_NODE: dict[str, str] = {
     "dedup": "dedup_judge",
+    "labeler": "labeler",
     "sorter": "sorter",
-    "story_organizer": "story_organizer",
-    "gatekeeper": "gatekeeper",
     "writer": "writer",
     "editor": "editor",
     "repeat_check": "repeat_check",
@@ -36,6 +35,7 @@ STATION_TO_NODE: dict[str, str] = {
 
 # Prompts that live in prompts/.
 PROMPT_FILES: dict[str, str] = {
+    "labeler": "labeler.md",
     "sorter": "rubric.md",
     "editor": "editor.md",
     "image_analyst": "image_rubric.md",
@@ -46,16 +46,13 @@ PROMPT_FILES: dict[str, str] = {
 # dedup check 5 uses.
 PROMPT_SOURCES: dict[str, tuple[str, str]] = {
     "dedup_judge": ("judge.py", "SYSTEM_THREE_WAY"),
-    "story_organizer": ("stories.py", "PLACE_SYSTEM"),
-    "gatekeeper": ("stories.py", "GATE_SYSTEM"),
     "repeat_check": ("echo.py", "SYSTEM"),
 }
 
 MODEL_VARS: dict[str, str] = {
     "dedup_judge": "JUDGE_MODEL",
+    "labeler": "LABELER_MODEL",
     "sorter": "SORTER_MODEL",
-    "story_organizer": "STORY_MODEL",
-    "gatekeeper": "STORY_MODEL",
     "writer": "WRITER_MODEL",
     "editor": "EDITOR_MODEL",
     "repeat_check": "ECHO_MODEL",
@@ -68,9 +65,8 @@ FALLBACK_MODEL_VARS: dict[str, str] = {"editor": "EDITOR_FALLBACK_MODEL"}
 
 LABELS: dict[str, str] = {
     "dedup_judge": "Dedup judge",
+    "labeler": "Labeler",
     "sorter": "Sorter",
-    "story_organizer": "Story organizer",
-    "gatekeeper": "Gatekeeper",
     "writer": "Writer",
     "editor": "Editor",
     "repeat_check": "Repeat check",
@@ -82,13 +78,13 @@ LABELS: dict[str, str] = {
 DESCRIPTIONS: dict[str, str] = {
     "dedup_judge": "Rules on two look-alike stories — same event, a continuation, or "
                    "different — the deciding step behind duplicate check 5.",
+    "labeler": "Picks the item's kind (new_product, new_model, feature, pricing, tool, "
+               "skill, guide, roundup, other) and the company that made it, each from a "
+               "fixed list; anything off the list is stored as 'other'. A cheap model. "
+               "Checked with tools/check_labels.py.",
     "sorter": "Scores every incoming item 1-5 for how useful it is to a regular "
-              "person today, names its kind and who can use it — the only node "
-              "that decides if something is worth covering at all.",
-    "story_organizer": "Decides which running story a new item joins. On this "
-                       "channel one product is one story.",
-    "gatekeeper": "Decides whether a story has moved enough since its last post to "
-                  "publish again.",
+              "person today and names who can use it — the only node that decides "
+              "if something is worth covering at all. It is given the labels.",
     "writer": "Writes the post in AI Flow's voice: simple, bold first line, "
               "• lines, bold key words, link last, no emoji. Shown with the "
               "voice file (persona.md) it is given in front of the prompt.",
@@ -135,9 +131,6 @@ def _prompt(node_id: str, config_text: str) -> str | None:
         filename, const_name = PROMPT_SOURCES[node_id]
         source = _read(NODES_DIR / filename)
         prompt = _triple_quoted(source, const_name) if source else None
-        notes = _triple_quoted(config_text, "STORY_PLACE_NOTES") if node_id == "story_organizer" else None
-        if prompt and notes:
-            prompt = f"{prompt}\n\n--- added for this channel (config.py) ---\n\n{notes}"
         return prompt
     return None
 

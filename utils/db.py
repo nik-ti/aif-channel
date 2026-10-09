@@ -63,6 +63,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("media_json", "ALTER TABLE items ADD COLUMN media_json TEXT DEFAULT ''"),  # Every candidate image and video — see nodes/media.py.
         ("link_url", "ALTER TABLE items ADD COLUMN link_url TEXT DEFAULT ''"),
         ("links_json", "ALTER TABLE items ADD COLUMN links_json TEXT DEFAULT ''"),  # A tweet's outside links, read by nodes/article.py.  # The thing itself (repo, product page) when url is an aggregator's page.
+        ("company", "ALTER TABLE items ADD COLUMN company TEXT DEFAULT ''"),  # Who made it, from config.COMPANIES — see nodes/labeler.py.
     ],
     "posts": [
         ("source_context", "ALTER TABLE posts ADD COLUMN source_context TEXT DEFAULT ''"),
@@ -83,6 +84,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
 # Indexes over migrated columns (cannot be in schema.sql: runs before migrations exist).
 _MIGRATION_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_items_story ON items(story_id, status)",
+    "CREATE INDEX IF NOT EXISTS idx_items_company ON items(company, status)",
 ]
 
 
@@ -534,6 +536,39 @@ def set_item_sorting(item_id: int, topic: str, importance: int,
         (topic, importance, market, reason[:300], now_iso(), item_id),
     )
     conn().commit()
+
+
+def set_item_labels(item_id: int, kind: str, company: str) -> None:
+    """Store the labeler's kind (in items.topic) and company."""
+    conn().execute("UPDATE items SET topic = ?, company = ?, updated_at = ? WHERE id = ?",
+                   (kind, company, now_iso(), item_id))
+    conn().commit()
+
+
+def company_posts_today(company: str) -> int:
+    """Posts sent since midnight UTC whose item was made by this company."""
+    return conn().execute(
+        """SELECT COUNT(*) AS n FROM posts p JOIN items i ON i.id = p.item_id
+            WHERE p.status = 'sent' AND i.company = ? AND p.sent_at >= date('now')""",
+        (company,)).fetchone()["n"]
+
+
+def waiting_for_digest() -> list[sqlite3.Row]:
+    """Items held back by the company limit, oldest first."""
+    return conn().execute(
+        "SELECT * FROM items WHERE status = 'waiting_digest' ORDER BY id").fetchall()
+
+
+def expire_digest_waits(max_hours: int) -> int:
+    """Give up on items that waited for a digest longer than max_hours."""
+    cursor = conn().execute(
+        f"""UPDATE items SET status = 'expired', updated_at = ?,
+                  status_reason = 'waited over {int(max_hours)} hours for a company digest'
+             WHERE status = 'waiting_digest'
+               AND fetched_at < datetime('now', '-{int(max_hours)} hours')""",
+        (now_iso(),))
+    conn().commit()
+    return cursor.rowcount
 
 
 def bump_attempts(item_id: int) -> int:

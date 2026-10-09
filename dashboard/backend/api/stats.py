@@ -68,6 +68,8 @@ def _empty(window: str) -> dict:
         "sources": [],
         "importance": [],
         "markets": [],
+        "kinds": [],
+        "companies": [],
         "editor": {"approve": 0, "decline": 0, "top_rules": []},
         "dedup": [],
         "hour_of_day": [],
@@ -152,7 +154,8 @@ def get_stats(
             "SELECT COUNT(*) AS n FROM items WHERE status IN ('queued', 'written')", ()
         ),
         "held_now": _count("SELECT COUNT(*) AS n FROM items WHERE status = 'held'", ()),
-        "live_stories": _count("SELECT COUNT(*) AS n FROM stories WHERE status = 'live'", ()),
+        "waiting_digest_now": _count(
+            "SELECT COUNT(*) AS n FROM items WHERE status = 'waiting_digest'", ()),
         "last_published_at": (query_one(
             "SELECT MAX(sent_at) AS t FROM posts WHERE status = 'sent'"
         ) or {}).get("t"),
@@ -228,6 +231,28 @@ def get_stats(
         item_params,
     )
 
+    # Kinds and companies, from the labeler. Old items carry the pre-2026-10-09 kinds.
+    kinds = query(
+        f"""
+        SELECT topic AS kind, COUNT(*) AS count, SUM(status = 'published') AS published
+        FROM items
+        WHERE topic != '' AND topic IS NOT NULL AND {item_where}
+        GROUP BY topic
+        ORDER BY published DESC, count DESC
+        """,
+        item_params,
+    )
+    companies = query(
+        f"""
+        SELECT company, COUNT(*) AS count, SUM(status = 'published') AS published
+        FROM items
+        WHERE company != '' AND company IS NOT NULL AND {item_where}
+        GROUP BY company
+        ORDER BY published DESC, count DESC
+        """,
+        item_params,
+    )
+
     # ── the editor and the dedup ladder: the two filters worth auditing ─────
     editor_where, editor_params = _since("created_at", modifier)
     verdict_rows = query(
@@ -278,6 +303,8 @@ def get_stats(
         "sources": sources,
         "importance": importance,
         "markets": markets,
+        "kinds": kinds,
+        "companies": companies,
         "editor": {
             "approve": verdicts.get("approve", 0),
             "decline": verdicts.get("decline", 0),

@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import trafilatura
@@ -50,6 +52,36 @@ _NOT_AN_ARTICLE = (
     "unusual traffic", "verify you are human", "cookies to continue",
     "subscribe to continue", "page not found",
 )
+
+
+# Where a page states its own publish date: meta tags, then schema.org JSON.
+_META = re.compile(r"<meta\s[^>]*>", re.IGNORECASE)
+_ATTR = re.compile(r'([\w:-]+)\s*=\s*["\']([^"\']*)["\']')
+_DATE_NAMES = {"article:published_time", "og:published_time", "datepublished", "pubdate", "publish-date"}
+_JSON_DATE = re.compile(r'datePublished\\*"\s*:\s*\\*"(\d{4}-\d{2}-\d{2}[^"\\]*)')
+
+
+class StalePage(Exception):
+    """A feed article whose own page says it is older than ARTICLE_MAX_AGE_HOURS."""
+
+
+def page_date(html: str) -> datetime | None:
+    """The publish date the page states about itself, or None if it states none."""
+    from nodes.fetch_rss import _parse_date
+    for tag in _META.findall(html or ""):
+        attrs = {key.lower(): value for key, value in _ATTR.findall(tag)}
+        name = (attrs.get("property") or attrs.get("name") or attrs.get("itemprop") or "").lower()
+        if name in _DATE_NAMES and (found := _parse_date(attrs.get("content", ""))):
+            return found
+    match = _JSON_DATE.search(html or "")
+    return _parse_date(match.group(1)) if match else None
+
+
+def is_old(date: datetime | None, max_age_hours: float) -> bool:
+    """True if a page date is past the limit. A day of slack, since many pages give only the day."""
+    if date is None:
+        return False
+    return date < datetime.now(timezone.utc) - timedelta(hours=max_age_hours + 24)
 
 
 def _usable(text: str | None) -> bool:
@@ -233,13 +265,15 @@ async def _tweet_pages(item) -> str | None:
             if images or videos:
                 db.add_item_media(item["id"], images=images, videos=videos)
         preview = "\n".join(p for p in (link.get("title"), link.get("description")) if p)
+        dated = page_date(html)
+        label = f"{url} (page dated {dated:%Y-%m-%d})" if dated else url
         if text:
             read += 1
             content = text.strip()[:budget]
             log.info("Tweet %s: linked page %d read via %s (%d chars)", item["id"], number, used, len(content))
         else:
             content = preview or "(the page could not be read)"
-        parts.append(f"LINKED PAGE {number}: {url}\n{content}")
+        parts.append(f"LINKED PAGE {number}: {label}\n{content}")
     (_record_success if read else _record_failure)()
     combined = "\n\n".join(parts)
     db.set_article_text(item["id"], combined)
@@ -248,6 +282,7 @@ async def _tweet_pages(item) -> str | None:
 
 async def fetch_for(item) -> str | None:
     """The article behind this item, cached on the row. None if there is none.
+    Raises StalePage when a feed article's own page is too old to be news.
 
     Called once per item, after the sorter has kept it — there is no point
     paying for the ~85% that never get past that.
@@ -267,6 +302,13 @@ async def fetch_for(item) -> str | None:
         return await _tweet_pages(item)
 
     text, html, used = await _read(url)
+    # Aggregators like Future Tools date an item when THEY list it, so the
+    # page's own date is the one to trust (an old launch can be relisted).
+    dated = page_date(html)
+    if item["origin"] == "rss" and is_old(dated, config.ARTICLE_MAX_AGE_HOURS):
+        db.set_item_status(item_id, "skipped_stale", f"the article page is dated {dated:%Y-%m-%d}")
+        log.info("Item %s skipped: its page is dated %s (%s)", item_id, f"{dated:%Y-%m-%d}", url[:70])
+        raise StalePage(url)
     known = (item["link_url"] if "link_url" in item.keys() else "") or ""
     if config.PRODUCT_LINK_PAGES and html and not known:
         link = product_link(html, url)

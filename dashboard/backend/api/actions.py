@@ -8,9 +8,9 @@ channel's only labelled data and the only honest way to tell whether a later
 change to a prompt helped.
 
 Forcing does not publish anything by itself. It returns the item to the queue
-with a flag, and the live pipeline picks it up on its next round — through
-story placement, so the story knows it was covered, but past the two stations
-that judge whether it was worth covering.
+with a flag, and the live pipeline picks it up on its next round — past the
+sorter and the company limit, the stations that judge whether it should go out now,
+but still through the writer and the editor.
 """
 
 from __future__ import annotations

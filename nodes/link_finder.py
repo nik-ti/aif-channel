@@ -1,36 +1,40 @@
-"""Finds the real page for a post whose source is a tweet with no outside link.
+"""Finds where to try a new product, for a post whose source is a tweet with no outside link.
 
-A news account's tweet is never what "Try it here" should open, so before such a
-post goes out, a model searches the web for the maker's own page (the demo, the
-app, the announcement). When it lands on an announcement that links to the demo
-on the maker's own site, the demo wins. The page must load and must not be on X;
-otherwise the post goes out with no link line at all.
+Only a product a person can go and use gets a link: an announcement is just reported,
+since the post already says what the article would (nikita, 2026-10-09). A model searches
+the web for the demo, app or download page. An announcement page counts only for the
+"try it" link on it; otherwise the post goes out with no link line.
 """
 
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import httpx
 
 import config
-from nodes import publisher
+from nodes import article, publisher
 from utils import db, logger as log_setup, openrouter, persona_loader
 
 log = log_setup.get("link_finder")
 
-PROMPT = """You find the official web page for an AI product that a news post is about.
+PROMPT = """You decide whether a news post needs a link where the reader can try something.
 
-Search the web, then answer with ONE URL and nothing else:
-- best: the page where a person can try, use or download the product (a demo, app or playground)
-- otherwise: the maker's own announcement or product page
-Never a link to x.com or twitter.com, never a news site, blog or aggregator writing about it.
-If you cannot find the maker's own page, answer exactly: NONE"""
+Only if the post is about a NEW product or tool that a person can go and use, search the web
+and answer with ONE URL and nothing else: the maker's own page where a person can try, use,
+sign up for or download it (a demo, app, playground or download page).
+Answer exactly NONE for anything else: a feature update, an announcement, research, a deal,
+a policy, pricing. Answer NONE too if you cannot find such a page.
+Never a blog post or announcement article, never x.com or twitter.com, never a news site
+or aggregator. The page must be about THIS product, not an earlier one: check its date."""
 
 _URL = re.compile(r"https?://[^\s<>\"')\]]+")
 _ANCHOR = re.compile(r'<a\s[^>]*href="(https?://[^"]+)"[^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
 _TRY_WORDS = re.compile(r"\b(try|demo|experience|playground|play|launch app|open app|get started)\b", re.I)
+# An article about the product rather than the product itself.
+_ARTICLE_PATH = re.compile(r"/(blog|news|index|research|announcements?|posts?|press)/", re.I)
 _TRY_HOSTS = ("experience.", "demo.", "try.", "play.", "playground.", "app.", "studio.", "chat.")
 
 
@@ -66,8 +70,9 @@ async def _loads(url: str) -> tuple[str, str]:
 
 
 async def find(item, post_html: str) -> str:
-    """The maker's own page for this post, or "" when none was found and checked."""
-    user = (f"The post:\n{persona_loader.visible_text(post_html)}\n\n"
+    """Where to try the product this post is about, or "" when it is not one or none was found."""
+    user = (f"Today is {datetime.now(timezone.utc):%Y-%m-%d}.\n\n"
+            f"The post:\n{persona_loader.visible_text(post_html)}\n\n"
             f"What it was written from:\n{(item['body'] or '')[:2000]}")
     try:
         answer = await openrouter.chat_text(
@@ -86,9 +91,18 @@ async def find(item, post_html: str) -> str:
     if not final or publisher.is_x_link(url) or publisher.is_x_link(final):
         log.info("Rejected found link for item %s: %s", item["id"], url[:100])
         return ""
+    dated = article.page_date(html)
+    if article.is_old(dated, config.LINK_MAX_AGE_DAYS * 24):
+        log.info("Rejected found link for item %s: page dated %s (%s)",
+                 item["id"], f"{dated:%Y-%m-%d}", url[:100])
+        return ""
     demo = demo_link(html, final)
     if demo and (await _loads(demo))[0]:
         url = demo
-    log.info("Found the official page for item %s: %s", item["id"], url[:100])
+    elif _ARTICLE_PATH.search(urlparse(final).path):
+        log.info("Rejected found link for item %s: an announcement, not the product (%s)",
+                 item["id"], url[:100])
+        return ""
+    log.info("Found where to try it for item %s: %s", item["id"], url[:100])
     db.set_item_link(item["id"], url)
     return url

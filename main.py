@@ -39,6 +39,12 @@ def _prepare_database() -> None:
     db.init_db()
     db.sync_sources(config.SOURCES)
     db.drop_unfollowed_x_items(config.X_ACCOUNTS.keys())
+    # Guides waiting in the reserve were labelled "resource" before the kinds were renamed.
+    db.conn().execute("UPDATE items SET topic = 'guide' WHERE status = 'capped' AND topic = 'resource'")
+    db.conn().commit()
+    # The dashboard draws the graph that is actually running, saved here at every start.
+    from pipeline import graph
+    db.meta_set("graph_mermaid", graph.diagram())
 
 
 # =============================================================================

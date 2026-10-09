@@ -19,6 +19,7 @@ This folder and a git tag are everything needed to bring it back.
 | How to read a macro release (fed to writer and editor) | `prompts/market_reading.md` |
 | Which pictures may go out | `prompts/image_rubric.md` |
 | Economic calendar (scheduled releases, Forecast/Previous lines) | `code/calendar.py` |
+| **Stories** — one thread per running event, the gate that posts only when it moved (AI Flow dropped them 2026-10-09, so they are no longer in the running code) | `code/stories/` (start with its `README.md`) |
 | Tests that existed only for Market One | `code/test_macro.py`, `code/test_markets_unchanged.py` |
 | Database layout at pause (includes the `calendar` table and calendar columns) | `schema.sql` |
 | systemd unit and log rotation | `deploy/` |

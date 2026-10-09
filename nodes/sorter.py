@@ -38,14 +38,13 @@ THIN_CAP = 3
 NO_USE_CAP = 3
 
 # The shape of the answer. "strict" mode means the provider enforces this, so
-# the model cannot invent a topic name or return importance as words.
+# the model cannot return importance as words. The kind comes from nodes/labeler.py.
 SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["relevant", "topic", config.SORTER_AXIS, "importance", "reason"],
+    "required": ["relevant", config.SORTER_AXIS, "importance", "reason"],
     "properties": {
         "relevant": {"type": "boolean"},
-        "topic": {"type": "string", "enum": list(config.TOPICS)},
         config.SORTER_AXIS: {"type": "string", "enum": list(config.SORTER_AXIS_VALUES)},
         "importance": {"type": "integer", "minimum": 1, "maximum": 5},
         "reason": {"type": "string"},
@@ -73,13 +72,15 @@ def user_message(item) -> str:
     elif config.SORTER_READS_ARTICLE and article:
         # The feed's snippet (often just "Source: x | Release date: y") plus the article.
         body = f"{body}\n\n{article[:1500]}".strip()
-    hint = item["topic_hint"] or "unknown"
+    keys = item.keys()
+    kind = (item["topic"] if "topic" in keys else "") or "unknown"
+    company = (item["company"] if "company" in keys else "") or "unknown"
     origin = "a post on X" if item["origin"] == "x" else "a news article"
     today = (f"Today is {datetime.now(timezone.utc):%d %B %Y}.\n"
              if config.SORTER_SHOWS_DATE else "")
     return (
         f"{today}Source: {item['source_name']} ({origin})\n"
-        f"The source files this under: {hint}\n"
+        f"Kind: {kind}\nMade by: {company}\n"
         f"\nHeadline: {title}\n\n"
         f"Text: {body}"
     )
@@ -88,11 +89,12 @@ def user_message(item) -> str:
 async def execute(item) -> dict:
     """Judge one item. Always returns a usable answer, even when the model fails.
 
-    Returns relevant, topic, market (who can use it; stored in items.market),
+    Returns relevant, topic (the labeler's kind, passed through), market (who can use it;
+    stored in items.market),
     importance (1-5), reason, and fallback (True if the model failed).
     """
     title = item["title"] or ""
-    hint = item["topic_hint"] or "unknown"
+    kind = (item["topic"] if "topic" in item.keys() else "") or "other"
 
     try:
         result = await openrouter.chat_json(
@@ -101,17 +103,13 @@ async def execute(item) -> dict:
             temperature=TEMPERATURE, max_tokens=MAX_TOKENS,
         )
 
-        topic = result.get("topic", "other")
+        topic = kind
         relevant = bool(result.get("relevant", False))
         market = str(result.get(config.SORTER_AXIS, "none"))
         if market not in config.SORTER_AXIS_VALUES:
             market = "none"
         importance = int(result.get("importance", 2))
         reason = str(result.get("reason", ""))[:300]
-
-        # "other" is the topic that means "not ours", so it doubles as the filter.
-        if topic == "other":
-            relevant = False
 
         if importance > THIN_CAP and source_chars(item) < THIN_SOURCE_CHARS:
             log.info("Capping item %s from %d to %d — only %d characters of source to write "
@@ -138,10 +136,9 @@ async def execute(item) -> dict:
         log.warning("Scoring failed for item %s (%s): %s", item["id"], title[:60], error)
         # Neither publish unscored nor drop: fallback=True sends it back to the
         # queue, and it is given up on after MAX_ATTEMPTS tries.
-        usable_hint = hint if hint in config.VALID_TOPICS else "other"
         return {
             "relevant": False,
-            "topic": usable_hint,
+            "topic": kind,
             "market": "none",
             "importance": 0,
             "reason": "could not be scored; will try again",

@@ -14,22 +14,19 @@ export interface StatusInfo {
 // rest are deliberately quieter so the three that matter stand out.
 export const STATUS_INFO: Record<string, StatusInfo> = {
   published: { label: "Published", hint: "Went out to the channel", color: "#10B981" },
-  held: { label: "Held", hint: "Joined a story that had not moved yet — fuel for its next post", color: "#F59E0B" },
+  held: { label: "Held", hint: "The finished post told the reader nothing a recent post had not", color: "#F59E0B" },
+  waiting_digest: { label: "Waiting for digest", hint: "Its company already had its posts today — goes out in that company's evening digest", color: "#14B8A6" },
   queued: { label: "Queued", hint: "Waiting to be processed", color: "#6366F1" },
   written: { label: "Written", hint: "A post exists, waiting on the editor or on room to send", color: "#8B5CF6" },
-  low_impact: { label: "Low impact", hint: "Real news, but nothing has to reprice on it", color: "#F97316" },
-  irrelevant: { label: "Irrelevant", hint: "Not our topics, or not really news", color: "#DC2626" },
+  low_impact: { label: "Low impact", hint: "Real news, but scored below 4: not something a regular person can use today", color: "#F97316" },
+  irrelevant: { label: "Irrelevant", hint: "Not our topics, not really news, or a roundup of several items", color: "#DC2626" },
   declined: { label: "Declined", hint: "On topic and written, but the editor rejected the post", color: "#BE185D" },
-  // Not a raw items.status — this is the literal string the /stories endpoint
-  // buckets everything into that isn't published/merged/held, for that one
-  // response only (see components/ui/badge.tsx's older STATUS_TONE map).
-  rejected: { label: "Rejected", hint: "Did not go out — filtered, declined, or a duplicate", color: "#DC2626" },
   duplicate: { label: "Duplicate", hint: "Already covered", color: "#2563EB" },
-  merged: { label: "Merged", hint: "Folded into another item's story post", color: "#64748B" },
+  merged: { label: "Merged", hint: "Went out as a line in a company digest (or, before 9 Oct, in a story post)", color: "#64748B" },
   capped: { label: "Daily limit", hint: "Good enough, but its type (guide, skill) hit today's limit — waiting in the reserve; the best one posts when a slot opens, dropped after 3 days", color: "#0EA5E9" },
   expired: { label: "Expired", hint: "Sat in the queue too long and went stale", color: "#9CA3AF" },
   failed: { label: "Failed", hint: "Something broke repeatedly — see the reason", color: "#BE123C" },
-  skipped_stale: { label: "Skipped · stale", hint: "Already too old when it was read", color: "#A8A29E" },
+  skipped_stale: { label: "Skipped · stale", hint: "Already too old when it was read, or its article page is dated too long ago", color: "#A8A29E" },
   skipped_backlog: { label: "Skipped · backlog", hint: "Too many arrived at once", color: "#A8A29E" },
   skipped_handle: { label: "Skipped · handle", hint: "From an X account this channel does not follow", color: "#A8A29E" },
 };
@@ -56,6 +53,7 @@ export const STATUS_FILTERS: StatusFilter[] = [
   { id: "published", label: "Published", statuses: ["published"], color: STATUS_INFO.published.color },
   { id: "held", label: "Held", statuses: ["held"], color: STATUS_INFO.held.color },
   { id: "in_progress", label: "In progress", statuses: ["queued", "written"], color: STATUS_INFO.queued.color },
+  { id: "waiting_digest", label: "Waiting for digest", statuses: ["waiting_digest"], color: STATUS_INFO.waiting_digest.color },
   { id: "low_impact", label: "Low impact", statuses: ["low_impact"], color: STATUS_INFO.low_impact.color },
   { id: "irrelevant", label: "Irrelevant", statuses: ["irrelevant"], color: STATUS_INFO.irrelevant.color },
   { id: "declined", label: "Declined", statuses: ["declined"], color: STATUS_INFO.declined.color },
@@ -83,6 +81,7 @@ export const FORCEABLE = new Set([
   "merged",
   "expired",
   "capped",
+  "waiting_digest",
   "failed",
   "skipped_stale",
   "skipped_backlog",
