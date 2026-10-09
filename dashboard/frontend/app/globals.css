@@ -2,27 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Color tokens straight from SPEC.md's UI color table. Light values are the
-   default (this app is light-mode-first); the .dark class (toggled by
-   Header.tsx) swaps in a dark set so text/surfaces stay readable. */
+/* AI Flow's look: frosted glass panels over a soft "aurora" of colour, so the
+   page reads as a calm control room. The backdrop is the one bold element;
+   panels stay solid enough that every number is crisp.
+   Light is "mist" (periwinkle, mint, apricot), dark is "night" (indigo, teal,
+   violet). Header.tsx toggles the .dark class. */
 :root {
-  --surface-primary: #ffffff;
-  --surface-secondary: #f8fafc;
-  --ink-primary: #0f172a;
-  --ink-muted: #64748b;
-  --border-color: #e2e8f0;
+  --canvas: #e9edf7;
+  --aurora-1: rgba(142, 162, 255, 0.7);
+  --aurora-2: rgba(127, 224, 200, 0.55);
+  --aurora-3: rgba(255, 196, 163, 0.6);
+  --surface-primary: rgba(255, 255, 255, 0.62);
+  --surface-secondary: rgba(91, 104, 170, 0.07);
+  --surface-solid: #ffffff;
+  --ink-primary: #161b36;
+  --ink-muted: #5e6787;
+  --border-color: rgba(38, 48, 105, 0.11);
+  --glass-edge: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 18px 40px -24px rgba(38, 48, 120, 0.35);
+  --accent: #4f5bff;
+  --accent-soft: rgba(79, 91, 255, 0.12);
 }
 
 .dark {
-  --surface-primary: #0f172a;
-  --surface-secondary: #1e293b;
-  --ink-primary: #f1f5f9;
-  --ink-muted: #94a3b8;
-  --border-color: #334155;
+  --canvas: #0c1024;
+  --aurora-1: rgba(51, 70, 214, 0.42);
+  --aurora-2: rgba(14, 158, 149, 0.3);
+  --aurora-3: rgba(123, 63, 196, 0.36);
+  --surface-primary: rgba(255, 255, 255, 0.06);
+  --surface-secondary: rgba(255, 255, 255, 0.05);
+  --surface-solid: #0c1024;
+  --ink-primary: #eef1fb;
+  --ink-muted: #98a1c4;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 18px 40px -24px rgba(0, 0, 0, 0.6);
+  --accent: #8c96ff;
+  --accent-soft: rgba(140, 150, 255, 0.16);
+}
+
+html {
+  background: var(--canvas);
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
 }
 
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background: transparent;
+  min-height: 100dvh;
+}
+
+/* The aurora: three blurred fields of colour fixed behind everything. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38vmax 30vmax at 12% 8%, var(--aurora-1), transparent 70%),
+    radial-gradient(34vmax 28vmax at 88% 18%, var(--aurora-2), transparent 70%),
+    radial-gradient(40vmax 32vmax at 60% 92%, var(--aurora-3), transparent 70%);
+  filter: blur(40px);
+}
+
+/* Every panel that uses the surface colour is frosted glass. Kept out of a
+   utility so the whole site changes in one place. */
+@layer utilities {
+  .bg-surface-primary {
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+  .glass-panel {
+    background: var(--surface-primary);
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+  .font-display {
+    font-family: var(--font-sora), var(--font-geist-sans), sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Keyboard users always see where they are. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 /* Tables need to scroll horizontally on narrow screens instead of

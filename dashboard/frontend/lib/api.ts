@@ -9,6 +9,7 @@ import type {
   StatsRange,
   StatsResponse,
   CompaniesResponse,
+  Pulse,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -78,6 +79,10 @@ export function fetchCompanies() {
 
 export function fetchStats(range: StatsRange = "7d") {
   return get<StatsResponse>(`/stats?${new URLSearchParams({ range }).toString()}`);
+}
+
+export function fetchPulse() {
+  return get<Pulse>("/pulse");
 }
 
 export function fetchGraph() {

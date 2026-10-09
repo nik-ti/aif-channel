@@ -22,6 +22,8 @@ export interface PostItem {
   // Why the sorter scored it as it did — the answer to "why did we cover this
   // at all", which status_reason only ever kept for items it REJECTED.
   sorter_reason: string;
+  // The written post, tags removed; "" when nothing was written.
+  post_text: string;
   // Set only once a post exists and was sent. The link is built by the backend,
   // which is the only side that knows the channel's @name.
   telegram_message_id: number | null;
@@ -183,6 +185,16 @@ export interface GraphResponse {
   edges: GraphEdge[];
   // LangGraph's own drawing of the running graph (Mermaid, top to bottom).
   mermaid: string;
+}
+
+export interface Pulse {
+  ready: boolean;
+  last_check_at?: string | null;
+  last_item_at?: string | null;
+  last_post_at?: string | null;
+  posts_today?: number;
+  in_progress?: number;
+  waiting_digest?: number;
 }
 
 export interface NodeInfo {

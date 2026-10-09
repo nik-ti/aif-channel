@@ -1,4 +1,4 @@
-// Tailwind theme tokens taken directly from SPEC.md's UI color table.
+// Tailwind theme tokens; the values live in app/globals.css (light and dark).
 // Dark mode is class-based (toggled by Header.tsx) since the app defaults
 // to light mode but still offers a light/dark switch.
 import type { Config } from "tailwindcss";
@@ -15,6 +15,11 @@ const config: Config = {
         surface: {
           primary: "var(--surface-primary)",
           secondary: "var(--surface-secondary)",
+          solid: "var(--surface-solid)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          soft: "var(--accent-soft)",
         },
         ink: {
           primary: "var(--ink-primary)",

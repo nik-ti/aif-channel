@@ -270,9 +270,12 @@ On 2026-10-06 Market One measured `google/gemini-3.5-flash-lite` (sorter) and
 ## The dashboard
 
 A password-protected website (Next.js on Vercel, project **m1-dashboard**, domain
-**m1.simple-flow.co**) with tabs for posts (filter by kind and company), companies (today's
-count per company, what waits for the digest, digests sent), stats, the graph (collapsible)
-and every step's model and prompt. It reads the read-only API in `dashboard/backend/`, which nginx on the
+**m1.simple-flow.co**) in frosted glass over a soft colour backdrop, light or dark. The header
+shows whether the channel is running (feeds polled in the last 25 minutes), the last post and
+today's count. Tabs: posts (filter by kind and company; an opened item shows the post as it went
+out, its source, and why each step decided what it did), companies (today's count per company,
+what waits for the digest, digests sent), stats, the graph and guide (both collapsible) and
+every step's model and prompt. Colours and the glass effect live in `app/globals.css`. It reads the read-only API in `dashboard/backend/`, which nginx on the
 VPS exposes at `/api/dashboard/v1`.
 
 - **Deploy the website by `git push` to main.** Vercel builds `dashboard/frontend`.
@@ -282,7 +285,7 @@ VPS exposes at `/api/dashboard/v1`.
   `DASHBOARD_PASSWORD` and `SESSION_SECRET` (the login).
 - **The API token lives only in `.env`.** It used to be written into the committed service
   file and leaked to GitHub; it was rotated on 2026-10-07.
-- Endpoints (all GET, under `/api/v1`, Bearer token): `posts`, `companies`, `stats`, `graph`,
+- Endpoints (all GET, under `/api/v1`, Bearer token): `posts`, `companies`, `pulse`, `stats`, `graph`,
   `nodes`, `overrides`; POST `actions/force` and `actions/should-not-have-posted` are the
   only writes. Run it locally with
   `cd dashboard/backend && DASHBOARD_TOKEN=x venv/bin/uvicorn main:app --port 8000`.

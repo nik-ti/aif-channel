@@ -35,18 +35,22 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-[100dvh] items-center justify-center bg-surface-secondary px-4">
+    <main className="flex min-h-[100dvh] items-center justify-center px-4">
       <form
         onSubmit={submit}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-border bg-surface-primary p-6 shadow-sm"
+        className="w-full max-w-sm space-y-5 glass-panel rounded-3xl p-7"
       >
         <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-secondary text-ink-primary">
+          <span
+            aria-hidden
+            className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-inner"
+            style={{ background: "conic-gradient(from 210deg, #4f5bff, #35c7b0, #ffb38a, #4f5bff)" }}
+          >
             <Lock className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-xl font-semibold text-ink-primary">AI Flow Dashboard</h1>
-            <p className="mt-1 text-sm text-ink-muted">Enter the password to continue.</p>
+            <h1 className="font-display text-2xl font-semibold text-ink-primary">AI Flow</h1>
+            <p className="mt-1 text-sm text-ink-muted">Enter the password to open the dashboard.</p>
           </div>
         </div>
 
@@ -65,7 +69,7 @@ export default function LoginPage() {
             aria-label="Password"
             placeholder="Password"
             // text-base (16px) stops iOS Safari zooming the page on focus.
-            className="h-12 w-full rounded-md border border-border bg-surface-primary pl-3 pr-12 text-base text-ink-primary outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-sky-500"
+            className="h-12 w-full rounded-xl border border-border bg-surface-primary pl-3 pr-12 text-base text-ink-primary outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-accent"
           />
           <button
             type="button"
@@ -89,7 +93,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={busy || !password}
-          className="h-12 w-full rounded-md bg-ink-primary text-base font-medium text-surface-primary transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="h-12 w-full rounded-xl bg-accent text-base font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           {busy ? "Checking…" : "Sign in"}
         </button>

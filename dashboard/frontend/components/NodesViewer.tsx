@@ -33,10 +33,10 @@ function NodeCard({ node }: { node: NodeInfo }) {
           onClick={() => hasPrompt && setOpen((v) => !v)}
           aria-expanded={open}
           disabled={!hasPrompt}
-          className="flex min-h-[44px] w-full items-start justify-between gap-3 p-4 text-left disabled:cursor-default"
+          className="flex min-h-[44px] w-full items-start justify-between gap-3 p-5 text-left disabled:cursor-default"
         >
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-semibold text-ink-primary">{node.label}</span>
+            <span className="font-display text-[15px] font-semibold text-ink-primary">{node.label}</span>
             <span className="text-xs text-ink-muted sm:text-sm">{node.description}</span>
             <div className="mt-1 flex flex-wrap gap-1.5">
               <ModelChip label="Model:" value={node.model} />
@@ -56,7 +56,7 @@ function NodeCard({ node }: { node: NodeInfo }) {
       </CardHeader>
       {hasPrompt && open && (
         <CardContent className="pt-0">
-          <pre className="max-h-[28rem] overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-border bg-surface-secondary p-3 font-mono text-xs leading-relaxed text-ink-primary">
+          <pre className="max-h-[28rem] overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-border bg-surface-secondary p-3 font-mono text-xs leading-relaxed text-ink-primary">
             {node.prompt}
           </pre>
         </CardContent>
@@ -84,7 +84,7 @@ export function NodesViewer() {
           with no data yet the pipeline is still worth showing: a note, not a
           blocking empty state. */}
       {data && !data.ready && (
-        <p className="rounded-md border border-dashed border-border bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
+        <p className="rounded-xl border border-dashed border-border bg-surface-secondary px-3 py-2 text-xs text-ink-muted">
           This channel has no database yet — the pipeline below reflects its settings, not live runs.
         </p>
       )}

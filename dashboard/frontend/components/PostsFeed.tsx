@@ -50,7 +50,16 @@ function formatTime(iso: string | null) {
   const withZone = iso.includes("T") ? iso : `${iso.replace(" ", "T")}Z`;
   const date = new Date(withZone);
   if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString();
+  // "Today 17:35", "Yesterday 09:12", "Oct 8, 22:44" — the full stamp is in the tooltip.
+  const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const days = Math.floor((startOfDay(new Date()) - startOfDay(date)) / 86_400_000);
+  if (days === 0) return `Today ${time}`;
+  if (days === 1) return `Yesterday ${time}`;
+  return `${date.toLocaleDateString([], { month: "short", day: "numeric" })}, ${time}`;
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
 
 function escapeRegExp(text: string) {
@@ -126,9 +135,21 @@ function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-primary">
-        {item.body ? <Highlight text={item.body} terms={terms} /> : "(no body text)"}
-      </p>
+      {item.post_text && (
+        <div className="rounded-xl bg-accent-soft p-4">
+          <p className="mb-1.5 text-xs font-semibold text-accent">
+            {item.status === "published" ? "The post" : "The written post (not sent)"}
+          </p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-primary">{item.post_text}</p>
+        </div>
+      )}
+
+      <div>
+        {item.post_text && <p className="mb-1 text-xs font-semibold text-ink-muted">Source</p>}
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-primary">
+          {item.body ? <Highlight text={item.body} terms={terms} /> : "(no body text)"}
+        </p>
+      </div>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-5">
         <div>
@@ -161,7 +182,7 @@ function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
             href={item.telegram_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 items-center gap-1.5 rounded-md border border-sky-300 bg-sky-50 px-3 text-xs font-medium text-sky-800 hover:bg-sky-100 sm:h-8"
+            className="inline-flex h-11 items-center gap-1.5 rounded-full border border-transparent bg-accent-soft px-3 text-xs font-medium text-accent hover:brightness-110 sm:h-8"
           >
             View in Telegram <ExternalLink className="h-3.5 w-3.5" />
           </a>
@@ -171,7 +192,7 @@ function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium text-ink-primary hover:bg-surface-secondary sm:h-8"
+            className="inline-flex h-11 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-ink-primary hover:bg-surface-secondary sm:h-8"
           >
             Open source <ExternalLink className="h-3.5 w-3.5" />
           </a>
@@ -189,7 +210,7 @@ function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
       </div>
 
       {confirming && (
-        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
           <p className="text-xs text-ink-muted">
             {confirming === "force"
               ? "Sends this item back to the queue, skipping the checks that rejected it. It goes out on the next round."
@@ -199,7 +220,7 @@ function PostDetail({ item, terms }: { item: PostItem; terms: string[] }) {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Why? (optional, helps later tuning)"
-            className="h-11 rounded-md border border-border bg-surface-primary px-3 text-sm text-ink-primary outline-none focus:ring-2 focus:ring-sky-500 sm:h-9"
+            className="h-11 rounded-xl border border-border bg-surface-primary px-3 text-sm text-ink-primary outline-none focus:ring-2 focus:ring-accent sm:h-9"
           />
           <div className="flex gap-2">
             <Button
@@ -238,7 +259,7 @@ function PostCard({
   onToggle: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-primary">
+    <div className="glass-panel rounded-2xl">
       <button
         type="button"
         onClick={onToggle}
@@ -247,17 +268,12 @@ function PostCard({
         className="flex min-h-[44px] w-full items-start justify-between gap-3 p-4 text-left"
       >
         <div className="flex min-w-0 flex-col gap-1.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
             <StatusBadge status={item.status} />
-            <span>{item.source_name}</span>
-            <span aria-hidden>&middot;</span>
             <span>{formatTime(item.time)}</span>
-            {item.topic && (
-              <>
-                <span aria-hidden>&middot;</span>
-                <span>{kindLabel(item.topic)}{item.company && item.company !== "other" ? ` · ${item.company}` : ""}</span>
-              </>
-            )}
+            <span>{item.source_name}</span>
+            {item.topic && <span>{kindLabel(item.topic)}</span>}
+            {item.company && item.company !== "other" && <span>{item.company}</span>}
           </div>
           <p className="text-sm font-medium text-ink-primary">
             <Highlight text={item.title} terms={terms} />
@@ -396,7 +412,7 @@ export function PostsFeed() {
       {/* Search + source */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-ink-muted" />
           <input
             type="search"
             value={searchText}
@@ -404,7 +420,7 @@ export function PostsFeed() {
             placeholder="Search titles and text…"
             aria-label="Search posts by keyword"
             enterKeyHint="search"
-            className="h-11 w-full rounded-md border border-border bg-surface-primary pl-9 pr-9 text-sm text-ink-primary outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-sky-500 sm:h-9 [&::-webkit-search-cancel-button]:hidden"
+            className="h-11 w-full rounded-xl border border-border bg-surface-primary pl-9 pr-9 text-sm text-ink-primary outline-none placeholder:text-ink-muted focus:ring-2 focus:ring-accent sm:h-9 [&::-webkit-search-cancel-button]:hidden"
           />
           {searchText && (
             <button
@@ -424,7 +440,7 @@ export function PostsFeed() {
           value={source ?? ""}
           onChange={(e) => update({ source: e.target.value || null })}
           aria-label="Source"
-          className="h-11 rounded-md border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9"
+          className="h-11 rounded-xl border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9"
         >
           <option value="">All sources</option>
           {sources.map((name) => (
@@ -438,7 +454,7 @@ export function PostsFeed() {
             value={company ?? ""}
             onChange={(e) => update({ company: e.target.value || null })}
             aria-label="Company"
-            className="h-11 flex-1 rounded-md border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9 sm:flex-none"
+            className="h-11 flex-1 rounded-xl border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9 sm:flex-none"
           >
             <option value="">All companies</option>
             {companies.map((name) => (
@@ -451,7 +467,7 @@ export function PostsFeed() {
             value={kind ?? ""}
             onChange={(e) => update({ kind: e.target.value || null })}
             aria-label="Kind"
-            className="h-11 flex-1 rounded-md border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9 sm:flex-none"
+            className="h-11 flex-1 rounded-xl border border-border bg-surface-primary px-3 text-sm text-ink-primary sm:h-9 sm:flex-none"
           >
             <option value="">All kinds</option>
             {kinds.map((name) => (
@@ -473,7 +489,7 @@ export function PostsFeed() {
           className={cn(
             "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors sm:h-8",
             statusIds.length === 0
-              ? "border-ink-primary bg-ink-primary text-surface-primary"
+              ? "border-accent bg-accent text-white"
               : "border-border bg-surface-primary text-ink-primary hover:bg-surface-secondary"
           )}
         >
@@ -482,6 +498,8 @@ export function PostsFeed() {
         {STATUS_FILTERS.map((f) => {
           const active = statusIds.includes(f.id);
           const n = chipCount(f.statuses);
+          // An empty status is noise as a filter; it comes back when something lands in it.
+          if (n === 0 && !active) return null;
           return (
             <button
               key={f.id}
@@ -491,7 +509,7 @@ export function PostsFeed() {
               className={cn(
                 "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors sm:h-8",
                 active
-                  ? "border-ink-primary bg-surface-primary text-ink-primary ring-1 ring-ink-primary"
+                  ? "border-accent bg-accent-soft text-ink-primary ring-1 ring-accent"
                   : "border-border bg-surface-primary text-ink-primary hover:bg-surface-secondary",
                 !active && n === 0 && "opacity-50"
               )}
@@ -544,7 +562,7 @@ export function PostsFeed() {
         )}
       </div>
 
-      <div className="table-scroll hidden rounded-lg border border-border bg-surface-primary sm:block">
+      <div className="table-scroll hidden glass-panel rounded-2xl px-1 py-1 sm:block">
         <Table>
           <TableHeader>
             <TableRow>

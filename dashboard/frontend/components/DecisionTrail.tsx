@@ -152,8 +152,8 @@ export function DecisionTrail({ item }: { item: TrailItem }) {
 
   if (steps.length === 0) return null;
   return (
-    <div className="rounded-md bg-surface-secondary/60 px-3 py-2.5">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">What happened</p>
+    <div className="rounded-xl bg-surface-secondary px-3.5 py-3">
+      <p className="mb-2 text-xs font-semibold text-ink-primary">What happened</p>
       <ol className="flex flex-col gap-2">{steps}</ol>
     </div>
   );

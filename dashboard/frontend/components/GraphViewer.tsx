@@ -42,6 +42,7 @@ export function GraphViewer() {
   const [selected, setSelected] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const nodes = data?.nodes ?? [];
@@ -115,14 +116,14 @@ export function GraphViewer() {
         <EmptyState />
       ) : (
         <>
-          <div className="rounded-lg border border-border bg-surface-primary">
+          <div className="glass-panel rounded-2xl">
             <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
-              <p className="text-sm font-semibold text-ink-primary">The pipeline</p>
+              <p className="font-display text-[15px] font-semibold text-ink-primary">The pipeline</p>
               <button
                 type="button"
                 onClick={toggleExpanded}
                 aria-expanded={expanded}
-                className="inline-flex h-11 items-center gap-1 rounded-md px-3 text-xs font-medium text-ink-primary hover:bg-surface-secondary sm:h-8"
+                className="inline-flex h-11 items-center gap-1 rounded-full px-3 text-xs font-medium text-ink-primary hover:bg-surface-secondary sm:h-8"
               >
                 {expanded ? (
                   <>
@@ -148,10 +149,7 @@ export function GraphViewer() {
                 >
                   <div
                     ref={containerRef}
-                    className={cn(
-                      "mx-auto flex justify-center [&_svg]:h-auto [&_svg]:max-w-full",
-                      expanded ? "max-w-xl" : "max-w-md"
-                    )}
+                    className="mx-auto flex max-w-2xl justify-center [&_svg]:h-auto [&_svg]:max-w-full"
                   />
                 </div>
                 {!expanded && (
@@ -159,7 +157,7 @@ export function GraphViewer() {
                     type="button"
                     onClick={toggleExpanded}
                     aria-label="Expand the pipeline diagram"
-                    className="absolute inset-x-0 bottom-0 flex h-20 items-end justify-center bg-gradient-to-t from-surface-primary to-transparent pb-2 text-xs font-medium text-ink-muted"
+                    className="absolute inset-x-0 bottom-0 flex h-24 items-end justify-center rounded-b-2xl bg-gradient-to-t from-[var(--surface-solid)] to-transparent pb-3 text-xs font-medium text-ink-muted"
                   >
                     Show the whole pipeline
                   </button>
@@ -169,7 +167,7 @@ export function GraphViewer() {
           </div>
 
           {selectedNode ? (
-            <div className="rounded-lg border border-border bg-surface-primary p-4 text-sm">
+            <div className="glass-panel rounded-2xl p-4 text-sm">
               <p className="font-semibold text-ink-primary">{selectedNode.label}</p>
               {selectedNode.description && (
                 <p className="text-ink-muted">{selectedNode.description}</p>
@@ -186,7 +184,27 @@ export function GraphViewer() {
 
       {/* The workflow write-up explains the shared machinery, not this
           database, so it stays visible even with no database yet. */}
-      <div className="rounded-lg border border-border bg-surface-primary p-4 md:p-6">
+      <div className="glass-panel relative rounded-2xl">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+          <p className="font-display text-[15px] font-semibold text-ink-primary">How a post gets made</p>
+          <button
+            type="button"
+            onClick={() => setGuideOpen((v) => !v)}
+            aria-expanded={guideOpen}
+            className="inline-flex h-11 items-center gap-1 rounded-full px-3 text-xs font-medium text-ink-primary hover:bg-surface-secondary sm:h-8"
+          >
+            {guideOpen ? (
+              <>
+                Collapse <ChevronUp className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Read it all <ChevronDown className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+        <div className={cn("overflow-hidden p-4 md:px-6", guideOpen ? "max-h-none" : "max-h-96")}>
         <article className="prose-workflow">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -208,6 +226,16 @@ export function GraphViewer() {
             {WORKFLOW_EXPLANATION}
           </ReactMarkdown>
         </article>
+        </div>
+        {!guideOpen && (
+          <button
+            type="button"
+            onClick={() => setGuideOpen(true)}
+            className="absolute inset-x-0 bottom-0 flex h-24 items-end justify-center rounded-b-2xl bg-gradient-to-t from-[var(--surface-solid)] to-transparent pb-3 text-xs font-medium text-ink-muted"
+          >
+            Read the whole guide
+          </button>
+        )}
       </div>
     </div>
   );

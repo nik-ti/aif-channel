@@ -12,6 +12,7 @@ import {
   fetchPosts,
   fetchStats,
   fetchCompanies,
+  fetchPulse,
   forcePublish,
   markShouldNotHavePosted,
 } from "@/lib/api";
@@ -41,6 +42,15 @@ export function useStats(range: StatsRange = "7d") {
   return useQuery({
     queryKey: ["stats", range],
     queryFn: () => fetchStats(range),
+    refetchInterval: POLL_INTERVAL_MS,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function usePulse() {
+  return useQuery({
+    queryKey: ["pulse"],
+    queryFn: () => fetchPulse(),
     refetchInterval: POLL_INTERVAL_MS,
     placeholderData: keepPreviousData,
   });

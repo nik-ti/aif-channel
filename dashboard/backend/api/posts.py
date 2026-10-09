@@ -20,12 +20,16 @@ each one would give you before it is clicked.
 
 from __future__ import annotations
 
+import re
+
 from fastapi import APIRouter, Query
 
 import paths
 from db_connector import query
 
 router = APIRouter()
+
+_TAG_RE = re.compile(r"<[^>]+>")
 
 
 # Longest keyword search accepted. A search box, not a query language — this
@@ -104,6 +108,9 @@ def get_posts(
                  WHERE p.item_id = items.id AND p.status = 'sent'
                    AND p.telegram_message_id IS NOT NULL
                  ORDER BY p.id DESC LIMIT 1)          AS telegram_message_id,
+               (SELECT p.post_html FROM posts p
+                 WHERE p.item_id = items.id ORDER BY p.id DESC LIMIT 1)
+                                                      AS post_html,
                (SELECT e.verdict FROM editor_decisions e
                  WHERE e.item_id = items.id ORDER BY e.id DESC LIMIT 1)
                                                       AS editor_verdict,
@@ -129,6 +136,8 @@ def get_posts(
     # link instead of a broken one.
     username = paths.channel_username()
     for row in rows:
+        # The post as the reader saw it (or would have): Telegram's <b> and links dropped.
+        row["post_text"] = _TAG_RE.sub("", row.pop("post_html") or "").strip()
         message_id = row.get("telegram_message_id")
         row["telegram_url"] = (f"https://t.me/{username}/{message_id}"
                                if username and message_id else None)

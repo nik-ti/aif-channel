@@ -6,7 +6,7 @@
 import { ExternalLink } from "lucide-react";
 
 import { EmptyState } from "@/components/EmptyState";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCompanies } from "@/hooks/useApi";
 import { STATUS_INFO } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -42,21 +42,28 @@ export function CompaniesView() {
 
   const limit = data?.limit ?? 2;
 
+  if (!data) {
+    return <p className="p-6 text-sm text-ink-muted">Loading today&apos;s companies…</p>;
+  }
+
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm text-ink-muted">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+        <h2 className="font-display text-xl font-semibold text-ink-primary">Companies</h2>
+        <p className="mt-0.5 max-w-2xl text-sm text-ink-muted">
           Each company gets <span className="font-semibold text-ink-primary">{limit} posts a day</span> (UTC).
           The rest wait and go out together at{" "}
           <span className="font-semibold text-ink-primary">{data ? digestTime(data.digest_hour_utc) : "…"}</span>.
           A 5/5 launch always goes out.
         </p>
+        </div>
         {isFetching && <span className="text-xs text-ink-muted">Refreshing…</span>}
       </div>
 
       <Card>
-        <CardHeader className="pb-2">
-          <p className="text-sm font-semibold text-ink-primary">Today</p>
+        <CardHeader className="pb-3">
+          <CardTitle>Posts today</CardTitle>
         </CardHeader>
         <CardContent>
           {data && data.today.length === 0 ? (
@@ -91,10 +98,10 @@ export function CompaniesView() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <p className="text-sm font-semibold text-ink-primary">
-            Waiting for the digest <span className="font-normal text-ink-muted">({data?.waiting.length ?? 0})</span>
-          </p>
+        <CardHeader className="pb-3">
+          <CardTitle>
+            Waiting for the digest <span className="font-normal text-ink-muted">{data?.waiting.length ?? 0}</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {data && data.waiting.length === 0 ? (
@@ -103,9 +110,11 @@ export function CompaniesView() {
             <ul className="flex flex-col divide-y divide-border">
               {data?.waiting.map((item) => (
                 <li key={item.id} className="flex flex-col gap-0.5 py-2">
-                  <span className="text-xs text-ink-muted">
-                    {item.company} · {item.kind.replace(/_/g, " ")} · scored {item.importance}/5 · arrived{" "}
-                    {localTime(item.time)}
+                  <span className="flex flex-wrap gap-x-3 text-xs text-ink-muted">
+                    <span className="font-medium text-ink-primary">{item.company}</span>
+                    <span>{item.kind.replace(/_/g, " ")}</span>
+                    <span>scored {item.importance}/5</span>
+                    <span>arrived {localTime(item.time)}</span>
                   </span>
                   <span className="text-sm text-ink-primary">{item.title}</span>
                 </li>
@@ -116,8 +125,8 @@ export function CompaniesView() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <p className="text-sm font-semibold text-ink-primary">Digests sent</p>
+        <CardHeader className="pb-3">
+          <CardTitle>Digests sent</CardTitle>
         </CardHeader>
         <CardContent>
           {data && data.digests.length === 0 ? (
@@ -125,18 +134,19 @@ export function CompaniesView() {
           ) : (
             <ul className="flex flex-col gap-4">
               {data?.digests.map((digest) => (
-                <li key={digest.id} className="flex flex-col gap-2 rounded-md bg-surface-secondary/60 p-3">
+                <li key={digest.id} className="flex flex-col gap-2 rounded-xl bg-surface-secondary p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-                    <span>
-                      <span className="font-medium text-ink-primary">{digest.company}</span> · {localTime(digest.sent_at)} ·{" "}
-                      {digest.items.length} items
+                    <span className="flex flex-wrap gap-x-3">
+                      <span className="font-medium text-ink-primary">{digest.company}</span>
+                      <span>{localTime(digest.sent_at)}</span>
+                      <span>{digest.items.length} items</span>
                     </span>
                     {digest.telegram_url && (
                       <a
                         href={digest.telegram_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-medium text-sky-700 hover:underline"
+                        className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
                       >
                         View in Telegram <ExternalLink className="h-3.5 w-3.5" />
                       </a>

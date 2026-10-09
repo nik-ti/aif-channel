@@ -36,13 +36,14 @@ const RANGE_KEY = "market-one-stats-range";
 
 // Two series, one unit (items), so one axis. "Arrived" is a calm blue;
 // "Published" wears the published status green used everywhere else.
-const ARRIVED = "#3b82f6";
+const ARRIVED = "#6b7cff";
 const PUBLISHED = STATUS_INFO.published.color;
 
 const TOOLTIP_STYLE = {
-  background: "var(--surface-primary)",
+  background: "var(--surface-solid)",
   border: "1px solid var(--border-color)",
-  borderRadius: 8,
+  borderRadius: 12,
+  boxShadow: "var(--glass-shadow)",
   fontSize: 12,
   color: "var(--ink-primary)",
 };
@@ -143,12 +144,12 @@ function Kpi({
   accent?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-border bg-surface-primary p-4 shadow-sm">
+    <div className="glass-panel flex flex-col gap-1.5 rounded-2xl p-4 sm:p-5">
       <span className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
         {accent && <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: accent }} />}
         {label}
       </span>
-      <span className="text-2xl font-semibold tabular-nums tracking-tight text-ink-primary">{value}</span>
+      <span className="font-display text-[1.75rem] font-semibold leading-tight tabular-nums text-ink-primary">{value}</span>
       {sub && <span className="min-h-[1rem]">{sub}</span>}
     </div>
   );
@@ -478,13 +479,13 @@ export function StatsPanel() {
     <div className="mx-auto flex max-w-7xl flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-ink-primary">Channel overview</h2>
-          <p className="text-xs text-ink-muted">
-            {rangeLong} · last post {timeAgo(summary?.last_published_at ?? null)}
-            {isFetching && " · refreshing…"}
+          <h2 className="font-display text-xl font-semibold text-ink-primary">Channel overview</h2>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            {rangeLong}, last post {timeAgo(summary?.last_published_at ?? null)}
+            {isFetching && ", refreshing…"}
           </p>
         </div>
-        <div role="radiogroup" aria-label="Time window" className="inline-flex rounded-lg border border-border bg-surface-primary p-0.5">
+        <div role="radiogroup" aria-label="Time window" className="glass-panel inline-flex rounded-full p-1">
           {RANGES.map((r) => (
             <button
               key={r.id}
@@ -493,8 +494,8 @@ export function StatsPanel() {
               aria-checked={range === r.id}
               onClick={() => chooseRange(r.id)}
               className={cn(
-                "h-9 min-w-[3rem] rounded-md px-3 text-xs font-medium transition-colors sm:h-8",
-                range === r.id ? "bg-ink-primary text-surface-primary" : "text-ink-muted hover:text-ink-primary"
+                "h-9 min-w-[3rem] rounded-full px-3 text-xs font-medium transition-colors sm:h-8",
+                range === r.id ? "bg-accent text-white" : "text-ink-muted hover:text-ink-primary"
               )}
             >
               {r.label}

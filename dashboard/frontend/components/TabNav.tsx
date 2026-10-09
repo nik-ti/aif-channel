@@ -1,4 +1,4 @@
-// The 5 tabs. Switching tabs is local state in page.tsx — TabNav just
+// The five tabs as one glass pill. Switching is local state in page.tsx; this only
 // renders the strip and reports clicks upward.
 "use client";
 
@@ -15,23 +15,25 @@ export function TabNav({
   onChange: (tab: Tab) => void;
 }) {
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-border px-4">
-      {TABS.map((tab) => (
-        <button
-          key={tab}
-          onClick={() => onChange(tab)}
-          className={cn(
-            // py-3 gives a 44px tap target on phones; sm: brings it back to
-            // the original, more compact desktop size.
-            "shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors sm:py-2",
-            active === tab
-              ? "border-ink-primary text-ink-primary"
-              : "border-transparent text-ink-muted hover:text-ink-primary"
-          )}
-        >
-          {tab}
-        </button>
-      ))}
+    <nav className="mx-auto max-w-7xl px-4 pt-5 sm:px-6" aria-label="Sections">
+      <div className="glass-panel flex w-full gap-0.5 overflow-x-auto rounded-full p-1 sm:inline-flex sm:w-auto sm:gap-1">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => onChange(tab)}
+            aria-current={active === tab ? "page" : undefined}
+            className={cn(
+              // 40px tall on phones for thumbs, a little tighter on desktop.
+              "h-10 flex-1 shrink-0 rounded-full px-2 text-[13px] font-medium transition-colors sm:h-9 sm:flex-none sm:px-4 sm:text-sm",
+              active === tab
+                ? "bg-accent text-white shadow-sm"
+                : "text-ink-muted hover:bg-surface-secondary hover:text-ink-primary"
+            )}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }

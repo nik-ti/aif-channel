@@ -61,11 +61,11 @@ function HomeContent() {
   const ActiveTab = TAB_CONTENT[tab];
 
   return (
-    <div className="min-h-screen bg-surface-secondary">
+    <div className="min-h-screen pb-12">
       <Header />
 
       {offline && (
-        <div className="flex items-center justify-between gap-3 bg-status-rejected/10 px-4 py-2 text-sm text-status-rejected">
+        <div className="mx-auto mt-3 flex max-w-7xl items-center justify-between gap-3 rounded-2xl bg-status-rejected/10 px-4 py-2 text-sm text-status-rejected">
           <span>API offline — showing last known data.{health.isFetching ? " Retrying..." : ""}</span>
           <Button variant="outline" size="sm" onClick={() => health.refetch()}>
             Retry
@@ -75,7 +75,7 @@ function HomeContent() {
 
       <TabNav active={tab} onChange={setTab} />
 
-      <main className={cn("transition-opacity", offline && "pointer-events-none opacity-50")}>
+      <main className={cn("mx-auto max-w-7xl px-0 sm:px-2", offline && "pointer-events-none opacity-50")}>
         <ActiveTab />
       </main>
     </div>
@@ -84,7 +84,7 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-surface-secondary" />}>
+    <Suspense fallback={<div className="min-h-screen" />}>
       <HomeContent />
     </Suspense>
   );

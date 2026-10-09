@@ -6,11 +6,11 @@ import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 rounded-full text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-ink-primary text-surface-primary hover:opacity-90",
+        default: "bg-accent text-white hover:opacity-90",
         outline:
           "border border-border bg-transparent hover:bg-surface-secondary text-ink-primary",
         ghost: "hover:bg-surface-secondary text-ink-primary",
