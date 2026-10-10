@@ -160,6 +160,13 @@ misled the reader (Odyssey-3, 2026-10-08). Two layers:
   otherwise there is no link. (A fresh Managed Agents tweet once got the May 28 dynamic
   workflows blog post as its link, 2026-10-09.)
 
+### Fixing a post that already went out
+
+`python3 tools/edit_post.py ITEM_ID --html new_post.html [--link URL | --no-link] [--dry-run]`
+edits the message in the channel (caption or text) and saves the new version to the database,
+so the dashboard and the repeat check see it. Run the new text past the editor first. Used on
+2026-10-10 for seven posts with repeats, an unknown maker, or a wrong link.
+
 ### Changing a model
 
 Every model is a line in `config.py`, overridable in `.env`. Before switching one:
