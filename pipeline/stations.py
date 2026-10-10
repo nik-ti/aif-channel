@@ -64,8 +64,12 @@ async def fetch_article_node(state: dict) -> dict[str, Any]:
         return {"outcome": "stale"}
     if not text:
         return {}
-    # Carried on the item, so a sorter placed after this station reads the article.
-    return {"item": {**state["item"], "article_text": text}}
+    # Carried on the item, so a sorter placed after this station reads the article. The product
+    # link the reader found is carried too: it is saved on the row, and the publisher reads this
+    # copy, so without it every AI/TLDR post linked AI/TLDR itself (Clef-omni, 2026-10-09).
+    found = db.get_item(state["item"]["id"])
+    link = (found["link_url"] if found is not None else "") or state["item"].get("link_url") or ""
+    return {"item": {**state["item"], "article_text": text, "link_url": link}}
 
 
 def route_after_fetch_article(state: dict) -> str:

@@ -955,6 +955,24 @@ def repeats_and_filler_send_the_post_back_for_a_rewrite():
     text = config.WRITER_PROMPT_PATH.read_text()
     assert "Every line says something new" in text and "Who made it" in text
 
+
+@test
+async def the_product_link_found_while_reading_reaches_the_publisher():
+    from nodes import article
+    from pipeline import stations
+
+    async def fetched(item):
+        db.set_item_link(item["id"], "https://developers.cloudflare.com/workers-ai/models/clef-omni")
+        return "Clef-omni reads audio and video. " * 30
+    real, article.fetch_for = article.fetch_for, fetched
+    item_id = db.insert_item(origin="rss", source_name="ai_tldr", external_id="clef",
+                             url="https://ai-tldr.dev/releases/cloudflare-clef-omni/", title="Clef-omni")
+    try:
+        state = await stations.fetch_article_node({"item": dict(db.get_item(item_id))})
+    finally:
+        article.fetch_for = real
+    assert state["item"]["link_url"] == "https://developers.cloudflare.com/workers-ai/models/clef-omni"
+
 # ── A rewrite edits the rejected draft, with every request so far ──
 
 @test
