@@ -68,6 +68,13 @@ def is_x_link(url: str) -> bool:
         "x.com", "twitter.com", "t.co", "pic.x.com", "pic.twitter.com")
 
 
+def _on_aggregator(url: str) -> bool:
+    """True for a page on a site in PRODUCT_LINK_PAGES (it writes ABOUT things, it is not one)."""
+    from urllib.parse import urlparse
+    host = urlparse(url or "").netloc.lower()
+    return any(host == site or host.endswith("." + site) for site in config.PRODUCT_LINK_PAGES)
+
+
 def compose(post_html: str, url: str, link_url: str = "") -> str:
     """The post as it goes out: the writer's text, with any foreign link removed.
 
@@ -82,6 +89,9 @@ def compose(post_html: str, url: str, link_url: str = "") -> str:
     text = post_html.strip()
     if config.LINK_TO_PRODUCT:
         target = link_url or url
+        # An aggregator's page (AI/TLDR) is never the link: no product page found means no link.
+        if not link_url and _on_aggregator(url):
+            target = ""
         # Never X: "Try it here" opening a news account's tweet promotes them and
         # misleads the reader (Odyssey-3, 2026-10-08). No link beats that one.
         if is_x_link(target):

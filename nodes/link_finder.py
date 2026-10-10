@@ -33,9 +33,7 @@ or aggregator. The page must be about THIS product, not an earlier one: check it
 _URL = re.compile(r"https?://[^\s<>\"')\]]+")
 _ANCHOR = re.compile(r'<a\s[^>]*href="(https?://[^"]+)"[^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
 _TRY_WORDS = re.compile(r"\b(try|demo|experience|playground|play|launch app|open app|get started)\b", re.I)
-# An article about the product rather than the product itself.
-_ARTICLE_PATH = re.compile(r"/(blog|news|index|research|announcements?|posts?|press)/", re.I)
-_TRY_HOSTS = ("experience.", "demo.", "try.", "play.", "playground.", "app.", "studio.", "chat.")
+_TRY_HOSTS = article.TRY_HOSTS
 
 
 def _site(url: str) -> str:
@@ -99,7 +97,7 @@ async def find(item, post_html: str) -> str:
     demo = demo_link(html, final)
     if demo and (await _loads(demo))[0]:
         url = demo
-    elif _ARTICLE_PATH.search(urlparse(final).path):
+    elif article.is_article_url(final):
         log.info("Rejected found link for item %s: an announcement, not the product (%s)",
                  item["id"], url[:100])
         return ""

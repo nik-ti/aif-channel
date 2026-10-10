@@ -207,8 +207,13 @@ BRIEF_SOURCE_CHARS = _get_int("BRIEF_SOURCE_CHARS", 400)
 WRONG_TOPIC_RULE = "not about AI tools, AI products or AI models that people can use"
 EXTRA_EDITOR_RULES = {
     "JARGON": "uses a technical word a 12-year-old would not know, without explaining it",
+    # nikita 2026-10-10: bodies kept saying the headline again ("free to try for Pro users",
+    # then "no extra cost for eligible Pro users"), and "Uizze made a free skill... no account
+    # needed" named an unknown maker and stated what is true of every skill.
+    "REPEATS": "a body line says again what the first line or another line already said",
+    "FILLER": "names an unknown maker, or says what is true of every item of its kind",
 }
-EXTRA_FIXABLE_RULES = frozenset({"JARGON"})
+EXTRA_FIXABLE_RULES = frozenset({"JARGON", "REPEATS", "FILLER"})
 
 # On a rewrite the editor sees its own earlier rejection, so it cannot reverse
 # itself ("say units of text" → "say tokens").

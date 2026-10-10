@@ -206,10 +206,37 @@ def _record_success() -> None:
     _consecutive_failures = 0
 
 
+# An article ABOUT the thing (a blog post, a news page) rather than the thing itself. A dated
+# path (/2026/10/08/) is how news sites like TechCrunch and 9to5Google file their stories.
+_ARTICLE_PATH = re.compile(r"/(blog|news|index|research|announcements?|posts?|press)/|/20\d\d/\d\d/",
+                           re.IGNORECASE)
+# Where a released thing itself lives when the maker has no product page: its code or model.
+_CODE_HOSTS = ("github.com", "huggingface.co")
+TRY_HOSTS = ("experience.", "demo.", "try.", "play.", "playground.", "app.", "studio.", "chat.")
+
+
+def site_of(url: str) -> str:
+    """The last two parts of the host: cloudflare.com for blog.cloudflare.com."""
+    from urllib.parse import urlparse
+    host = urlparse(url).netloc.lower().split(":")[0]
+    return ".".join(host.split(".")[-2:])
+
+
+def is_article_url(url: str) -> bool:
+    """True for a blog post or news page (blog.x.com, /blog/, /news/...), not a product."""
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    return parsed.netloc.lower().startswith(("blog.", "news.")) or bool(_ARTICLE_PATH.search(parsed.path))
+
+
 def product_link(html: str, page_url: str) -> str:
-    """The first outside link in an aggregator page's main text: the thing it is about.
+    """Where to use the thing an aggregator page is about, or "" if it only links articles.
 
     Only for sites named in PRODUCT_LINK_PAGES; anywhere else the page IS the source.
+    Picks, in order: a "try it" site, the maker's own page that is not an article (Cloudflare's
+    model page, not its blog post about it), the thing's code or model on GitHub or Hugging Face.
+    Never a news site, someone's blog or a video about it.
+    An announcement is never the link: the post already says what it says (nikita, 2026-10-10).
     """
     from urllib.parse import urlparse
     from bs4 import BeautifulSoup
@@ -219,11 +246,20 @@ def product_link(html: str, page_url: str) -> str:
         return ""
     soup = BeautifulSoup(html or "", "lxml")
     body = soup.find("main") or soup.find("article") or soup.body or soup
+    links = []
     for tag in body.find_all("a", href=True):
         href = tag["href"].strip()
         target = urlparse(href).netloc.lower()
-        if href.startswith("http") and target and target != host and not target.endswith("." + host):
-            return href
+        if (href.startswith("http") and target and target != host
+                and not target.endswith("." + host) and href not in links):
+            links.append(href)
+    makers = {site_of(link) for link in links if is_article_url(link)}
+    usable = [link for link in links if not is_article_url(link)]
+    for choice in ([u for u in usable if urlparse(u).netloc.lower().startswith(TRY_HOSTS)],
+                   [u for u in usable if site_of(u) in makers],
+                   [u for u in usable if site_of(u) in _CODE_HOSTS]):
+        if choice:
+            return choice[0]
     return ""
 
 

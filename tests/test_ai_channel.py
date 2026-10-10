@@ -922,6 +922,39 @@ async def an_old_page_is_neither_news_nor_the_link():
     assert state == {"outcome": "stale"}, state
     assert db.get_item(item_id)["status"] == "skipped_stale"
 
+
+# ── 2026-10-10: the product, never an article about it; no repeats, no filler ──
+
+@test
+def an_aggregator_page_links_the_product_not_an_article():
+    from nodes import article, publisher
+    page = ('<main><a href="https://blog.cloudflare.com/clef-faster/">source</a>'
+            '<a href="https://techcrunch.com/2026/10/09/cloudflare-clef/">news</a>'
+            '<a href="https://huggingface.co/Cloudflare/clef-omni">model</a>'
+            '<a href="https://developers.cloudflare.com/workers-ai/models/clef-omni">docs</a></main>')
+    url = "https://ai-tldr.dev/releases/cloudflare-clef-omni/"
+    assert article.product_link(page, url) == "https://developers.cloudflare.com/workers-ai/models/clef-omni"
+    only_news = '<main><a href="https://techcrunch.com/2026/10/09/x/">a</a><a href="https://blog.x.ai/y/">b</a></main>'
+    assert article.product_link(only_news, url) == ""
+    assert article.is_article_url("https://9to5google.com/2026/10/08/gemini-agent/")
+    assert not article.is_article_url("https://red.anthropic.com/oss-scanner")
+    out = publisher.compose('<b>Clef-omni</b>\n\n<a href="LINK">Try it here</a>', url, "")
+    assert "ai-tldr.dev" not in out and "Try it here" not in out, out
+
+
+def test_rules_are_fixable():
+    from nodes import editor
+    from pipeline import stations
+    for rule in ("REPEATS", "FILLER"):
+        assert rule in editor.RULES and rule in stations.FIXABLE_RULES
+
+
+@test
+def repeats_and_filler_send_the_post_back_for_a_rewrite():
+    test_rules_are_fixable()
+    text = config.WRITER_PROMPT_PATH.read_text()
+    assert "Every line says something new" in text and "Who made it" in text
+
 # ── A rewrite edits the rejected draft, with every request so far ──
 
 @test

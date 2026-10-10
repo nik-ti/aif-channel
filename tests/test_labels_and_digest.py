@@ -54,7 +54,7 @@ def _item(title: str, *, company: str = "", kind: str = "", status: str = "queue
     return item_id
 
 
-def _sent(company: str, minutes_ago: int = 30) -> None:
+def _sent(company: str, minutes_ago: int = 0) -> None:
     item_id = _item(f"sent {company}", company=company, kind="feature", status="published")
     post_id = db.create_post(item_id=item_id, topic="feature", post_html="<b>x</b>",
                              image_url="", writer_model="t")
@@ -223,6 +223,7 @@ async def the_digest_goes_out_once_a_day_at_its_hour():
     from nodes import company_digest
     from pipeline import graph
     db.conn().execute("UPDATE items SET status='expired' WHERE status='waiting_digest'")
+    db.conn().execute("DELETE FROM posts")      # a post a moment ago would make the digest wait its turn
     db.conn().commit()
     waiting = [_item(f"Anthropic thing {n}", company="Anthropic", kind="feature",
                      status="waiting_digest", hours_ago=2) for n in range(3)]

@@ -102,6 +102,12 @@ Simple does NOT mean vague. Keep the names, numbers, prices and conditions that 
 
 Only add what the source supports. If the source has one fact, the post is the first line plus the link line, and that is a success.
 
+**Every line says something new.** The first line tells the news; the body only adds facts the first line did not give. Never say the first line again in other words ("free for Pro users" up top, then "at no extra cost for Pro users" below). If a fact is in the first line, it is not in the body, and the other way round. A short post that never repeats itself beats a longer one that does.
+
+**Who made it, only when the reader would know them.** Name the maker when it is a known company (OpenAI, Google, Cloudflare, Midjourney...) or a well-known person in AI. An unknown maker (a username, a GitHub handle, an individual or small team nobody would recognise) is not news: do not name them, start with what the thing does ("A skill turns a screenshot into real code").
+
+**No filler that is true of every item of its kind.** Skills and prompts are always free and need no account, so never say so for a skill or a prompt. "Free" is worth saying only for something people would otherwise expect to pay for (an app, a plan, a model).
+
 **Marks:** {emoji_rule}
 
 No hashtags. No channel name and no sign-off: the system adds the signature.

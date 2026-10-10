@@ -234,6 +234,17 @@ address. Every link in a post loses its `utm_` tracking parameters (`textclean.s
 extra lines carry a figure from the source, and a post that opens like a recent one is
 written again once.
 
+**Every line says something new** (2026-10-10). The body never restates the first line, an
+unknown maker (a username, an individual nobody in AI knows) is not named, and nothing true of
+every item of its kind is said (a skill being free or needing no account). The editor rejects
+these as `REPEATS` and `FILLER`, both fixable, so the writer cuts them on the rewrite.
+
+**An aggregator page links the product, never an article.** For AI/TLDR items
+(`article.product_link`): a "try it" site first, then the maker's own non-article page
+(Cloudflare's model page, not its blog post), then the code or model on GitHub or Hugging Face.
+Blog posts, news sites and dated `/2026/10/..` paths are never picked, and with nothing usable
+the post has no link line rather than one to AI/TLDR.
+
 **Too thin to post.** A source with under 250 characters of real text and no page read is capped at
 3 in code (`sorter.THIN_SOURCE_CHARS`): a headline-only post tells the reader nothing. A one-line
 source that is posted keeps any body sentence built from the source's own words.
