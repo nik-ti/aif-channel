@@ -11,6 +11,7 @@ import re
 from datetime import datetime, timezone
 
 import config
+from nodes import article
 from utils import logger as log_setup, openrouter
 
 log = log_setup.get("writer")
@@ -21,13 +22,15 @@ TEMPERATURE = 0.2  # Low: house style should stay consistent.
 MAX_TOKENS = 900
 
 # Ask for length, not write-long-then-cut (cuts mid-sentence).
-LENGTH_RULE_TEXT = "70-100 words. Three short paragraphs at most."
+# Raised 2026-10-11 (nikita: "we should be more informative"): the old 70-100 and 45-65
+# left out the source's best facts (Microsoft-Decision-1 lost "35x faster than GPT-6 Sol").
+LENGTH_RULE_TEXT = "80-130 words. Three short paragraphs or four • lines at most."
 
 # Telegram caps image captions at 1024 (vs 4096 for text).
 LENGTH_RULE_IMAGE = (
-    "45-65 words. This one is going out as a caption under a picture, and "
-    "Telegram cuts captions off at 1024 characters, so it MUST be short. "
-    "Two short paragraphs at most."
+    "60-100 words. This one is going out as a caption under a picture, and "
+    "Telegram cuts captions off at 1024 characters, so never go over 100 words. "
+    "Two short paragraphs or three • lines at most."
 )
 
 # Short X posts have no padding material; padding = inventing.
@@ -219,7 +222,7 @@ ONE_LINE_SOURCE_WORDS = 32
 
 def is_one_line_source(item) -> bool:
     """True if the source is a single sentence — a bare wire headline."""
-    text = f"{item['title'] or ''} {item['body'] or ''}"
+    text = f"{item['title'] or ''} {article.full_source(item)}"
     words = {w for w in re.findall(r"[a-z0-9$%.]+", text.lower()) if len(w) > 1}
     return len(words) <= ONE_LINE_SOURCE_WORDS
 
@@ -252,9 +255,12 @@ def repeated_opening(post: str, recent_posts: list[str], window: int = 10) -> st
 
 
 def headline_only(post: str) -> str:
-    """Cut a post down to its first line — the mark and the bold headline."""
+    """Cut a post down to its first line — the mark and the bold headline — and its link line."""
     first = post.strip().split("\n", 1)[0].strip()
-    return first if "<b>" in first else post
+    if "<b>" not in first:
+        return post
+    links = [line.strip() for line in post.splitlines() if LINK_PLACEHOLDER in line]
+    return f"{first}\n\n{links[-1]}" if links and LINK_PLACEHOLDER not in first else first
 
 
 def _figures(text: str) -> set[str]:
@@ -268,7 +274,7 @@ def figures_lost_by_cut(item, post: str) -> set[str]:
     "TESLA 3Q DELIVERIES 486,532, EST. 463,761" was cut to "Tesla Q3 deliveries:
     486,532" — the estimate, the only thing that made the number mean anything, went.
     """
-    source = _figures(f"{item['title'] or ''} {item['body'] or ''}")
+    source = _figures(f"{item['title'] or ''} {article.full_source(item)}")
     return (_figures(post) - _figures(headline_only(post))) & source
 
 
@@ -288,7 +294,7 @@ def lost_by_cut(item, post: str) -> set[str]:
     and any body sentence whose words are mostly the source's ("Users on paid plans can
     generate" went with the Playground post's headline-only cut). Padding still goes."""
     lost = figures_lost_by_cut(item, post)
-    source = _stems(f"{item['title'] or ''} {item['body'] or ''}")
+    source = _stems(f"{item['title'] or ''} {article.full_source(item)}")
     body = post.strip().split("\n", 1)[1] if "\n" in post.strip() else ""
     for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
         words = _stems(sentence)
@@ -301,7 +307,7 @@ def has_thin_source(item) -> bool:
     """True if barely any source material; decides post length (can't write 90w from 150c
     summary).
     """
-    return len((item["body"] or "").strip()) < config.BRIEF_SOURCE_CHARS
+    return len(article.full_source(item)) < config.BRIEF_SOURCE_CHARS
 
 
 def is_brief(item) -> bool:
@@ -318,7 +324,7 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     """
 
     title = item["title"] or ""
-    body = (item["body"] or "")[: config.MAX_BODY_CHARS]
+    body = article.full_source(item)[: config.MAX_BODY_CHARS]
     origin = "a post on X" if item["origin"] == "x" else "a news article"
 
     user_message = (

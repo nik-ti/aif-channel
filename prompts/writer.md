@@ -104,6 +104,8 @@ Only add what the source supports. If the source has one fact, the post is the f
 
 **Every line says something new.** The first line tells the news; the body only adds facts the first line did not give. Never say the first line again in other words ("free for Pro users" up top, then "at no extra cost for Pro users" below). If a fact is in the first line, it is not in the body, and the other way round. A short post that never repeats itself beats a longer one that does.
 
+**Give the reader the source's best facts.** When the source has them, use the specifics a reader would want: the key numbers and comparisons ("35 times faster than GPT-6 Sol"), who already uses it and for what, what it costs, where to get it, what comes next. A post that leaves out the source's best facts is a bad post even if every line in it is true. Pick the facts that matter to a regular person; skip the technical ones they cannot use.
+
 **Who made it, only when the reader would know them.** Name the maker when it is a known company (OpenAI, Google, Cloudflare, Midjourney...) or a well-known person in AI. An unknown maker (a username, a GitHub handle, an individual or small team nobody would recognise) is not news: do not name them, start with what the thing does ("A skill turns a screenshot into real code").
 
 **No filler that is true of every item of its kind.** Skills and prompts are always free and need no account, so never say so for a skill or a prompt. "Free" is worth saying only for something people would otherwise expect to pay for (an app, a plan, a model).

@@ -84,6 +84,25 @@ def is_old(date: datetime | None, max_age_hours: float) -> bool:
     return date < datetime.now(timezone.utc) - timedelta(hours=max_age_hours + 24)
 
 
+def full_source(item) -> str:
+    """Everything known about an item for the writer and the editor: the article read for it,
+    with a short feed stub kept on top (Future Tools' "Release date" line lives only there).
+
+    For a tweet the article already starts with the post, then the pages it links to. Until
+    2026-10-11 the writer and editor saw only items.body, a feed's one-line summary: stories
+    used to merge the article in, and switching them off left Qwen-Image-2.1-Turbo written
+    from 101 characters while 1,682 of article sat unused.
+    """
+    keys = item.keys() if hasattr(item, "keys") else ()
+    article = ((item["article_text"] if "article_text" in keys else "") or "").strip()
+    stub = (item["body"] or "").strip()
+    if not article:
+        return stub
+    if item["origin"] == "x" or not stub or article.startswith(stub) or len(stub) >= 400:
+        return article
+    return f"{stub}\n\n{article}"
+
+
 def _usable(text: str | None) -> bool:
     """True if this looks like an article rather than a wall, a stub or a check."""
     if not text:

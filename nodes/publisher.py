@@ -75,7 +75,7 @@ def _on_aggregator(url: str) -> bool:
     return any(host == site or host.endswith("." + site) for site in config.PRODUCT_LINK_PAGES)
 
 
-def compose(post_html: str, url: str, link_url: str = "") -> str:
+def compose(post_html: str, url: str, link_url: str = "", kind: str = "") -> str:
     """The post as it goes out: the writer's text, with any foreign link removed.
 
     No source credit. The channel speaks in its own voice, and a byline under
@@ -97,7 +97,8 @@ def compose(post_html: str, url: str, link_url: str = "") -> str:
         if is_x_link(target):
             target = ""
         if target and 'href="LINK"' not in text:
-            text += f'\n\n<a href="LINK">{config.LINK_FALLBACK_TEXT}</a>'
+            words = config.LINK_TEXT_BY_KIND.get(kind, config.LINK_FALLBACK_TEXT)
+            text += f'\n\n<a href="LINK">{words}</a>'
         if target:
             text = text.replace('href="LINK"', f'href="{target}"')
         else:
@@ -206,7 +207,8 @@ async def execute(item, post_html: str, post_id: int,
     """
     topic = item["topic"] or item["topic_hint"] or "?"
     link_url = (item["link_url"] if "link_url" in item.keys() else "") or ""
-    message = compose(post_html, item["url"] or "", link_url)
+    kind = (item["topic"] if "topic" in item.keys() else "") or ""
+    message = compose(post_html, item["url"] or "", link_url, kind)
     # Only what the analysts chose for this post. A post they never saw goes out
     # as text, so no picture reaches the channel unjudged.
     chosen = db.get_post_media(post_id)

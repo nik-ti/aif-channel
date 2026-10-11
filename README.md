@@ -241,6 +241,14 @@ address. Every link in a post loses its `utm_` tracking parameters (`textclean.s
 extra lines carry a figure from the source, and a post that opens like a recent one is
 written again once.
 
+**The writer and the editor read the whole source** (2026-10-11, `article.full_source`): the
+article read for an item (a short feed line kept on top), or for a tweet the post plus the pages
+it links to. From 2026-10-09 to 10-11 they saw only the feed's one-line summary, because the
+story step used to merge the article in; Qwen-Image-2.1-Turbo went out as a bare headline. The
+"one-line source" and "thin source" checks use the same text. Posts are 80-130 words (60-100
+under a picture) and must use the source's best facts. A link line the writer left out is added
+with words that fit the kind ("Try it here", "Get the skill here", "Read the guide here").
+
 **Every line says something new** (2026-10-10). The body never restates the first line, an
 unknown maker (a username, an individual nobody in AI knows) is not named, and nothing true of
 every item of its kind is said (a skill being free or needing no account). The editor rejects

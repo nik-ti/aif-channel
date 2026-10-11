@@ -17,6 +17,7 @@ import time
 from datetime import datetime, timezone
 
 import config
+from nodes import article
 from utils import db, logger as log_setup, openrouter
 
 log = log_setup.get("editor")
@@ -119,7 +120,7 @@ async def execute(item, post_html: str, post_id: int, record: bool = True,
     # story's items folded together — up to 4000 characters. Measured: of 74
     # FACTUAL_DRIFT rejections on story posts, 29 had a source longer than 1500,
     # some of them showing the editor 38% of what the post was written from.
-    source_text = (item["body"] or "")[: config.MAX_BODY_CHARS]
+    source_text = article.full_source(item)[: config.MAX_BODY_CHARS]
     started = time.monotonic()
 
     system_prompt = PROMPT.format(today=_today())

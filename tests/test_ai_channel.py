@@ -973,6 +973,56 @@ async def the_product_link_found_while_reading_reaches_the_publisher():
         article.fetch_for = real
     assert state["item"]["link_url"] == "https://developers.cloudflare.com/workers-ai/models/clef-omni"
 
+
+# ── 2026-10-11: the writer and the editor read the whole article ──
+
+QWEN_STUB = "The fast version of Qwen-Image-2.1: the same 7B image generator and editor, cut to 8 denoising steps."
+QWEN_ARTICLE = ("Qwen-Image-2.1-Turbo is a faster checkpoint of Qwen-Image-2.1. One model covers text-to-image, "
+                "single-image edits, multi-reference composition and transparent output. Qwen made Pro and Turbo "
+                "available as APIs on Alibaba Cloud Model Studio. Turbo runs 8 steps while the base model uses 40. "
+                "The weights are under the Qwen Research License, so commercial products need the hosted API. ") * 2
+
+
+@test
+async def the_writer_and_the_editor_see_the_article_not_just_the_feed_line():
+    from nodes import article, editor, writer
+    from utils import openrouter
+    item = {"id": 1, "origin": "rss", "source_name": "ai_tldr", "title": "Qwen-Image-2.1-Turbo",
+            "body": QWEN_STUB, "article_text": QWEN_ARTICLE, "topic": "new_model", "topic_hint": "tool"}
+    assert "Model Studio" in article.full_source(item)
+    assert not writer.is_one_line_source(item) and not writer.has_thin_source(item)
+    seen = []
+
+    async def fake_text(**kwargs):
+        seen.append(kwargs["user"])
+        return ("<b>Qwen's image model now draws and edits in 8 steps instead of 40</b>\n\n"
+                "It also makes transparent pictures, and you can use it on Alibaba Cloud Model Studio.\n\n"
+                '<a href="LINK">Try it here</a>')
+
+    async def fake_json(**kwargs):
+        seen.append(kwargs["user"])
+        return {"verdict": "approve", "rules_broken": [], "reason": "ok", "confidence": 0.9}
+    real = openrouter.chat_text, openrouter.chat_json
+    openrouter.chat_text, openrouter.chat_json = fake_text, fake_json
+    try:
+        post = await writer.execute(item)
+        await editor.execute(item, post, 0, record=False)
+    finally:
+        openrouter.chat_text, openrouter.chat_json = real
+    assert all("Model Studio" in user for user in seen), [u[:200] for u in seen]
+    assert "Model Studio" in post, post        # the body was kept, not cut to the headline
+
+
+@test
+def a_headline_only_post_keeps_its_link_and_the_link_words_fit_the_kind():
+    from nodes import publisher, writer
+    post = '<b>Headline</b>\n\nBody.\n\n<a href="LINK">Try it here</a>'
+    assert writer.headline_only(post) == '<b>Headline</b>\n\n<a href="LINK">Try it here</a>'
+    out = publisher.compose("<b>Qwen-Image-2.1-Turbo</b>", "https://huggingface.co/blog/x", "", "new_model")
+    assert ">Try it here</a>" in out and ">Link</a>" not in out, out
+    out = publisher.compose("<b>A guide</b>", "https://huggingface.co/blog/x", "", "guide")
+    assert ">Read the guide here</a>" in out, out
+
 # ── A rewrite edits the rejected draft, with every request so far ──
 
 @test

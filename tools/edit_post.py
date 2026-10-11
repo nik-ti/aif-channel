@@ -30,7 +30,7 @@ async def edit(item_id: int, html: str | None, link: str | None, dry_run: bool) 
     link_url = (item["link_url"] or "") if link is None else link
     # No link at all: no source address either, so the publisher drops the link line.
     url = "" if link == "" else (item["url"] or "")
-    message = publisher.compose(html, url, link_url)
+    message = publisher.compose(html, url, link_url, item["topic"] or "")
     print(f"--- message {post['telegram_message_id']} becomes:\n{message}\n")
     if dry_run:
         return

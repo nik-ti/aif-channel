@@ -187,7 +187,13 @@ ALLOW_FLAG_MARKS = False
 # in the thing itself. AI/TLDR pages list the official link first.
 LINK_TO_PRODUCT = True
 PRODUCT_LINK_PAGES = ("ai-tldr.dev",)
-LINK_FALLBACK_TEXT = "Link"
+# The link line's words when the writer did not write one, by kind ("Link" read as broken).
+LINK_TEXT_BY_KIND = {
+    "new_product": "Try it here", "new_model": "Try it here", "feature": "Try it here",
+    "tool": "Try it here", "skill": "Get the skill here", "guide": "Read the guide here",
+    "pricing": "See the prices here",
+}
+LINK_FALLBACK_TEXT = "Read more here"
 # A tweet with no outside link: this model searches the web for the maker's own page
 # before the post goes out (nodes/link_finder.py). Never links to X (nikita, 2026-10-08).
 LINK_FINDER_MODEL = _get("LINK_FINDER_MODEL", "google/gemini-2.5-flash")
