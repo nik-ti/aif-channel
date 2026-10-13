@@ -1,4 +1,5 @@
-"""Finds where to try a new product, for a post whose source is a tweet with no outside link.
+"""Finds where to try a new product, for a post whose source is a tweet or an aggregator page
+(AI/TLDR) with no link to the thing itself.
 
 Only a product a person can go and use gets a link: an announcement is just reported,
 since the post already says what the article would (nikita, 2026-10-09). A model searches
@@ -24,11 +25,12 @@ PROMPT = """You decide whether a news post needs a link where the reader can try
 
 Only if the post is about a NEW product or tool that a person can go and use, search the web
 and answer with ONE URL and nothing else: the maker's own page where a person can try, use,
-sign up for or download it (a demo, app, playground or download page).
+sign up for or download it (a demo, app, playground or download page). For a free or
+open-source project with no site of its own, its code page on GitHub is that page.
 Answer exactly NONE for anything else: a feature update, an announcement, research, a deal,
 a policy, pricing. Answer NONE too if you cannot find such a page.
-Never a blog post or announcement article, never x.com or twitter.com, never a news site
-or aggregator. The page must be about THIS product, not an earlier one: check its date."""
+Never a blog post or announcement article, never x.com or twitter.com, never a news site,
+aggregator, video or forum thread about it. The page must be about THIS product, not an earlier one: check its date."""
 
 _URL = re.compile(r"https?://[^\s<>\"')\]]+")
 _ANCHOR = re.compile(r'<a\s[^>]*href="(https?://[^"]+)"[^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
@@ -71,7 +73,7 @@ async def find(item, post_html: str) -> str:
     """Where to try the product this post is about, or "" when it is not one or none was found."""
     user = (f"Today is {datetime.now(timezone.utc):%Y-%m-%d}.\n\n"
             f"The post:\n{persona_loader.visible_text(post_html)}\n\n"
-            f"What it was written from:\n{(item['body'] or '')[:2000]}")
+            f"What it was written from:\n{article.full_source(item)[:2000]}")
     try:
         answer = await openrouter.chat_text(
             model=config.LINK_FINDER_MODEL, system=PROMPT, user=user,

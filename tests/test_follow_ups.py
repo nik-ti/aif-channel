@@ -215,11 +215,11 @@ async def a_digest_skips_the_sifter():
 
 
 @test
-def the_sifter_sits_between_the_company_limit_and_the_writer():
+def the_sifter_runs_before_the_company_limit_so_repeats_never_reach_a_digest():
     from pipeline import graph
     edges = {(e.source, e.target) for e in graph.graph.get_graph().edges}
-    assert ("company_limit", "sifter") in edges and ("sifter", "writer") in edges, edges
-    assert ("company_limit", "writer") not in edges
+    assert ("sorter", "sifter") in edges and ("sifter", "company_limit") in edges, edges
+    assert ("company_limit", "writer") in edges and ("sifter", "writer") not in edges
 
 
 @test

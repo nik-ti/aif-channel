@@ -39,6 +39,14 @@ THIN_CAP = 3
 # scores 4 has contradicted itself, and the concrete answer wins.
 NO_USE_CAP = 3
 
+# A sighting or a guess is not news (nikita, 2026-10-13): "Google seems to be rolling out custom
+# MCPs" and "Fable 5.5 traces have been spotted in Azure configs" both went out as posts. Checked
+# on the headline and the evidence quote; no published headline before them matched.
+UNCONFIRMED = re.compile(
+    r"\b(seems?|seemingly|appears? to|spotted|traces? of|leaked|leaks|rumou?r(?:s|ed)?|"
+    r"reportedly|allegedly|may be|might|could be|expected to|is said to|hints? at|"
+    r"in testing|being tested|(?:is|are) testing|coming soon)\b", re.IGNORECASE)
+
 # Request structured output; quote validation below still runs in code.
 # The kind comes from nodes/labeler.py.
 SCHEMA = {
@@ -151,6 +159,9 @@ async def execute(item) -> dict:
             elif quote not in source:
                 relevant = False
                 reason = f"source evidence absent from the text shown to the sorter; {reason}"
+            elif basis == "news" and (hedge := UNCONFIRMED.search(title) or UNCONFIRMED.search(quote)):
+                relevant = False
+                reason = f"unconfirmed (\"{hedge.group(0)}\"): a sighting or a guess, not news; {reason}"
 
         if importance > THIN_CAP and source_chars(item) < THIN_SOURCE_CHARS:
             log.info("Capping item %s from %d to %d — only %d characters of source to write "

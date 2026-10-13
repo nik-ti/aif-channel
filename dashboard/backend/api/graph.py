@@ -20,7 +20,7 @@ _STATION_INFO: dict[str, tuple[str, str]] = {
     "labeler": ("Labeler", "Picks the kind (new model, feature, tool, skill, guide...) and the company that made it, from fixed lists. A roundup is dropped here."),
     "sorter": ("Sorter", "Requires concrete news or a usable resource and a supporting source quote. Checks quote presence in code. Scores usefulness 1-5; the bar is 4. 'Nobody can use it' caps at 3."),
     "company_limit": ("Company limit", "A company's 3rd post of the day waits for its evening digest. A 5/5 always goes."),
-    "sifter": ("Sifter", "Finds earlier posts about the same product. If there are any, keeps only the source's facts the reader does not have yet (each quote checked in code); nothing new (or only trivia) and the item stops here."),
+    "sifter": ("Sifter", "Finds earlier posts about the same product. One went out in the last 12 hours: the item stops here. Older ones: keeps only the source's facts the reader does not have yet (each quote checked in code); nothing new (or only trivia) and the item stops here."),
     "writer": ("Writer", "Bold first line, • lines, bold key words, link last. No emoji. Simple enough for a 12-year-old."),
     "editor": ("Editor", "Checks the post against the source, including JARGON. Sees its own earlier reason on the rewrite."),
     "repeat_check": ("Repeat check", "The exit. Refuses a finished post that tells the reader what a recent post already did."),

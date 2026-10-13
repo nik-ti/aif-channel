@@ -767,7 +767,7 @@ def update_post_text(post_id: int, post_html: str) -> None:
     conn().commit()
 
 
-def mark_post_sent(post_id: int, message_id: int, post_url: str) -> None:
+def mark_post_sent(post_id: int, message_id: int | None, post_url: str) -> None:
     """Record that a post reached the channel, and where it landed."""
     conn().execute(
         """

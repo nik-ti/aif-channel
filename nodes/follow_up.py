@@ -8,6 +8,7 @@ shared_phrases is the code check behind "do not reuse their words".
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 
 import config
 from nodes import article
@@ -27,6 +28,16 @@ async def related_posts(item, *, now=None, persist: bool = True) -> list[dict]:
     matches = await semantic_memory.published_matches(text, now=now, persist=persist)
     close = [m for m in matches if m["score"] >= config.FOLLOW_UP_SIMILARITY]
     return close[:config.FOLLOW_UP_MAX_POSTS]
+
+
+def minutes_since_latest(posts: list[dict], *, now=None) -> float | None:
+    """How long ago the most recent of these posts went out, or None if none has a time."""
+    times = [datetime.fromisoformat(str(row["sent_at"]).replace("Z", "+00:00"))
+             for row in posts if row.get("sent_at")]
+    if not times:
+        return None
+    latest = max(t if t.tzinfo else t.replace(tzinfo=timezone.utc) for t in times)
+    return ((now or datetime.now(timezone.utc)) - latest).total_seconds() / 60
 
 
 def writer_section(posts: list[str]) -> str:

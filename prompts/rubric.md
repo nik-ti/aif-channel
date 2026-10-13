@@ -40,7 +40,19 @@ if it only describes the subject, choose none. Do not let step 3 override this c
 
 Require enough concrete information to explain what readers get or can do and the
 access/practical limitations. A long source full of promotion can still be too thin.
+**Confirmed, not rumoured.** A sighting, leak or guess is basis=none even from a trusted
+tracker: "seems to be rolling out", "spotted in code / configs / a model catalog", "traces
+of", "being tested", "may launch", "could arrive soon", "a user reports seeing it". News
+is the maker announcing it, or the thing being plainly available ("is now available in the
+Gemini app"). "Google seems to be rolling out custom MCPs to more users" and "Fable 5.5
+traces have been spotted in Azure configs" are both relevant=false.
+
 A video can announce a real change or teach a usable workflow; judge its content.
+A video or article that REPORTS a fresh release as a fact is news about that release; the
+video is only how we heard of it. "Fireship's video covers a developer who rewrote seven
+Adobe apps in Rust and released them as open source for free" is basis=news (seven free
+apps anyone can download now). "A video explains how an existing model works" is
+basis=none: nothing was released.
 Do not assume every video is an explainer, or every fresh explainer is a release.
 
 Mark relevant=false for:
@@ -54,6 +66,9 @@ Mark relevant=false for:
   fashion and outfits, dating, horoscopes, games played for fun, filters and avatars for selfies.
   "Pinterest's AI turns your saved nail pictures into salon plans" is relevant=false. This channel is
   about getting work done with AI.
+* Gadgets and home entertainment, even with AI inside: TVs, streaming boxes, smart speakers and
+  displays, headphones, a new phone or watch. "The new Apple TV 4K lets you ask Siri to find shows"
+  is relevant=false: it is about watching TV, not about getting work done.
 * Generic advice that is not about AI, even when it is packaged as an AI skill or prompt: a method for
   writing marketing copy, a sales framework, a productivity system, a design process. The test: does the
   source describe a concrete AI capability or usable AI workflow? "A structured way to edit your marketing

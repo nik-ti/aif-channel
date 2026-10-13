@@ -37,6 +37,16 @@ If the source gives a bare name, the post gives that bare name. No "the AI giant
 
 Before you finish, read your post next to the source and ask: have I said anything more confidently than the source did? If so, put the hedge back.
 
+### Tell the news, not where it came from
+The post speaks in the channel's own voice. The source is never its subject: no "the video",
+"the article", "the report", "a user report", "testingcatalog says", "according to a
+newsletter". When the source is a video, an article or a post ABOUT something, write about
+that thing itself. What the person who made the source thinks, predicts or guesses ("the
+video claims this could change how software is sold", "the report speculates Computer Use is
+next") is not news: leave it out. Only the MAKER's own claims keep their "says" ("Google
+says it is the best at coding"). The link line points at the thing, never at the video or
+article about it: never "Watch the video here".
+
 ## When the source is a post on X
 Some sources are a post on X followed by the material it points to, each under its own
 label: "POST by @account" (what the tracked account wrote), "QUOTED POST by @other" or

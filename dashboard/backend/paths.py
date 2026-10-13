@@ -24,8 +24,8 @@ PROMPTS_DIR = ROOT_DIR / "prompts"
 
 # The stations in the order pipeline/graph.py runs them (a test checks they match).
 STATIONS = [
-    "dedup", "fetch_article", "labeler", "sorter", "company_limit",
-    "sifter", "writer", "editor", "repeat_check", "image_analyst", "video_analyst", "publish",
+    "dedup", "fetch_article", "labeler", "sorter", "sifter",
+    "company_limit", "writer", "editor", "repeat_check", "image_analyst", "video_analyst", "publish",
 ]
 
 

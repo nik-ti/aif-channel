@@ -165,17 +165,12 @@ async def dedup_node(state: dict) -> dict[str, Any]:
     return {}
 
 
-# What the item an item repeats ended up as. Only these count: the reader saw it, is
-# about to, or it waits for a digest. A repeat of an item the sorter or editor turned
-# down is let through, since a fuller account of the same news may pass where it did not.
-_COVERED = ("published", "queued", "written", "waiting_digest", "capped", "duplicate",
-            "held", "merged")
 
 
 def _drop_repeat_without_stories(item, matched_id, dry: bool) -> dict[str, Any]:
     """Drop a same-event repeat of a covered item; let a repeat of a rejected one through."""
     matched = db.get_item(matched_id)
-    if matched is None or matched["status"] not in _COVERED:
+    if matched is None or matched["status"] not in dedup.COVERED:
         log.info("Item %s matches item %s (%s), which never went out — letting it through",
                  item["id"], matched_id, matched["status"] if matched else "gone")
         if not dry:
@@ -248,6 +243,16 @@ async def sifter_node(state: dict) -> dict[str, Any]:
              ", ".join(f"{row['id']} ({row['score']:.2f})" for row in found))
     if state.get("forced"):
         return {"related_posts": related, "new_facts": []}
+
+    recent = follow_up.minutes_since_latest(found)
+    if recent is not None and recent < config.FOLLOW_UP_COOLDOWN_HOURS * 60:
+        why = (f"already posted about this {recent:.0f} minutes ago (one post per product "
+               f"per {config.FOLLOW_UP_COOLDOWN_HOURS:g} hours)")
+        log.info("Item %s held: %s", item["id"], why)
+        if not dry:
+            db.set_item_status(item["id"], "held", why)
+            db.bump_counter("follow_up_cooldown")
+        return {"outcome": "nothing_new", "related_posts": related}
 
     sifted = await sifter.execute(item, related)
     if sifted.nothing_new:
@@ -779,8 +784,11 @@ async def publish_node(state: dict) -> dict[str, Any]:
         return {"outcome": "approved"}
 
     item = state["item"]
+    # A tweet, or an aggregator page that linked only articles and videos about the thing
+    # (Fireship's Adobe clones, 2026-10-13: the repos were one search away).
+    source = item.get("url", "")
     if (config.LINK_TO_PRODUCT and not state.get("digest") and not item.get("link_url")
-            and publisher.is_x_link(item.get("url", ""))):
+            and (publisher.is_x_link(source) or publisher.on_aggregator(source))):
         item = {**item, "link_url": await link_finder.find(item, state["post_html"])}
     story = state.get("story")
     reply_to = story.first_message_id if story and story.posts else None

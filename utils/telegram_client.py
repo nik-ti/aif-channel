@@ -9,6 +9,7 @@ import asyncio
 
 from telegram import Bot
 from telegram.error import BadRequest, RetryAfter
+from telegram.request import HTTPXRequest
 
 import config
 from utils import logger as log_setup, telegram_html
@@ -62,7 +63,11 @@ async def _get_bot() -> Bot:
     if _bot is None:
         if not config.TELEGRAM_BOT_TOKEN:
             raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in .env")
-        _bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
+        # The library waits 5 seconds for an answer. Telegram fetching a clip from its address
+        # takes longer, and the Facebook post went out twice on that (2026-10-13).
+        _bot = Bot(token=config.TELEGRAM_BOT_TOKEN,
+                   request=HTTPXRequest(connect_timeout=15, read_timeout=120,
+                                        write_timeout=120, media_write_timeout=180))
         await _bot.initialize()
     return _bot
 

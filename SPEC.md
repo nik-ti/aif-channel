@@ -229,3 +229,36 @@ were all over 48h old). tools/check_sources.py: 11 working, 3 unchanged, 0 broke
 a temporary DB copy (it used to mark feeds as read in the live DB, which would have defeated the
 first-read rule) and checks pages as pages (x.ai always showed as broken before). Tests: 6 new
 sources, 18 follow-up, 52 channel, 24 media, 11 labels/digest pass; reader-memory 27/28 (known).
+
+## Rumours, one product three times, a double send, source talk (2026-10-13 evening)
+nikita woke up to: (1) the Adobe-clones post spoke of "the video claims" and had no link,
+though the repos were public (github.com/storytold); (2) "Gemini's desktop app may be rolling
+out custom tools" was a tracker's guess (so was #87, "Fable 5.5 traces spotted"); (3) Gemini 4
+Argon posted 3 times in 31 minutes; (4) Apple TV 4K, entertainment; (5) the Facebook post twice.
+CAUSES: (3) dedup returned at the first "same event" match, a rejected one-liner, and never met
+the published post behind it; then the sifter found a true new fact each time; three more Argon
+items waited for the 18:00 digest, which skips the sifter (held by hand at 17:48). (5) the clip
+upload hit the library's 5-second wait, Telegram finished it anyway, and the code stepped down to
+the picture, then text.
+GOAL: sorter rejects news whose headline or quote hedges (sorter.UNCONFIRMED, news only; matched 2
+of 332 past headlines, both rumours) and the rubric says so, plus gadgets/entertainment; dedup
+looks past matches that never went out (dedup.COVERED); one post per product per
+FOLLOW_UP_COOLDOWN_HOURS (12), checked before the sifter, which now runs BEFORE the company limit
+so a repeat never waits for a digest; a Telegram timeout counts as sent (no step-down, no retry,
+an alert), waits are 120 s; the writer never makes the source the subject and drops its author's
+guesses, the editor's fixable SOURCE_TALK enforces it; AI/TLDR items with no product link get the
+web link finder, which accepts an open-source project's GitHub page.
+FAILURE: 1. A hedged news item passes the sorter. 2. A confirmed launch or a resource is blocked by
+the word check. 3. A same-event repeat of a published item passes because a rejected one matched
+first. 4. A second post about one product within 12 h, or in a digest. 5. A timed-out send goes out
+again in any form. 6. A refused clip no longer falls back to the picture. 7. A post says "the
+video"/"a report". 8. An aggregator item with no product link gets no search. 9. Existing tests fail.
+Run: /usr/bin/python3 -m unittest tests/test_rumours_and_repeats.py (15);
+python3 tools/check_sorter.py --runs 3; python3 tools/check_editor.py --runs 3
+Status: LIVE 2026-10-13 17:49 UTC (both services restarted). Tests: 15 new, 52 channel, 24 media,
+18 follow-up, 11 labels/digest, 6 sources pass; reader-memory 27/28 (known). Real models on 30
+sorter cases x3: 88/90 (yesterday's rubric 77/90: posted Apple TV 3/3 and the DeepSeek explainer
+2/3); 6 new cases from today's items. Editor 30 cases x3: 79/90 (yesterday's prompt 70/90, which
+approved both source-talk posts 3/3); the misses are older cases whose "this week" went stale.
+Trade-off nikita should know: the FIRST post about a product wins the 12 hours, so a tracker's
+early "now in Agent Studio" can shut out the official launch post with prices an hour later.

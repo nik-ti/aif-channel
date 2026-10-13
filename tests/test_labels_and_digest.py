@@ -155,7 +155,7 @@ def no_story_station_is_in_the_graph():
     assert not {"story_organizer", "gatekeeper"} & nodes, nodes
     edges = {(e.source, e.target) for e in graph.graph.get_graph().edges}
     for pair in [("fetch_article", "labeler"), ("labeler", "sorter"),
-                 ("sorter", "company_limit"), ("company_limit", "sifter"), ("sifter", "writer")]:
+                 ("sorter", "sifter"), ("sifter", "company_limit"), ("company_limit", "writer")]:
         assert pair in edges, (pair, edges)
 
 

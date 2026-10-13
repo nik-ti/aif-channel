@@ -13,6 +13,8 @@ import asyncio
 import html
 import re
 
+from telegram.error import TimedOut
+
 import config
 from utils import db, logger as log_setup, telegram_client, telegram_html, textclean
 
@@ -68,7 +70,7 @@ def is_x_link(url: str) -> bool:
         "x.com", "twitter.com", "t.co", "pic.x.com", "pic.twitter.com")
 
 
-def _on_aggregator(url: str) -> bool:
+def on_aggregator(url: str) -> bool:
     """True for a page on a site in PRODUCT_LINK_PAGES (it writes ABOUT things, it is not one)."""
     from urllib.parse import urlparse
     host = urlparse(url or "").netloc.lower()
@@ -90,7 +92,7 @@ def compose(post_html: str, url: str, link_url: str = "", kind: str = "") -> str
     if config.LINK_TO_PRODUCT:
         target = link_url or url
         # An aggregator's page (AI/TLDR) is never the link: no product page found means no link.
-        if not link_url and _on_aggregator(url):
+        if not link_url and on_aggregator(url):
             target = ""
         # Never X: "Try it here" opening a news account's tweet promotes them and
         # misleads the reader (Odyssey-3, 2026-10-08). No link beats that one.
@@ -140,6 +142,10 @@ def check_limits(*, forced: bool = False) -> tuple[bool, str]:
     return True, ""
 
 
+class MaybeSent(Exception):
+    """Telegram did not answer in time. The message may well be in the channel already."""
+
+
 def _reply_target_gone(error: Exception) -> bool:
     """True if Telegram refused because the message we reply to no longer exists."""
     return "message to be replied not found" in str(error).lower()
@@ -151,7 +157,7 @@ async def _deliver(post_id: int, message: str, image_url: str, video_url: str,
     message_id = None
 
     # Clip first, then its thumbnail, then plain text. Each step down is a
-    # smaller loss than losing the post, which is why none of them raises.
+    # smaller loss than losing the post. A timeout is the exception (MaybeSent).
     if (video_url or image_url) and telegram_html.would_cut_mid_sentence(
             message, telegram_html.CAPTION_LIMIT):
         # A complete post without a picture beats a truncated one with.
@@ -166,6 +172,10 @@ async def _deliver(post_id: int, message: str, image_url: str, video_url: str,
                 video_url, video_kind, message,
                 reply_to_message_id=reply_to_message_id,
             )
+        except TimedOut as error:
+            # Facebook, 2026-10-13: the clip timed out on our side, arrived anyway, and the
+            # text version went out under it. A timeout is not a refusal: never step down.
+            raise MaybeSent(f"the {video_kind or 'clip'} upload timed out") from error
         except Exception as error:  # noqa: BLE001
             if _reply_target_gone(error):
                 raise    # not the clip's fault; the caller re-threads
@@ -181,6 +191,8 @@ async def _deliver(post_id: int, message: str, image_url: str, video_url: str,
                 image_url, message,
                 reply_to_message_id=reply_to_message_id,
             )
+        except TimedOut as error:
+            raise MaybeSent("the picture upload timed out") from error
         except Exception as error:  # noqa: BLE001
             if _reply_target_gone(error):
                 raise    # not the picture's fault; the caller re-threads
@@ -191,10 +203,13 @@ async def _deliver(post_id: int, message: str, image_url: str, video_url: str,
             db.bump_counter("image_dropped_failed")
 
     if message_id is None:
-        message_id = await telegram_client.send_text(
-            message,
-            reply_to_message_id=reply_to_message_id,
-        )
+        try:
+            message_id = await telegram_client.send_text(
+                message,
+                reply_to_message_id=reply_to_message_id,
+            )
+        except TimedOut as error:
+            raise MaybeSent("the text send timed out") from error
     return message_id
 
 
@@ -241,6 +256,23 @@ async def execute(item, post_html: str, post_id: int,
         db.bump_counter("published")
 
         log.info("Published [%s] %s", topic, (item["title"] or "")[:70])
+        return True
+
+    except MaybeSent as error:
+        # Counted as sent: a retry would post it twice if it did arrive, which is the
+        # likelier case. A human checks the channel instead.
+        log.warning("Post %s: %s — counting it as sent, not retrying", post_id, error)
+        db.mark_post_sent(post_id, None, "")
+        db.set_item_status(item["id"], "published",
+                           f"{error}; it most likely arrived (no message number)")
+        db.bump_counter("send_timed_out")
+        from utils import telegram_error
+        telegram_error.send_error(
+            f"Post {post_id} (item {item['id']}, {(item['title'] or '')[:80]}): {error}. It was "
+            "NOT sent again, because Telegram usually finishes the upload anyway. Check the "
+            "channel; if it is missing, its text is on the dashboard to post by hand.",
+            node_name="publisher",
+        )
         return True
 
     except Exception as error:  # noqa: BLE001

@@ -85,6 +85,33 @@
    "source_name": "btibor91",
    "topic": "feature",
    "body": "POST by @btibor91 on X (https://x.com/btibor91/status/2108629534673125784):\n“During the beta, composer predictions are included at no additional cost for eligible Pro users” https://twitter.com/openaidevs/status/2108624138369929725\n\nQUOTED POST by @openaidevs (https://x.com/OpenAIDevs/status/2108624138369929725):\nNow in beta: composer predictions in Codex for Pro users.\n\nCodex can now suggest your next message based on your conversation and how you talk to it.\n\nOne of the most loved new features we've ever tested internally. https://x.com/OpenAIDevs/status/2108624138369929725/video/1"
+  },
+  "1133": {
+   "title": "Fireship — 'Every app on Earth is now open source... whether it likes it or not'",
+   "source_name": "ai_tldr",
+   "topic": "other",
+   "body": "Fireship looks at what happens when one developer and a coding model can clone a whole commercial software suite.",
+   "article_text": "Fireship · 2026-10-12 · notable\nFireship — 'Every app on Earth is now open source... whether it likes it or not'\nFireship's 12 October 2026 video covers a developer who rewrote seven Adobe apps in Rust with help from Claude Opus 5.5 and released them as open source for free.\nFireship looks at what happens when one developer and a coding model can clone a whole commercial software suite.\nWhat is it?\n'Every app on Earth is now open source... whether it likes it or not' went up on Fireship on 12 October 2026. The description says 'a developer just rewrote seven Adobe apps in Rust and open-sourced them for free' and invites viewers to try them.\nHow does it work?\nXDA Developers reports that a developer with about a decade of Rust experience built open-source versions of Photoshop, Illustrator, Premiere, Lightroom, After Effects, InDesign and Acrobat Pro, announcing the seven apps as 'created with the help of Opus 5.5'.\nWhy does it matter?\nIf a strong coding model lets one person rebuild large commercial apps, the moat around paid desktop software gets thinner. That is the claim in the video's title, and it is a live question for anyone who sells software.\nWho is it for?\ndevelopers and software founders",
+   "origin": "rss",
+   "url": "https://ai-tldr.dev/releases/fireship-every-app-open-source-oct12/"
+  },
+  "1142": {
+   "title": "Google seems to be rolling out support for custom MCPs on Gemini desktop app to more users.",
+   "source_name": "testingcatalog",
+   "topic": "feature",
+   "body": "POST by @testingcatalog on X (https://x.com/testingcatalog/status/2109975009883980157):\nGoogle seems to be rolling out support for custom MCPs on Gemini desktop app to more users. \n\nThis means that along with Gemini 4 we may get additional updates - for example, Computer Use has been in testing for quite some time and should be ready by now. The same goes for “Superprojects”.\n\nYet, the biggest win would be there if Google release Gemini 4 to Pro users as well. \n\nIs there a chance? 👀\nh/t @BartokGabi17",
+   "article_text": "",
+   "origin": "x",
+   "url": "https://x.com/testingcatalog/status/2109975009883980157"
+  },
+  "1149": {
+   "title": "Gemini 4 Argon: Built to solve your hardest problems",
+   "source_name": "google_ai",
+   "topic": "new_model",
+   "body": "We’re giving developers, enterprises, scientists, and consumers access to Gemini 4 Argon, our latest frontier model.",
+   "article_text": "Gemini 4 Argon: Built to solve your hardest problems\nGemini 4 Argon is now globally available today for developers and enterprises via the API in AI Studio and Gemini platform, for Google AI Ultra subscribers in Google Antigravity, and Google AI Ultra and Pro subscribers in the Gemini app and AI Mode in Search.\nArgon excels at deep work in complex, real-world tasks across domains including coding, finance, legal, cybersecurity, and science. Its depth and precision across multi-step tasks leads Argon to outperform other frontier models on benchmarks across domains, ranking #1 on the Vals Index, which measures model performance across critical economic sectors like finance, coding, legal, and tax work.\nThe model launches today at an introductory price 1 of $2 per million input tokens and $10 per million output tokens (with cached input tokens at 95% off).\nTeams at Google, across enterprises, and in the research community have already been using Argon to land significant impact across fields:\n- To solve major engineering problems like large codebase refactoring and optimizations\n- To optimize business workflows across domains like legal, finance, and science\n- To find and patch critical cybersecurity vulnerabilities\n- To enable novel breakthroughs in quantum computing, nuclear fusion, and life sciences\nSolving complex engineering tasks\nAt Google, we’ve been using Argon on our hardest engineering problems. Over the past few weeks, software engineers have been shipping high-quality code faster than ever. Argon in Antigravity has helped teams increase agentic code submissions by more than 35% while reducing code rollbacks by nearly a third.\n- Untangling browser feature code in Chrome: Argon helped the Chrome team separate core webpage handling from a ~6 million line legacy folder of browser features held within Chromium’s 40 million-line codebase. Piping multiple clean code changes at a time, Argon helped the team finish an architectural refactor across hundreds of files, completing months of work in weeks. For Chrome's billions of global users, this will unlock the ability for live webpages to move fluidly between tabs, side panels, and floating windows without reloading, eliminating an entire category of browser crashes.\n- Optimizing a production Python codebase in hours: Argon in Antigravity is helping the team behind Google's open-source Agent Development Kit (ADK), a framework powering enterprise agents, push their performance engineering further. The team gave Argon their .agents/skills rulebook and a one-paragraph goal to eliminate framework overhead without breaking existing apps. Working autonomously overnight, Argon surfaced optimizations, now live in google/adk-python, that cut in-memory session prep time by 40% in long sessions and sped up cold imports by 21%. Read the engineering deep dive to learn more.\n- Quantum chemistry open-source package optimization: xTB (Semiempirical Extended Tight-Binding) is one of the most-cited open-source quantum chemistry packages for molecules. Scientists use it to predict molecules' 3D shapes and to screen large numbers of drug and materials candidates. Using Argon in Antigravity, our researchers made xTB up to 2.3x faster at predicting molecular structures and 1.8x faster at conformer search. The changes have been contributed to the official xTB repository on GitHub.\n- Making our open Gemma models nearly three times as fast: Using Argon, we achieved a 2.85x end-to-end inference speedup on an A100 via vLLM (accelerating throughput from ~37,900 to over 108,000 tokens per second on Gemma 4 E2B) with 100% token parity and zero quality drop in just a few days, a process that would usually take months. Check out the upstream pull requests (optimizing everything from attention tuning to speculative decoding) to see the exact changes.\n- Delivering complex 3D visualizations: Argon brings major improvements in spatial reasoning, mathematical precision, and visual coding compared to previous Gemini models. Using slash commands like /goal and prompting for multi-agent loops with custom skills in Antigravity, Googlers are using Argon to prototype complex 3D visualizations, high-fidelity games, and interactive animations in vanilla code that can be rendered directly in the browser.\nTransforming critical business and professional workflows\nArgon combines frontier reasoning, deep visual perception, expanded domain knowledge, and stronger writing capabilities across legal, finance, science, and coding to help with high-stakes professional workflows. It communicates clearly, keeping you in the loop, and follows style instructions better than any of our previous Gemini models. Argon answers questions more directly with less hedging, doesn’t repeat itself more than necessary, and skips clichés throughout the responses.\nEnterprise customers and startups in our early access program are already seeing strong wins with Argon.\nUsing its advanced reasoning and multimodal capabilities while maintaining strict grounding, Argon excels in deep multimodal document comprehension, longitudinal data analysis, and interactive analytical sandboxes.\nAccelerating real-world impact with researchers and domain experts\nResearchers, engineers, and security specialists are already using Argon to push the boundaries of cyber defense, science, math, and robotics. It’s helping cyber defenders and researchers test hypotheses, autonomously audit critical codebases and formal proofs, and catch subtle zero-day vulnerabilities and logic flaws.\nBringing state-of-the-art cyber capabilities to more trusted defenders\nStarting today, we’re beginning expansion to hundreds of additional Fairwind Program partners.\nWiz is already using Argon for its \"Scan for Good\" initiative, which protects critical infrastructure for the public good and for free. With early access to the model, Wiz has demonstrated Argon's real-world impact across multiple high-stakes sectors:\n- Securing sensitive government data: As pa",
+   "origin": "rss",
+   "url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/"
   }
  },
  "cases": [
@@ -269,6 +296,34 @@
    "expect": "approve",
    "why": "the same news with each fact said once",
    "post": "<b>Codex can now guess what you'll say next, at no extra cost for eligible Pro users during the beta</b>\n\nIt suggests your next message based on the conversation so far and how you usually talk to it.\n\n<a href=\"LINK\">Try it here</a>"
+  },
+  {
+   "id": "adobe-video-claims",
+   "source": "1133",
+   "expect": "reject",
+   "why": "SOURCE_TALK, 2026-10-13: 'The video claims this shows...' and 'Watch the video here'",
+   "post": "<b>A developer rewrote seven big Adobe apps and put them online for free</b>\n\nAn experienced Rust programmer rebuilt Photoshop, Illustrator, Premiere, Lightroom, After Effects, InDesign and Acrobat Pro as <b>open-source</b> apps, all with help from an AI coding model.\n\nThe video claims this shows how easy it can become for anyone to clone paid software, which could change how software is sold.\n\n<a href=\"LINK\">Watch the video here</a>"
+  },
+  {
+   "id": "adobe-clean",
+   "source": "1133",
+   "expect": "approve",
+   "why": "the same news told directly, no talk of the video",
+   "post": "<b>A developer rebuilt seven big Adobe apps with AI and released them for free</b>\n\nPhotoshop, Illustrator, Premiere, Lightroom, After Effects, InDesign and Acrobat Pro all have <b>open-source</b> versions now, written with help from <b>Claude Opus 5.5</b>.\n\n<a href=\"LINK\">Download them here</a>"
+  },
+  {
+   "id": "gemini-mcp-user-report",
+   "source": "1142",
+   "expect": "reject",
+   "why": "SOURCE_TALK, 2026-10-13: 'A user report says', 'The report also speculates'",
+   "post": "<b>Gemini's desktop app may be rolling out support for custom tools to more users</b>\n\nA user report says the feature, which lets you connect custom tools called MCPs, <b>seems to be rolling out</b> to more people.\n\nThe report also speculates that other tested features, like <b>Computer Use</b>, could be released soon.\n\n<a href=\"LINK\">Read about it here</a>"
+  },
+  {
+   "id": "argon-google-says",
+   "source": "1149",
+   "expect": "approve",
+   "why": "the maker's own claims keep 'Google says': not SOURCE_TALK",
+   "post": "<b>Google says Gemini 4 Argon is the top-ranked model for finance, coding and legal work</b>\n\nIt is now available globally for developers through the API, and for <b>Ultra and Pro subscribers</b> in the Gemini app.\n\nGoogle used it to reorganize a huge amount of computer code, finishing months of work in weeks. It launches at an <b>introductory price</b> of $2 per million tokens in and $10 per million out.\n\n<a href=\"LINK\">See the details here</a>"
   }
  ]
 }

@@ -238,8 +238,10 @@ EXTRA_EDITOR_RULES = {
     # needed" named an unknown maker and stated what is true of every skill.
     "REPEATS": "a body line says again what the first line or another line already said",
     "FILLER": "names an unknown maker, or says what is true of every item of its kind",
+    # nikita 2026-10-13: "The video claims this shows...", "A user report says...".
+    "SOURCE_TALK": "talks about the video, article or report instead of the news, or repeats its guesses",
 }
-EXTRA_FIXABLE_RULES = frozenset({"JARGON", "REPEATS", "FILLER"})
+EXTRA_FIXABLE_RULES = frozenset({"JARGON", "REPEATS", "FILLER", "SOURCE_TALK"})
 
 # On a rewrite the editor sees its own earlier rejection, so it cannot reverse
 # itself ("say units of text" → "say tokens").
@@ -406,6 +408,10 @@ STORY_MEMORY_SHORTLIST = _get_float("STORY_MEMORY_SHORTLIST", 0.60)
 # above ECHO_SHORTLIST, which filters the same search first.
 FOLLOW_UP_SIMILARITY = max(ECHO_SHORTLIST, _get_float("FOLLOW_UP_SIMILARITY", 0.70))
 FOLLOW_UP_MAX_POSTS = _get_int("FOLLOW_UP_MAX_POSTS", 3)
+# A follow-up within this many hours of a post about the same product is held without asking
+# the sifter (nikita, 2026-10-13): Gemini 4 Argon went out three times in 31 minutes, each
+# with a true new fact. The first post about a product wins; later news waits a day.
+FOLLOW_UP_COOLDOWN_HOURS = _get_float("FOLLOW_UP_COOLDOWN_HOURS", 12)
 
 
 # THE MEDIA ANALYSTS. Measured 2026-10-01: about $0.0007 per image and $0.003 for a

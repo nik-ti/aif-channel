@@ -31,11 +31,11 @@ graph TD
     labeler -->|roundup| END
     labeler -->|labelled| sorter
     sorter -->|below the bar| END
-    sorter -->|worth it| company_limit
-    company_limit -->|waits for digest| END
-    company_limit -->|under the limit| sifter
+    sorter -->|worth it| sifter
     sifter -->|nothing new| END
-    sifter -->|new facts| writer
+    sifter -->|new facts| company_limit
+    company_limit -->|waits for digest| END
+    company_limit -->|under the limit| writer
     writer --> editor
     editor -->|fixable| writer
     editor -->|rejected| END
@@ -56,9 +56,9 @@ dashboard's Graph tab draws the same graph from the running code (LangGraph's ow
 | dedup | `nodes/dedup.py`, `nodes/judge.py` | Have we seen this? Five checks, cheapest first; the last one is an AI reading both texts. |
 | fetch_article | `nodes/article.py` | Reads the full page *before* anything is judged (feeds often give one line). Plain request, then a stealth browser, then a reader service (Jina Reader, free; its failures are logged as warnings). Collects pictures, video players and the product link. A feed article whose own page is dated older than `ARTICLE_MAX_AGE_HOURS` (+1 day) is dropped as `skipped_stale`: aggregators like Future Tools date an item when *they* list it. AI/TLDR pages explicitly categorized as `video` are dropped as `irrelevant` before editorial models run. For a tweet it reads up to 3 pages the tweet links to instead (see below). |
 | labeler | `nodes/labeler.py` + `prompts/labeler.md` | What kind is it, and which company made it? Both from fixed lists in `config.py` (`KINDS`, `COMPANIES`); anything off the list is stored as "other". A **roundup** stops here. A cheap model. |
-| sorter | `nodes/sorter.py` + `prompts/rubric.md` | Is it worth posting? Concrete news or a usable resource, with a supporting source quote; code rejects missing/invented evidence. Who can use it and usefulness 1-5. 4+ goes on. "Nobody can use it" caps at 3 in code. |
+| sorter | `nodes/sorter.py` + `prompts/rubric.md` | Is it worth posting? Concrete news or a usable resource, with a supporting source quote; code rejects missing/invented evidence and rumours ("seems", "spotted"…). Who can use it and usefulness 1-5. 4+ goes on. "Nobody can use it" caps at 3 in code. |
+| sifter | `nodes/sifter.py`, `nodes/follow_up.py` + `prompts/sifter.md` | Did the channel already post about this product? In the last 12 hours: stops here. Earlier: which facts in the source are new to the reader (each quote checked in code)? Nothing new, or only trivia: stops here. Items about something new skip it. Runs before the company limit, so a repeat never waits for a digest. |
 | company_limit | `nodes/company_digest.py` | Has this company had its 2 posts today? If so the item waits for the company's evening digest. A 5/5 always goes. |
-| sifter | `nodes/sifter.py`, `nodes/follow_up.py` + `prompts/sifter.md` | Did the channel already post about this product? If so, which facts in the source are new to the reader (each quote checked in code)? Nothing new, or only trivia: stops here. Items about something new skip it. |
 | writer | `nodes/writer.py` + `prompts/writer.md`, `prompts/persona.md` | Writes the post in AI Flow's voice. A follow-up is written from the sifter's new facts only, never the source. |
 | editor | `nodes/editor.py` + `prompts/editor.md` | Checks the post against its source. Can only reject by naming a rule. A fixable rejection goes back to the writer, up to 3 times. **Fails closed.** |
 | repeat_check | `nodes/echo.py` | Does the finished post tell the reader anything a post of the last 60 days did not? |
@@ -181,6 +181,10 @@ edits the message in the channel (caption or text) and saves the new version to 
 so the dashboard and the repeat check see it. Run the new text past the editor first. Used on
 2026-10-10 for seven posts with repeats, an unknown maker, or a wrong link.
 
+`python3 tools/delete_post.py ITEM_ID [ITEM_ID ...] [--dry-run]` deletes posts from the channel
+and marks them `deleted`, so the repeat check and the follow-up search stop counting them as told.
+Used on 2026-10-13 for two extra Gemini 4 Argon posts and the Apple TV 4K post.
+
 ### Changing a model
 
 Every model is a line in `config.py`, overridable in `.env`. Before switching one:
@@ -207,8 +211,9 @@ overlap, so no cutoff works. The embeddings and the judge look back **7 days**
 (`DUPLICATE_MAX_GAP_HOURS`, `COSINE_WINDOW_HOURS`; was 12 hours for Market One's recurring
 market figures); the wording checks look back 24 hours, because "DAILY AI BRIEF — Oct 7" and
 "— Oct 8" read 95% alike. A "same event" repeat is dropped when the earlier item went out, is
-on its way or waits for a digest; when the earlier one was turned down, the new one is let
-through. Fails **open**: a duplicate is a small embarrassment, a silent channel is worse.
+on its way or waits for a digest; when the earlier one was turned down, the check moves on to
+the next match (2026-10-13: Gemini 4 Argon's official post matched a rejected one-liner first and
+never met the published post behind it), and only with no covered match is the item let through. Fails **open**: a duplicate is a small embarrassment, a silent channel is worse.
 
 **Labels.** Nine kinds — `new_product` (a new standalone product from a listed company),
 `new_model`, `feature` (new inside a product you already have), `pricing`, `tool` (anything
@@ -229,6 +234,12 @@ Each company's digest is marked done in the `meta` table *before* it runs, so a 
 send two. Waiting more than `DIGEST_MAX_WAIT_HOURS` (30, counted from when the wait began)
 expires an item. 5/5 items and the company "other" are never held. A digest has no link line.
 The dashboard shows it apart from the regular posts: "2 of 2 + evening digest".
+
+**One post per product per 12 hours** (2026-10-13). Gemini 4 Argon went out three times in 31
+minutes, each with a true new fact. Now a follow-up to a post sent less than
+`FOLLOW_UP_COOLDOWN_HOURS` (12) ago is `held` ("already posted about this N minutes ago") before
+the sifter is asked. The first post about a product wins, even when a better source arrives an
+hour later. Forced items ignore it.
 
 **Follow-ups and the sifter** (2026-10-13). Muse Wonder went out three times on 2026-10-12, each
 post re-introducing it: asking the writer not to repeat old facts was not enough, so the writer
@@ -281,6 +292,11 @@ story step used to merge the article in; Qwen-Image-2.1-Turbo went out as a bare
 under a picture) and must use the source's best facts. A link line the writer left out is added
 with words that fit the kind ("Try it here", "Get the skill here", "Read the guide here").
 
+**The news, not where it came from** (2026-10-13). "The video claims this shows...", "A user report
+says...": the source is never the subject of a post, and what its author guesses or predicts is
+left out (only the maker's own claims keep "Google says"). The editor sends it back as
+`SOURCE_TALK` (fixable).
+
 **Every line says something new** (2026-10-10). The body never restates the first line, an
 unknown maker (a username, an individual nobody in AI knows) is not named, and nothing true of
 every item of its kind is said (a skill being free or needing no account). The editor rejects
@@ -289,8 +305,11 @@ these as `REPEATS` and `FILLER`, both fixable, so the writer cuts them on the re
 **An aggregator page links the product, never an article.** For AI/TLDR items
 (`article.product_link`): a "try it" site first, then the maker's own non-article page
 (Cloudflare's model page, not its blog post), then the code or model on GitHub or Hugging Face.
-Blog posts, news sites and dated `/2026/10/..` paths are never picked, and with nothing usable
-the post has no link line rather than one to AI/TLDR.
+Blog posts, news sites and dated `/2026/10/..` paths are never picked. With nothing usable on the
+page, the link finder searches the web, as for a tweet (2026-10-13: AI/TLDR's Adobe-clones page
+linked only a Fireship video and an XDA article; the repos were at github.com/storytold). An
+open-source project's GitHub page counts as where to get it. Still nothing: no link line rather
+than one to AI/TLDR.
 
 **Too thin to post.** A source with under 250 characters of real text and no page read is capped at
 3 in code (`sorter.THIN_SOURCE_CHARS`): a headline-only post tells the reader nothing. A one-line
@@ -312,6 +331,14 @@ composition are normalized; names and numbers must match. Accepted basis and quo
 are saved in the existing sorting reason, visible on the dashboard. The model still
 judges whether that quote establishes a change or useful resource: matching text
 cannot prove meaning or independently verify a source's claims.
+
+**Rumours are not news** (2026-10-13). "Google seems to be rolling out custom MCPs" and "Fable 5.5
+traces have been spotted in Azure configs" went out as posts. For a `news` item, code rejects a
+headline or evidence quote with a hedge (`sorter.UNCONFIRMED`: seems, spotted, traces of, leaked,
+reportedly, may be, might, could be, being tested, coming soon…); on 332 past headlines it matched
+only those two and one other sighting. The rubric says the same, and also turns down gadgets and
+home entertainment even with AI inside (the Apple TV 4K post). A video or article that reports a
+fresh release as fact is still news about that release.
 
 This replaces the temporary AI/TLDR video-category filter and applies to every source.
 A real launch with a demo video can pass. Source/page collection freshness checks
@@ -343,7 +370,7 @@ waiting one is posted when a slot frees up.
 | Writer | `deepseek/deepseek-v3.2` |
 | Editor | `anthropic/claude-haiku-5.5` at low thinking effort, fallback `google/gemini-3.5-flash-lite` (chosen 2026-10-07 with `tools/check_editor.py`; haiku-5.5 takes no temperature, see `NO_TEMPERATURE_MODELS` in `config.py`) |
 | Repeat check | `mistralai/mistral-medium-3.1` |
-| Link finder (tweets with no outside link) | `google/gemini-2.5-flash` with OpenRouter web search, ~2 cents a search |
+| Link finder (tweets and AI/TLDR items with no product link) | `google/gemini-2.5-flash` with OpenRouter web search, ~2 cents a search |
 | Embeddings | `openai/text-embedding-3-small` |
 
 About **$9-10 a month** at ~120 items a day (estimated from two days of real volume on
@@ -391,6 +418,7 @@ VPS exposes at `/api/dashboard/v1`.
 | Good items not posted | `tools/stats.py --dropped`: the sorter (`prompts/rubric.md`) or the gate |
 | Dashboard says "API offline" | `sudo systemctl status aif-dashboard-api`; then check `DASHBOARD_TOKEN` matches in `.env` and Vercel |
 | Videos fail to download | yt-dlp is updated every Monday by cron (`logs/yt-dlp-update.log`) |
+| Alert "upload timed out" | Telegram did not answer within 120 s. The post is counted as sent and NOT sent again (the Facebook post went out twice on a 5-second wait, 2026-10-13). Check the channel; if it is missing, post the text from the dashboard by hand |
 
 ## Tests
 
@@ -398,6 +426,7 @@ VPS exposes at `/api/dashboard/v1`.
 /usr/bin/python3 tests/test_ai_channel.py
 /usr/bin/python3 tests/test_media.py
 /usr/bin/python3 -m unittest tests/test_reader_memory.py
+/usr/bin/python3 -m unittest tests/test_rumours_and_repeats.py
 /usr/bin/python3 -m unittest discover -s tests -p 'test_image_resolution.py'
 /usr/bin/python3 -m unittest discover -s tests -p 'test_article_content.py'
 /usr/bin/python3 -m unittest discover -s tests -p 'test_sorter_evidence.py'

@@ -33,6 +33,12 @@ MEANING_FAILURE_ALERT_AFTER = 10
 # at 0.716 against a 0.72 floor is a threshold problem, not a broken check.
 NEAR_MISS_FLOOR = 0.70
 
+# What a matched item ended up as. Only these count: the reader saw it, is about to, or it
+# waits for a digest. A repeat of an item the sorter or editor turned down is not a repeat,
+# since a fuller account of the same news may pass where it did not.
+COVERED = ("published", "queued", "written", "waiting_digest", "capped", "duplicate",
+           "held", "merged")
+
 
 def _record_meaning_failure(item_id: int) -> None:
     """Count a failed meaning check, and shout if they are piling up."""
@@ -268,6 +274,18 @@ async def check_meaning(item, item_norm_title: str = "", *,
             continue
 
         # verdict == "same_event"
+        if matched["status"] not in COVERED:
+            # Keep looking: on 2026-10-13 Gemini 4 Argon's official post matched a rejected
+            # one-liner first, was let through, and never met the published post behind it.
+            db.log_dedup_hit(
+                item_id=item_id, matched_item_id=matched_id, rung="judge",
+                score=score, kept=True,
+                detail=f"KEPT (same event as {matched['status']} item, never went out): "
+                       f"{title[:110]} ~{score:.3f}~ {matched_title[:110]}",
+            )
+            log.info("Same event as item %s (%s), which never went out — checking the next match",
+                     matched_id, matched["status"])
+            continue
         db.log_dedup_hit(
             item_id=item_id, matched_item_id=matched_id, rung="judge",
             score=score, kept=False,
