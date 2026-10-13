@@ -67,8 +67,14 @@ async def _fetch_image(url: str) -> bytes | None:
             return None
         from PIL import Image
         with Image.open(io.BytesIO(response.content)) as picture:
-            if min(picture.size) < 200:
+            width, height = picture.size
+            if (min(width, height) < config.IMAGE_MIN_SHORT_SIDE
+                    or max(width, height) < config.IMAGE_MIN_LONG_SIDE):
+                log.info("Image rejected before analysis: %dx%d; need long edge >= %d "
+                         "and short edge >= %d (%s)", width, height,
+                         config.IMAGE_MIN_LONG_SIDE, config.IMAGE_MIN_SHORT_SIDE, url[:160])
                 return None
+            picture.load()
         return response.content
     except Exception as error:  # noqa: BLE001 - a missing picture is not a problem
         log.debug("Could not fetch image %s: %s", url[:80], error)
@@ -112,7 +118,7 @@ async def choose(post_text: str, urls: list[str]) -> Choice:
     fetched = await asyncio.gather(*(_fetch_image(u) for u in urls))
     images = [(u, data) for u, data in zip(urls, fetched) if data][:config.MAX_IMAGES_JUDGED]
     if not images:
-        return Choice(reason="no image could be downloaded")
+        return Choice(reason="no image passed download and resolution checks")
 
     try:
         answer = await _judge(post_text, images)

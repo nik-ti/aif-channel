@@ -287,13 +287,14 @@ async def _read(url: str) -> tuple[str | None, str, str]:
     text, html = await _plain(url)
     used = "plain"
     if text is None:
-        text, html = await _browser(url)
+        text, browser_html = await _browser(url)
+        html = browser_html or html
         used = "browser"
     if text is None:
         text = await _reader(url)
         used = "reader"
         if text and config.COLLECT_ARTICLE_MEDIA:
-            html = await _reader_html(url)
+            html = (await _reader_html(url)) or html
     return text, html or "", used
 
 
@@ -339,8 +340,7 @@ async def fetch_for(item) -> str | None:
     """The article behind this item, cached on the row. None if there is none.
     Raises StalePage when a feed article's own page is too old to be news.
 
-    Called once per item, after the sorter has kept it — there is no point
-    paying for the ~85% that never get past that.
+    Runs before labeling and scoring, so neither has to guess from a feed stub.
     """
     item_id = item["id"]
     url = (item["url"] or "").strip()

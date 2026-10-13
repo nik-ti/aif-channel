@@ -61,6 +61,7 @@ RUBRIC_PATH = PROMPTS / "rubric.md"          # what is worth posting (the sorter
 PERSONA_PATH = PROMPTS / "persona.md"        # the voice, in front of the writer's prompt
 WRITER_PROMPT_PATH = PROMPTS / "writer.md"
 EDITOR_PROMPT_PATH = PROMPTS / "editor.md"
+SIFTER_PROMPT_PATH = PROMPTS / "sifter.md"  # what in a follow-up is new to the reader
 IMAGE_RUBRIC_PATH = PROMPTS / "image_rubric.md"
 VIDEO_RUBRIC_PATH = PROMPTS / "video_rubric.md"
 
@@ -287,6 +288,7 @@ EMBEDDING_MODEL = _get("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 # AI MODELS (all through OpenRouter)
 
 SORTER_MODEL = _get("SORTER_MODEL", "google/gemini-2.5-flash")
+SIFTER_MODEL = _get("SIFTER_MODEL", "google/gemini-2.5-flash")
 WRITER_MODEL = _get("WRITER_MODEL", "deepseek/deepseek-v3.2")
 
 # The editor checks a post against its source and fails CLOSED. It must be a different
@@ -331,7 +333,9 @@ STORIES = False
 
 # ONE COMPANY, AT MOST 2 POSTS A DAY (nodes/company_digest.py). The rest wait, and at
 # DIGEST_HOUR_UTC each company's waiting items go out as one bullet post. A 5/5 item and
-# "other" companies are never held. Days are UTC days.
+# "other" companies are never held. Days are UTC days. Only items already waiting at
+# DIGEST_HOUR_UTC go in that day's digest; later ones wait for tomorrow's, and an item
+# expires DIGEST_MAX_WAIT_HOURS after it started waiting.
 COMPANY_DAILY_LIMIT = _get_int("COMPANY_DAILY_LIMIT", 2)
 DIGEST_HOUR_UTC = _get_int("DIGEST_HOUR_UTC", 18)
 DIGEST_MAX_WAIT_HOURS = _get_int("DIGEST_MAX_WAIT_HOURS", 30)
@@ -377,6 +381,13 @@ ECHO_BATCH_CHARS = max(1000, _get_int("ECHO_BATCH_CHARS", 16000))
 STORY_MEMORY_HOURS = min(max(1, _get_int("STORY_MEMORY_HOURS", 1440)), MEMORY_RETENTION_DAYS * 24)
 STORY_MEMORY_SHORTLIST = _get_float("STORY_MEMORY_SHORTLIST", 0.60)
 
+# FOLLOW-UPS (nodes/follow_up.py): published posts this close to a new item's source are
+# about the same product, and the writer is told to build on them. Measured 2026-10-13:
+# the three Muse Wonder posts 0.81-0.82, unrelated pairs never above 0.64. Must stay at or
+# above ECHO_SHORTLIST, which filters the same search first.
+FOLLOW_UP_SIMILARITY = max(ECHO_SHORTLIST, _get_float("FOLLOW_UP_SIMILARITY", 0.70))
+FOLLOW_UP_MAX_POSTS = _get_int("FOLLOW_UP_MAX_POSTS", 3)
+
 
 # THE MEDIA ANALYSTS. Measured 2026-10-01: about $0.0007 per image and $0.003 for a
 # 6 MB video on Flash.
@@ -385,6 +396,8 @@ IMAGE_MODEL = _get("IMAGE_MODEL", "google/gemini-2.5-flash")
 VIDEO_MODEL = _get("VIDEO_MODEL", "google/gemini-2.5-flash")
 MEDIA_TIMEOUT_SECONDS = _get_int("MEDIA_TIMEOUT_SECONDS", 60)
 MAX_IMAGES_JUDGED = _get_int("MAX_IMAGES_JUDGED", 6)
+IMAGE_MIN_LONG_SIDE = _get_int("IMAGE_MIN_LONG_SIDE", 800)
+IMAGE_MIN_SHORT_SIDE = _get_int("IMAGE_MIN_SHORT_SIDE", 400)
 MAX_VIDEO_SECONDS = _get_int("MAX_VIDEO_SECONDS", 120)
 # Telegram's limit for sending a file by its address; bigger could not go out anyway.
 MAX_VIDEO_MB = _get_int("MAX_VIDEO_MB", 20)

@@ -43,6 +43,9 @@ launch can look new). While reading the page it also collects:
 - **The product link:** on AI/TLDR pages, the first official link (the GitHub release,
   the company blog post), so the post links to the thing itself, not to AI/TLDR.
 
+Video introductions and launches with demos are read like other articles. The sorter
+judges whether the content supports a concrete change or usable resource.
+
 ## 4. Labeler — what is it, and who made it?
 A cheap model (Gemini Flash Lite, about $0.0007 an item) picks two labels, each from a
 **fixed list**. Anything it answers that is not exactly on the list is stored as "other",
@@ -62,12 +65,17 @@ The labels are checked against 75 hand-labelled items with tools/check_labels.py
 ## 5. Sorter — is it worth posting?
 Reads the headline, the feed's summary, the start of the article, today's date and the two
 labels, and answers:
+- **Publication basis:** concrete news, a usable AI resource, or neither. Older skills,
+  prompt packs and practical guides can qualify without pretending they just launched.
+- **Supporting quote:** one verbatim source quote that establishes the change or use.
+  Code blocks missing or invented quotes regardless of score; the model judges meaning.
+  The basis and accepted quote appear in the existing sorting reason.
 - **Who can use it today:** everyone, creators, business, students, developers, or none.
   **"none" caps the score at 3**, so research papers, benchmark scores, waitlists,
   funding and company drama never get posted.
 - **Usefulness 1-5.** **4 or more is posted.** New models and price cuts from major AI
   companies are a 4 even when they are only for developers. Version updates, unknown
-  developer repos and third-party guides to someone else's release are a 3.
+  developer repos score 3. Practical guides can score 4 when they provide a usable AI workflow.
 
 **Daily limits per kind.** Guides and skills are useful, but a channel full of them reads like a
 list: at most **2 of each a day, at least 3 hours apart**. One that passes the sorter but hits a
@@ -81,14 +89,25 @@ that is not about AI even when it is packaged as an AI skill (marketing-copy met
 Each company gets **2 posts a day** (UTC day). A third item from the same company waits
 (shown as **Waiting for digest**). At **18:00 UTC** each company's waiting items go out as
 **one post with a line per item** ("More from Anthropic today"); a single waiting item goes
-out as a normal post. Anything that waits more than 30 hours is dropped.
+out as a normal post. Only items already waiting at 18:00 go in that day's digest; one
+held later waits for the next day's. Anything that waits more than 30 hours is dropped.
 **A 5/5 item always goes out at once**, and makers labelled "other" are never limited.
 The Companies tab shows today's count per company, what is waiting and the digests sent.
 
 (Until 9 October this step was the story organizer and gatekeeper, built for Market One's
 running events. They are switched off; their code is kept in archive/market-one.)
 
-## 7. Writer
+## 7. Sifter — what is new to the reader?
+Runs only when the channel **already posted about the same product or event** (found by
+meaning, not by title). It lists the facts in the new source the reader does not have yet,
+each with a quote, and code throws out any fact whose quote is not really in the source.
+The writer then gets **only those facts**, so it cannot repeat what the reader already knows.
+**Nothing new**, or new but only trivia (history, where it was trained, plans with no date),
+and the item stops here, shown as *held*. If the
+sifter itself fails, the item is still written, with the earlier posts as a "don't repeat" list.
+Items about something the channel never covered skip it entirely.
+
+## 8. Writer
 Its own prompt (writer.md) plus the voice file (persona.md). The shape:
 - a **bold first line** saying what it is and why the reader should care,
 - two to four short "•" lines, or one or two short paragraphs, with **two or three key
@@ -107,10 +126,15 @@ channel's own evening roundup and gives every waiting item its own "•" line.
 phrase it like these", and if a post still starts with the same first two words as a recent
 one ("Here's a…"), it is sent back for a different opening once.
 
+**Follow-ups.** When the sifter found earlier posts, the writer sees them and only the new
+facts, never the source itself: open with what is new, don't introduce the product again,
+don't reuse their words. A draft that copies five words in a row from one of them is sent
+back once for new wording.
+
 **No emoji at all**, only the "•" bullet. No hype words, no capitals for shouting. The
 writer never copies a link: it writes LINK and the publisher fills in the address.
 
-## 8. Editor — is the post right?
+## 9. Editor — is the post right?
 Its own prompt (editor.md), on a different model from the writer. It checks the post
 against the source and can only reject by naming a rule. This channel adds **JARGON**:
 a word a 12-year-old would not know, left unexplained ("tokens" and "API" are fine).
@@ -121,18 +145,21 @@ the post again from scratch (that used to fix one fault and add a new one, like 
 is not undone and the editor cannot ask for the opposite of what it asked before. A
 rejection after the third rewrite, or for a rule that cannot be fixed, is final.
 
-## 9. Repeat check
+## 10. Repeat check
 The exit: does this finished post tell the reader anything a post of the last 60 days
 did not? If not, it is held.
 
-## 10. Image analyst and video analyst
+## 11. Image analyst and video analyst
+Before Gemini sees a picture, code checks its actual file dimensions: at least **800
+pixels on the longer edge and 400 on the shorter edge**, in either orientation. Smaller
+pictures are dropped; the text post can still go out. The limits are adjustable.
 Gemini looks at every candidate picture and clip and picks the one that shows what the
 post says, or none. Clips from video players are downloaded with **yt-dlp** (720p, at
 most 20 MB); anything **over 2 minutes is refused** before the model sees it. A video
 that passes beats any picture, and the best picture is the backup. yt-dlp updates itself
 every Monday, and 3 failed downloads in a row send an alert.
 
-## 11. Publish
+## 12. Publish
 Fills in the link, adds the signature ("AI Flow | Subscribe"), and sends the post with
 the chosen media. **A post never links to X.** When the source is a tweet with no outside
 link, a web search (Gemini with OpenRouter's search, ~2 cents) looks for a page where the

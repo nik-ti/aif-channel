@@ -57,10 +57,21 @@ def get_companies():
         """
     )
     counts = {row["company"]: {"company": row["company"], "posts_today": row["posts_today"],
-                               "waiting": 0} for row in today}
+                               "digest_today": 0, "waiting": 0} for row in today}
+    # The channel marks a company's digest in meta when it starts; the one post sent after
+    # that mark is the evening digest, shown apart from the regular posts it does not count against.
+    for mark in query("SELECT key, value FROM meta WHERE key LIKE 'digest:%:' || date('now')"):
+        company = mark["key"].split(":")[1]
+        started = (mark["value"] or "").replace("T", " ")[:19]
+        sent = query("""SELECT COUNT(*) AS n FROM posts p JOIN items i ON i.id = p.item_id
+                         WHERE p.status = 'sent' AND i.company = ? AND p.sent_at >= ?""",
+                     (company, started))
+        if company in counts and sent and sent[0]["n"]:
+            counts[company]["digest_today"] = 1
+            counts[company]["posts_today"] -= 1
     for row in waiting:
         entry = counts.setdefault(row["company"], {"company": row["company"], "posts_today": 0,
-                                                   "waiting": 0})
+                                                   "digest_today": 0, "waiting": 0})
         entry["waiting"] += 1
 
     username = paths.channel_username()

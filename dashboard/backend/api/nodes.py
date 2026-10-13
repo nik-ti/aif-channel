@@ -26,6 +26,7 @@ STATION_TO_NODE: dict[str, str] = {
     "dedup": "dedup_judge",
     "labeler": "labeler",
     "sorter": "sorter",
+    "sifter": "sifter",
     "writer": "writer",
     "editor": "editor",
     "repeat_check": "repeat_check",
@@ -38,6 +39,7 @@ PROMPT_FILES: dict[str, str] = {
     "labeler": "labeler.md",
     "sorter": "rubric.md",
     "editor": "editor.md",
+    "sifter": "sifter.md",
     "image_analyst": "image_rubric.md",
     "video_analyst": "video_rubric.md",
 }
@@ -53,6 +55,7 @@ MODEL_VARS: dict[str, str] = {
     "dedup_judge": "JUDGE_MODEL",
     "labeler": "LABELER_MODEL",
     "sorter": "SORTER_MODEL",
+    "sifter": "SIFTER_MODEL",
     "writer": "WRITER_MODEL",
     "editor": "EDITOR_MODEL",
     "repeat_check": "ECHO_MODEL",
@@ -67,6 +70,7 @@ LABELS: dict[str, str] = {
     "dedup_judge": "Dedup judge",
     "labeler": "Labeler",
     "sorter": "Sorter",
+    "sifter": "Sifter",
     "writer": "Writer",
     "editor": "Editor",
     "repeat_check": "Repeat check",
@@ -84,7 +88,12 @@ DESCRIPTIONS: dict[str, str] = {
                "Checked with tools/check_labels.py.",
     "sorter": "Scores every incoming item 1-5 for how useful it is to a regular "
               "person today and names who can use it — the only node that decides "
-              "if something is worth covering at all. It is given the labels.",
+              "if something is worth covering at all. Requires news or a usable resource "
+              "with a supporting quote; missing or invented evidence is blocked in code.",
+    "sifter": "Runs only when the channel already posted about the same product. Lists the "
+              "source's facts the reader does not have yet, each with a quote that code "
+              "checks against the source. The writer then sees only those facts; if there "
+              "are none, the item is held and never written.",
     "writer": "Writes the post in AI Flow's voice: simple, bold first line, "
               "• lines, bold key words, link last, no emoji. Shown with the "
               "voice file (persona.md) it is given in front of the prompt.",
@@ -94,7 +103,8 @@ DESCRIPTIONS: dict[str, str] = {
                     "visible post of the last 60 days, without a newest-post cap. "
                     "Cached embeddings retrieve all related posts; the judge reads "
                     "their combined information. Unavailable checks defer sending.",
-    "image_analyst": "Looks at every candidate picture and picks the one that shows "
+    "image_analyst": "Checks actual image resolution in code before the model sees it, "
+                     "then looks at each eligible picture and picks the one that shows "
                      "what the post says, or none.",
     "video_analyst": "Watches candidate clips and keeps the first one that shows what "
                      "the post says. Over 2 minutes is refused before it is watched.",

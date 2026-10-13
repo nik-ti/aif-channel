@@ -1,15 +1,17 @@
 """The only station that asks whether an item is worth covering at all. The editor
 later checks a post against its source, which is a different question.
 
-The rubric (prompts/rubric.md) makes the model say who can use the thing today
-before it scores it, and "nobody" caps the score below the publishing bar.
+The model identifies a concrete change or useful resource and quotes its source.
+Code checks the quote, and "nobody" caps the score below the publishing bar.
 On a model failure the item goes back to the queue rather than being guessed.
 """
 
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import datetime, timezone
+from html import unescape
 
 import config
 from utils import logger as log_setup, openrouter
@@ -37,13 +39,18 @@ THIN_CAP = 3
 # scores 4 has contradicted itself, and the concrete answer wins.
 NO_USE_CAP = 3
 
-# The shape of the answer. "strict" mode means the provider enforces this, so
-# the model cannot return importance as words. The kind comes from nodes/labeler.py.
+# Request structured output; quote validation below still runs in code.
+# The kind comes from nodes/labeler.py.
 SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["relevant", config.SORTER_AXIS, "importance", "reason"],
+    "required": ["basis", "evidence", "relevant", config.SORTER_AXIS, "importance", "reason"],
     "properties": {
+        "basis": {"type": "string", "enum": ["news", "resource", "none"],
+                  "description": "Concrete new change, usable existing resource, or neither."},
+        "evidence": {"type": "string",
+                     "description": "One verbatim quote from Headline or Text supporting the change "
+                                    "or practical use; empty if basis is none."},
         "relevant": {"type": "boolean"},
         config.SORTER_AXIS: {"type": "string", "enum": list(config.SORTER_AXIS_VALUES)},
         "importance": {"type": "integer", "minimum": 1, "maximum": 5},
@@ -61,9 +68,8 @@ def source_chars(item) -> int:
     return len(" ".join(text.split()))
 
 
-def user_message(item) -> str:
-    """What the sorter reads about one item."""
-    title = item["title"] or ""
+def source_body(item) -> str:
+    """The same bounded source text is used for judging and quote validation."""
     body = (item["body"] or "")[:600]
     article = (item["article_text"] if "article_text" in item.keys() else "") or ""
     if config.SORTER_READS_ARTICLE and article and item["origin"] == "x":
@@ -72,6 +78,17 @@ def user_message(item) -> str:
     elif config.SORTER_READS_ARTICLE and article:
         # The feed's snippet (often just "Source: x | Release date: y") plus the article.
         body = f"{body}\n\n{article[:1500]}".strip()
+    return body
+
+
+def _normalize_quote(text: str) -> str:
+    return " ".join(unicodedata.normalize("NFC", unescape(text)).split())
+
+
+def user_message(item) -> str:
+    """What the sorter reads about one item."""
+    title = item["title"] or ""
+    body = source_body(item)
     keys = item.keys()
     kind = (item["topic"] if "topic" in keys else "") or "unknown"
     company = (item["company"] if "company" in keys else "") or "unknown"
@@ -91,7 +108,8 @@ async def execute(item) -> dict:
 
     Returns relevant, topic (the labeler's kind, passed through), market (who can use it;
     stored in items.market),
-    importance (1-5), reason, and fallback (True if the model failed).
+    importance (1-5), reason (including accepted evidence), basis, evidence,
+    and fallback (True if the model failed).
     """
     title = item["title"] or ""
     kind = (item["topic"] if "topic" in item.keys() else "") or "other"
@@ -110,6 +128,29 @@ async def execute(item) -> dict:
             market = "none"
         importance = int(result.get("importance", 2))
         reason = str(result.get("reason", ""))[:300]
+        basis = result.get("basis", "none")
+        evidence = result.get("evidence", "")
+        if basis not in ("news", "resource", "none"):
+            basis = "none"
+        if not isinstance(evidence, str):
+            evidence = ""
+        evidence = evidence.strip()
+
+        if relevant:
+            quote = _normalize_quote(evidence)
+            # Keep attribution in the prompt, but it cannot serve as release evidence.
+            body = re.sub(r"(?m)^(POST by|QUOTED POST by|@\S+ REPOSTED|LINKED PAGE \d+:|Source:).*$",
+                          "", source_body(item))
+            source = _normalize_quote(f"{title}\n{body}")
+            if basis == "none":
+                relevant = False
+                reason = f"missing publication basis; {reason}"
+            elif not quote:
+                relevant = False
+                reason = f"missing source evidence; {reason}"
+            elif quote not in source:
+                relevant = False
+                reason = f"source evidence absent from the text shown to the sorter; {reason}"
 
         if importance > THIN_CAP and source_chars(item) < THIN_SOURCE_CHARS:
             log.info("Capping item %s from %d to %d — only %d characters of source to write "
@@ -123,12 +164,17 @@ async def execute(item) -> dict:
             importance = NO_USE_CAP
             reason = f"nobody can use it today; {reason}"[:300]
 
+        if relevant:
+            reason = f"{basis}: {reason} | Source quote: {evidence}"
+
         return {
             "relevant": relevant,
             "topic": topic,
             "market": market,
             "importance": importance,
             "reason": reason,
+            "basis": basis,
+            "evidence": evidence,
             "fallback": False,
         }
 

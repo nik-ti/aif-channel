@@ -45,6 +45,8 @@ class BrainState(TypedDict, total=False):
     story_id: int               # 0 in a dry run
     story_angle: str            # the gate's instruction for this post
     story_brief: str            # what the writer is told beyond the source
+    related_posts: list         # published posts about the same thing (nodes/follow_up.py)
+    new_facts: list             # what the sifter found new: [{fact, quote}]
     gate_reason: str            # why a held item was held
     trigger_item_id: int        # the item that arrived, kept for logging
 
@@ -57,7 +59,7 @@ class BrainState(TypedDict, total=False):
     previous_editor_reason: str  # the editor's own rejection, shown to it on the rewrite
     rewrite_count: int
     outcome: str                # published | duplicate | roundup | irrelevant |
-                                # low_impact | waiting_digest | held | placed |
+                                # low_impact | waiting_digest | nothing_new | held | placed |
                                 # declined | retry | failed
 
 
@@ -73,7 +75,7 @@ def build_graph():
     if config.STORIES:
         stations += [("story_organizer", s.story_organizer_node), ("gatekeeper", s.gatekeeper_node)]
     else:
-        stations += [("company_limit", s.company_limit_node)]
+        stations += [("company_limit", s.company_limit_node), ("sifter", s.sifter_node)]
     stations += [
         ("writer", s.writer_node),
         ("editor", s.editor_node),
@@ -97,7 +99,9 @@ def build_graph():
     else:
         g.add_conditional_edges("sorter", s.route_after_sorter, {"worth it": "company_limit", "below the bar": END})
         g.add_conditional_edges("company_limit", s.route_after_company_limit,
-                                {"under the limit": "writer", "waits for digest": END})
+                                {"under the limit": "sifter", "waits for digest": END})
+        g.add_conditional_edges("sifter", s.route_after_sifter,
+                                {"new facts": "writer", "nothing new": END})
     g.add_conditional_edges("writer", s.route_after_writer, {"draft": "editor", "failed": END})
     g.add_conditional_edges("editor", s.route_after_editor,
                             {"approved": "repeat_check", "fixable": "writer", "rejected": END})

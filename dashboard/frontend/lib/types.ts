@@ -59,6 +59,7 @@ export interface PostFilters {
 export interface CompanyToday {
   company: string;
   posts_today: number;
+  digest_today: number;
   waiting: number;
 }
 

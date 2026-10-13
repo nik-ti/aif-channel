@@ -53,9 +53,9 @@ export function CompaniesView() {
         <h2 className="font-display text-xl font-semibold text-ink-primary">Companies</h2>
         <p className="mt-0.5 max-w-2xl text-sm text-ink-muted">
           Each company gets <span className="font-semibold text-ink-primary">{limit} posts a day</span> (UTC).
-          The rest wait and go out together at{" "}
+          The rest wait and go out together as one digest at{" "}
           <span className="font-semibold text-ink-primary">{data ? digestTime(data.digest_hour_utc) : "…"}</span>.
-          A 5/5 launch always goes out.
+          Anything held after that waits for the next day&apos;s digest. A 5/5 launch always goes out.
         </p>
         </div>
         {isFetching && <span className="text-xs text-ink-muted">Refreshing…</span>}
@@ -87,6 +87,7 @@ export function CompaniesView() {
                     <span className="text-xs text-ink-muted">
                       {row.posts_today} of {limit}
                       {full ? " · limit reached" : ""}
+                      {row.digest_today ? " + evening digest" : ""}
                       {row.waiting ? ` · ${row.waiting} waiting` : ""}
                     </span>
                   </li>

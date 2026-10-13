@@ -128,8 +128,10 @@ async def execute(item, post_html: str, post_id: int, record: bool = True,
     reply_context = ""
     if parent_post:
         reply_context = (
-            f"## The post this one replies to (already published by this channel)\n"
-            f"{parent_post}\n\n"
+            f"## Earlier posts this one follows (already published by this channel)\n"
+            f"{parent_post}\n"
+            f"The reader already saw these. A short pointer back to them, or a fact taken "
+            f"from them, is not invented.\n\n"
         )
 
     memory = ""

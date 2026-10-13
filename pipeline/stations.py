@@ -14,8 +14,9 @@ from typing import Any
 
 import config
 from utils import persona_loader
-from nodes import (article, company_digest, dedup, echo, editor, image_analyst, labeler,
-                   link_finder, media, publisher, sorter, stories, video_analyst, writer)
+from nodes import (article, company_digest, dedup, echo, editor, follow_up, image_analyst,
+                   labeler, link_finder, media, publisher, sifter, sorter, stories,
+                   video_analyst, writer)
 from utils import db, semantic_memory, logger as log_setup
 
 log = log_setup.get("pipeline")
@@ -52,9 +53,13 @@ def route_after_company_limit(state: dict) -> str:
     return "waits for digest" if state.get("outcome") else "under the limit"
 
 
+def route_after_sifter(state: dict) -> str:
+    return "nothing new" if state.get("outcome") else "new facts"
+
+
 async def fetch_article_node(state: dict) -> dict[str, Any]:
-    """Read article (writer needs more than headline). Runs on sorter-kept items only.
-    Fails open: no article = headline post.
+    """Read the full article before labeling; stop old pages.
+    A failed fetch leaves the item with its feed text for the sorter to judge.
     """
     if state.get("dry_run") or state.get("sweep") or state.get("digest"):
         return {}
@@ -216,6 +221,48 @@ async def company_limit_node(state: dict) -> dict[str, Any]:
         db.bump_counter("waiting_digest")
     log.info("Item %s waits for the %s digest: %s", item["id"], company, reason)
     return {"outcome": "waiting_digest"}
+
+
+async def sifter_node(state: dict) -> dict[str, Any]:
+    """Find earlier posts about the same product; if any, keep only what is new (nodes/sifter.py).
+
+    A forced item gets the earlier posts but is not sifted: a human chose to post it. A sifter
+    outage falls back to the earlier posts alone, which the writer is told not to repeat.
+    """
+    nothing = {"related_posts": [], "new_facts": []}
+    if state.get("digest") or state.get("sweep"):
+        return nothing
+    item = state["item"]
+    dry = state.get("dry_run", False)
+    try:
+        found = await follow_up.related_posts(item, persist=not dry)
+    except semantic_memory.Unavailable as error:
+        log.warning("Item %s waits for reader memory before writing: %s", item["id"], error)
+        if not dry:
+            db.set_item_status(item["id"], "queued", f"waiting for reader memory: {error}"[:300])
+        return {"outcome": "retry"}
+    if not found:
+        return nothing
+    related = [row["text"] for row in found]
+    log.info("Item %s follows %d published post(s): %s", item["id"], len(found),
+             ", ".join(f"{row['id']} ({row['score']:.2f})" for row in found))
+    if state.get("forced"):
+        return {"related_posts": related, "new_facts": []}
+
+    sifted = await sifter.execute(item, related)
+    if sifted.nothing_new:
+        log.info("Item %s has nothing new for the reader: %s", item["id"], sifted.reason)
+        if not dry:
+            why = (sifted.reason if sifted.reason.startswith("not worth")
+                   else f"nothing new for the reader: {sifted.reason}")
+            db.set_item_status(item["id"], "held", why)
+            db.bump_counter("nothing_new")
+        return {"outcome": "nothing_new", "related_posts": related}
+    if sifted.failed:
+        log.info("Item %s written without sifting (%s)", item["id"], sifted.reason)
+    else:
+        log.info("Item %s: %d new fact(s) — %s", item["id"], len(sifted.facts), sifted.reason[:120])
+    return {"related_posts": related, "new_facts": sifted.facts}
 
 
 async def sorter_node(state: dict) -> dict[str, Any]:
@@ -481,6 +528,9 @@ async def writer_node(state: dict) -> dict[str, Any]:
     persona = persona_loader.load_persona()
     recent_posts = persona_loader.get_recent_posts()
 
+    # Found by the sifter; a rewrite pass loops back here and keeps them.
+    related = state.get("related_posts") or []
+
     used_ai = True
     writer_kwargs = {
         "has_image": has_image,
@@ -489,6 +539,8 @@ async def writer_node(state: dict) -> dict[str, Any]:
         "persona": persona,
         "recent_posts": recent_posts,
         "brief": state.get("story_brief", ""),
+        "related_posts": related,
+        "new_facts": state.get("new_facts") or [],
     }
 
     post_html = await writer.execute(item, **writer_kwargs)
@@ -509,7 +561,7 @@ async def writer_node(state: dict) -> dict[str, Any]:
     if dry:
         # No post row in a rehearsal — the editor runs with record=False.
         return {"post_html": post_html, "used_ai": used_ai, "post_id": 0,
-                "editor_feedback": "", "rewrite_requested": False}
+                "editor_feedback": "", "rewrite_requested": False, "related_posts": related}
 
     if existing_post_id:
         # Rewrite pass: the draft row already exists.
@@ -537,7 +589,7 @@ async def writer_node(state: dict) -> dict[str, Any]:
         db.bump_counter("written")
 
     return {"post_html": post_html, "used_ai": used_ai, "post_id": post_id,
-            "editor_feedback": "", "rewrite_requested": False}
+            "editor_feedback": "", "rewrite_requested": False, "related_posts": related}
 
 
 # =============================================================================
@@ -560,6 +612,7 @@ async def editor_node(state: dict) -> dict[str, Any]:
     # it, that is exactly what the editor sees.
     story = state.get("story")
     parent_post = story.posts[-1] if story and story.posts else ""
+    parent_post = parent_post or "\n\n".join(state.get("related_posts") or [])
 
     decision = await editor.execute(
         item, state["post_html"], state["post_id"],

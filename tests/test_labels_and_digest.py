@@ -155,7 +155,7 @@ def no_story_station_is_in_the_graph():
     assert not {"story_organizer", "gatekeeper"} & nodes, nodes
     edges = {(e.source, e.target) for e in graph.graph.get_graph().edges}
     for pair in [("fetch_article", "labeler"), ("labeler", "sorter"),
-                 ("sorter", "company_limit"), ("company_limit", "writer")]:
+                 ("sorter", "company_limit"), ("company_limit", "sifter"), ("sifter", "writer")]:
         assert pair in edges, (pair, edges)
 
 
@@ -230,6 +230,13 @@ async def the_digest_goes_out_once_a_day_at_its_hour():
     lone = _item("OpenAI thing", company="OpenAI", kind="feature", status="waiting_digest", hours_ago=2)
     old = _item("Ancient thing", company="Google", kind="feature", status="waiting_digest",
                 hours_ago=config.DIGEST_MAX_WAIT_HOURS + 1)
+    # updated_at is when waiting began: the others an hour before today's digest, the old one
+    # longer ago than the wait allows.
+    db.conn().execute("UPDATE items SET updated_at = strftime('%Y-%m-%d ', 'now') || ? WHERE id IN "
+                      f"({','.join('?' * (len(waiting) + 1))})",
+                      (f"{config.DIGEST_HOUR_UTC - 1:02d}:00:00", *waiting, lone))
+    db.conn().execute("UPDATE items SET updated_at = fetched_at WHERE id = ?", (old,))
+    db.conn().commit()
     calls = []
 
     async def fake_run(item, **kwargs):

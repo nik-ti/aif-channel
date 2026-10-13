@@ -33,7 +33,9 @@ graph TD
     sorter -->|below the bar| END
     sorter -->|worth it| company_limit
     company_limit -->|waits for digest| END
-    company_limit -->|under the limit| writer
+    company_limit -->|under the limit| sifter
+    sifter -->|nothing new| END
+    sifter -->|new facts| writer
     writer --> editor
     editor -->|fixable| writer
     editor -->|rejected| END
@@ -52,11 +54,12 @@ dashboard's Graph tab draws the same graph from the running code (LangGraph's ow
 | Step | File | What it decides |
 |---|---|---|
 | dedup | `nodes/dedup.py`, `nodes/judge.py` | Have we seen this? Five checks, cheapest first; the last one is an AI reading both texts. |
-| fetch_article | `nodes/article.py` | Reads the full page *before* anything is judged (feeds often give one line). Plain request, then a stealth browser, then a reader service. Collects pictures, video players and the product link. A feed article whose own page is dated older than `ARTICLE_MAX_AGE_HOURS` (+1 day) is dropped as `skipped_stale`: aggregators like Future Tools date an item when *they* list it. For a tweet it reads up to 3 pages the tweet links to instead (see below). |
+| fetch_article | `nodes/article.py` | Reads the full page *before* anything is judged (feeds often give one line). Plain request, then a stealth browser, then a reader service. Collects pictures, video players and the product link. A feed article whose own page is dated older than `ARTICLE_MAX_AGE_HOURS` (+1 day) is dropped as `skipped_stale`: aggregators like Future Tools date an item when *they* list it. AI/TLDR pages explicitly categorized as `video` are dropped as `irrelevant` before editorial models run. For a tweet it reads up to 3 pages the tweet links to instead (see below). |
 | labeler | `nodes/labeler.py` + `prompts/labeler.md` | What kind is it, and which company made it? Both from fixed lists in `config.py` (`KINDS`, `COMPANIES`); anything off the list is stored as "other". A **roundup** stops here. A cheap model. |
-| sorter | `nodes/sorter.py` + `prompts/rubric.md` | Is it worth posting? Who can use it today, usefulness 1-5, given the labels. 4+ goes on. "Nobody can use it" caps at 3 in code. |
+| sorter | `nodes/sorter.py` + `prompts/rubric.md` | Is it worth posting? Concrete news or a usable resource, with a supporting source quote; code rejects missing/invented evidence. Who can use it and usefulness 1-5. 4+ goes on. "Nobody can use it" caps at 3 in code. |
 | company_limit | `nodes/company_digest.py` | Has this company had its 2 posts today? If so the item waits for the company's evening digest. A 5/5 always goes. |
-| writer | `nodes/writer.py` + `prompts/writer.md`, `prompts/persona.md` | Writes the post in AI Flow's voice. |
+| sifter | `nodes/sifter.py`, `nodes/follow_up.py` + `prompts/sifter.md` | Did the channel already post about this product? If so, which facts in the source are new to the reader (each quote checked in code)? Nothing new, or only trivia: stops here. Items about something new skip it. |
+| writer | `nodes/writer.py` + `prompts/writer.md`, `prompts/persona.md` | Writes the post in AI Flow's voice. A follow-up is written from the sifter's new facts only, never the source. |
 | editor | `nodes/editor.py` + `prompts/editor.md` | Checks the post against its source. Can only reject by naming a rule. A fixable rejection goes back to the writer, up to 3 times. **Fails closed.** |
 | repeat_check | `nodes/echo.py` | Does the finished post tell the reader anything a post of the last 60 days did not? |
 | image / video analyst | `nodes/image_analyst.py`, `nodes/video_analyst.py` + `prompts/*_rubric.md` | Picks the one picture or clip that shows what the post says, or none. |
@@ -72,7 +75,7 @@ dashboard's Graph tab draws the same graph from the running code (LangGraph's ow
 main.py           start the channel, and one-off commands (check, stats, …)
 config.py         every setting: sources, limits, models, rules
 schema.sql        the database layout
-prompts/          rubric, persona, writer, editor, image and video rubrics (plain text)
+prompts/          rubric, labeler, sifter, persona, writer, editor, image and video rubrics (plain text)
 pipeline/         graph.py (the LangGraph wiring) and stations.py (what each step does)
 nodes/            one file per job
 utils/            database, OpenRouter, Telegram, embeddings, logging
@@ -209,9 +212,27 @@ the cases the prompt was tuned on and 13/15 kinds, 15/15 companies on 15 it had 
 day. A third item waits as `waiting_digest`; from `DIGEST_HOUR_UTC` (18:00 UTC) each company's
 waiting items go out once as one post with a "•" line per item (`company_digest.build_source`
 + a COMPANY DIGEST brief to the writer); a single waiting item goes out as a normal post.
+Only items already waiting at the digest hour go in that day's digest; one held later waits
+for the next day's (2026-10-13: before this, an item held at 18:29 went out two minutes later).
 Each company's digest is marked done in the `meta` table *before* it runs, so a crash cannot
-send two. Waiting more than `DIGEST_MAX_WAIT_HOURS` (30) expires an item. 5/5 items and the
-company "other" are never held. A digest has no link line.
+send two. Waiting more than `DIGEST_MAX_WAIT_HOURS` (30, counted from when the wait began)
+expires an item. 5/5 items and the company "other" are never held. A digest has no link line.
+The dashboard shows it apart from the regular posts: "2 of 2 + evening digest".
+
+**Follow-ups and the sifter** (2026-10-13). Muse Wonder went out three times on 2026-10-12, each
+post re-introducing it: asking the writer not to repeat old facts was not enough, so the writer
+no longer sees them. The sifter station first searches the published posts (the reader memory
+`repeat_check` uses, `nodes/follow_up.py`) for ones about the same product: cosine
+`FOLLOW_UP_SIMILARITY` (0.70) or more, at most `FOLLOW_UP_MAX_POSTS` (3); the Muse Wonder pairs
+scored 0.81, unrelated pairs never above 0.64. Found any: the sifter (`SIFTER_MODEL`,
+gemini-2.5-flash) lists up to 6 facts new to the reader, each with a quote, and code keeps only
+quotes found in the source. The writer gets those facts plus the earlier posts and nothing else;
+the editor still reads the full source and the earlier posts. Nothing new, or new but only
+trivia (history, where it was trained, plans with no date): the sifter's `worth_a_post` is false
+and the item is `held` ("nothing new for the reader" / "not worth a new post"). Sifter down or every quote invented: written anyway, with the
+earlier posts as a "do not repeat" list. Memory down: the item waits. A forced item gets the
+earlier posts but is never sifted; digests skip it. A draft that copies 5 words in a row from an
+earlier post is sent back once for new wording.
 
 **Stories are off.** Market One's story mechanism (one thread per running event, a gate that
 posts only when it moved) made no threads on AI Flow and mostly re-filed what dedup caught.
@@ -266,6 +287,35 @@ source that is posted keeps any body sentence built from the source's own words.
 
 **Roundups.** A daily brief listing many items is dropped by the labeler; each item arrives
 on its own. The writer's rule for one that slips through: pick the single most important item.
+
+**Publication needs evidence** (2026-10-12). The existing sorter chooses a basis:
+`news` (a concrete change), `resource` (a usable AI tool, skill, prompt or practical
+guide), or `none`. A resource may have been published years ago; rediscovering it
+is not a launch. The source must contain enough practical detail to explain its use.
+A fresh article or video explaining an old model does not establish a new release.
+
+For a relevant item the sorter returns one verbatim supporting quote. Code rejects
+missing evidence, a missing basis, or a quote absent from the exact headline/text
+shown to the sorter, regardless of score. Only whitespace, HTML entities and Unicode
+composition are normalized; names and numbers must match. Accepted basis and quote
+are saved in the existing sorting reason, visible on the dashboard. The model still
+judges whether that quote establishes a change or useful resource: matching text
+cannot prove meaning or independently verify a source's claims.
+
+This replaces the temporary AI/TLDR video-category filter and applies to every source.
+A real launch with a demo video can pass. Source/page collection freshness checks
+still apply; the age of the skill or product discussed is not itself a sorter rejection.
+Run `python3 tools/check_sorter.py --runs 2` to replay labelled examples using the real
+model without changing channel data or sending posts (API usage is charged).
+
+**Image resolution is checked in code** (2026-10-11). Before the vision model sees a
+picture, Pillow checks the downloaded file: at least `IMAGE_MIN_LONG_SIDE` (800) pixels
+on the longer edge and `IMAGE_MIN_SHORT_SIDE` (400) on the shorter edge. Both landscape
+and portrait count, and a file right at the limits passes. A rejected image is logged
+with its dimensions; the post can still go out as text. The 480×360 DeepSeek thumbnail
+fails this check. These settings can be overridden in `.env`; no enlargement is done.
+Resolution alone does not prove sharpness: the analyst still checks blur, readability
+and relevance.
 
 **Daily limits per kind.** Guides and skill packs are capped at 2 a day, 3 hours
 apart. One that passes but hits the cap waits in the reserve (`nodes/reserve.py`), and the best
@@ -337,4 +387,7 @@ VPS exposes at `/api/dashboard/v1`.
 /usr/bin/python3 tests/test_ai_channel.py
 /usr/bin/python3 tests/test_media.py
 /usr/bin/python3 -m unittest tests/test_reader_memory.py
+/usr/bin/python3 -m unittest discover -s tests -p 'test_image_resolution.py'
+/usr/bin/python3 -m unittest discover -s tests -p 'test_article_content.py'
+/usr/bin/python3 -m unittest discover -s tests -p 'test_sorter_evidence.py'
 ```

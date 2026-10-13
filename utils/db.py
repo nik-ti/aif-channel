@@ -533,7 +533,7 @@ def set_item_sorting(item_id: int, topic: str, importance: int,
     conn().execute(
         "UPDATE items SET topic = ?, importance = ?, market = ?, sorter_reason = ?, "
         "updated_at = ? WHERE id = ?",
-        (topic, importance, market, reason[:300], now_iso(), item_id),
+        (topic, importance, market, reason, now_iso(), item_id),
     )
     conn().commit()
 
@@ -553,10 +553,15 @@ def company_posts_today(company: str) -> int:
         (company,)).fetchone()["n"]
 
 
-def waiting_for_digest() -> list[sqlite3.Row]:
-    """Items held back by the company limit, oldest first."""
+def waiting_for_digest(since_before: str) -> list[sqlite3.Row]:
+    """Items held back by the company limit before since_before (UTC), oldest first.
+
+    updated_at is when the item started waiting: nothing touches a waiting item until it
+    leaves that status.
+    """
     return conn().execute(
-        "SELECT * FROM items WHERE status = 'waiting_digest' ORDER BY id").fetchall()
+        "SELECT * FROM items WHERE status = 'waiting_digest' AND updated_at < ? ORDER BY id",
+        (since_before,)).fetchall()
 
 
 def expire_digest_waits(max_hours: int) -> int:
@@ -565,7 +570,7 @@ def expire_digest_waits(max_hours: int) -> int:
         f"""UPDATE items SET status = 'expired', updated_at = ?,
                   status_reason = 'waited over {int(max_hours)} hours for a company digest'
              WHERE status = 'waiting_digest'
-               AND fetched_at < datetime('now', '-{int(max_hours)} hours')""",
+               AND updated_at < datetime('now', '-{int(max_hours)} hours')""",
         (now_iso(),))
     conn().commit()
     return cursor.rowcount

@@ -29,6 +29,9 @@ redis>=8.0
 beautifulsoup4>=4.12
 lxml>=5.0
 
+# Checking the actual dimensions and readability of downloaded image files.
+Pillow>=11.0
+
 # Fast fuzzy text matching. Powers duplicate check number 3 — spotting that
 # "Fed holds rates steady" and "Fed leaves rates unchanged" are one story.
 rapidfuzz>=3.0

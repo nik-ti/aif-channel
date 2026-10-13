@@ -11,7 +11,7 @@ import re
 from datetime import datetime, timezone
 
 import config
-from nodes import article
+from nodes import article, follow_up
 from utils import logger as log_setup, openrouter
 
 log = log_setup.get("writer")
@@ -317,10 +317,14 @@ def is_brief(item) -> bool:
 
 async def execute(item, has_image: bool = False, editor_feedback: str = "",
                   recent_posts: list[str] | None = None, persona: str = "",
-                  brief: str = "", previous_draft: str = "") -> str:
+                  brief: str = "", previous_draft: str = "",
+                  related_posts: list[str] | None = None,
+                  new_facts: list[dict] | None = None) -> str:
     """Write post; return Telegram HTML or "" (never "publish nothing"). editor_feedback:
     every rewrite request so far; previous_draft: the rejected draft, edited not redone;
-    recent_posts: channel history; brief: what's new/known; persona: prompts/persona.md.
+    recent_posts: channel history; brief: what's new/known; persona: prompts/persona.md;
+    related_posts: published posts about the same product, so this one is a follow-up;
+    new_facts: the sifter's [{fact, quote}], which then replace the source text and headline.
     """
 
     title = item["title"] or ""
@@ -333,6 +337,18 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
         f"Headline: {title}\n\n"
         f"Text:\n{body}"
     )
+    # A follow-up never sees the source itself: what it does not see, it cannot repeat.
+    if new_facts:
+        facts = "\n".join(f"- {f['fact']} (source: \"{f['quote']}\")" for f in new_facts)
+        user_message = (
+            f"Source: {item['source_name']} ({origin})\n"
+            f"Topic: {item['topic'] or item['topic_hint']}\n\n"
+            f"Text (only the parts of the source that are new to the reader):\n{facts}"
+        )
+
+    # Right after the source, not at the end of the long system prompt, where it was ignored.
+    if related_posts:
+        user_message += "\n\n" + follow_up.writer_section(related_posts)
 
     # Writing from scratch on a rewrite fixed the named fault and added a new one
     # ("free", "just launched"): 13 of 17 final rejections, 2026-10-04..07, were round 2.
@@ -353,7 +369,7 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
     # invented "organized crime rings".
     thin = has_thin_source(item)
 
-    if thin:
+    if thin or (new_facts and len(new_facts) <= 2):
         length_rule = LENGTH_RULE_BRIEF
     elif has_image:
         length_rule = LENGTH_RULE_IMAGE
@@ -419,6 +435,25 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
         except Exception as error:  # noqa: BLE001 - the first draft still stands
             log.info("Second opening for item %s failed: %s", item["id"], error)
 
+    # The follow-up section asks for fresh wording; a copied phrase gets one more try.
+    copied = follow_up.shared_phrases(post, related_posts or [])
+    if copied:
+        log.info("Item %s repeats an earlier post's words (%s) — asking for new wording",
+                 item["id"], " | ".join(copied)[:120])
+        try:
+            again = _clean(await openrouter.chat_text(
+                model=MODEL, system=system_prompt,
+                user=user_message + (
+                    "\n\n---\nYour draft reuses these exact phrases from an earlier post: "
+                    + "; ".join(f'"{c}"' for c in copied)
+                    + ". Say the same thing in your own words, keep every fact. "
+                    f"Your previous draft:\n{post}"),
+                temperature=TEMPERATURE, max_tokens=MAX_TOKENS))
+            if again and len(follow_up.shared_phrases(again, related_posts)) < len(copied):
+                post = again
+        except Exception as error:  # noqa: BLE001 - the first draft still stands
+            log.info("Rewording for item %s failed: %s", item["id"], error)
+
     # Prompt not enough; guarantee it.
     before = post
     post, mark = enforce_mark(post)
@@ -427,7 +462,7 @@ async def execute(item, has_image: bool = False, editor_feedback: str = "",
 
     # One-fact source = one-line post (prompt says so, model adds body anyway, editor
     # waves it). Guaranteed, not requested.
-    if is_one_line_source(item) and "\n" in post.strip():
+    if not new_facts and is_one_line_source(item) and "\n" in post.strip():
         lost = lost_by_cut(item, post)
         if lost:
             log.info("Item %s has a one-line source, but the body carries source facts "

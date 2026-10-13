@@ -1,7 +1,7 @@
 """One company, at most COMPANY_DAILY_LIMIT posts a UTC day; the rest go out together in the evening.
 
 The company_limit station holds a company's extra items as 'waiting_digest'. Once a day,
-from DIGEST_HOUR_UTC, each company's waiting items become ONE post with a bullet per item
+from DIGEST_HOUR_UTC, each company's items that were already waiting become ONE post with a bullet per item
 (a lone waiting item is posted normally). A 5/5 item and the "other" company are never held.
 All of it is counting labels in code; no model decides the grouping.
 """
@@ -81,8 +81,11 @@ async def run_due(now: datetime | None = None) -> dict[str, int]:
     if now.hour < config.DIGEST_HOUR_UTC:
         return {}
 
+    # Only items already waiting at the digest hour: one held at 18:29 is released
+    # tomorrow, not two minutes later as a third post today.
+    cutoff = now.replace(hour=config.DIGEST_HOUR_UTC, minute=0, second=0, microsecond=0)
     by_company: dict[str, list] = {}
-    for row in db.waiting_for_digest():
+    for row in db.waiting_for_digest(cutoff.strftime("%Y-%m-%d %H:%M:%S")):
         by_company.setdefault(row["company"] or "other", []).append(row)
 
     outcomes: dict[str, int] = {}

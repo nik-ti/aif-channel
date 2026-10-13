@@ -110,7 +110,7 @@ async def the_sorter_asks_who_can_use_it_and_none_caps_at_three():
 
     async def fake(**kwargs):
         return {"relevant": True, "topic": config.VALID_TOPICS[0],
-                config.SORTER_AXIS: "none", "importance": 5, "reason": "a paper"}
+                config.SORTER_AXIS: "none", "importance": 5, "reason": "a paper", "basis": "news", "evidence": "A paper"}
     real, openrouter.chat_json = openrouter.chat_json, fake
     try:
         item = {"id": 1, "title": "A paper", "body": "", "topic_hint": "", "origin": "rss",
@@ -809,7 +809,8 @@ async def a_source_too_thin_to_write_from_is_capped_below_the_bar():
 
     async def fake(**kwargs):
         return {"relevant": True, "topic": "launch", config.SORTER_AXIS: "everyone",
-                "importance": 4, "reason": "new feature"}
+                "importance": 4, "reason": "new feature", "basis": "news",
+                "evidence": "A new Playground experiment is now available in the US."}
     thin = {"id": 1, "title": "A new Playground experiment is now available in the US.", "origin": "x",
             "source_name": "testingcatalog", "topic_hint": "launch", "article_text": "",
             "body": "POST by @testingcatalog on X (https://x.com/t/status/1):\nGOOGLE: A new Playground "

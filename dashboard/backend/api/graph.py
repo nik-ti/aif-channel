@@ -18,12 +18,13 @@ _STATION_INFO: dict[str, tuple[str, str]] = {
     "dedup": ("Dedup", "Have we already covered this? Five checks, ending in an LLM that reads both texts."),
     "fetch_article": ("Fetch article", "Reads the full page first (plain, then browser, then reader service), finds the product link, pictures and video players. A feed article whose page is dated too long ago is dropped."),
     "labeler": ("Labeler", "Picks the kind (new model, feature, tool, skill, guide...) and the company that made it, from fixed lists. A roundup is dropped here."),
-    "sorter": ("Sorter", "Can a regular person use this today? Scores usefulness 1-5; the bar is 4. 'Nobody can use it' caps at 3."),
+    "sorter": ("Sorter", "Requires concrete news or a usable resource and a supporting source quote. Checks quote presence in code. Scores usefulness 1-5; the bar is 4. 'Nobody can use it' caps at 3."),
     "company_limit": ("Company limit", "A company's 3rd post of the day waits for its evening digest. A 5/5 always goes."),
+    "sifter": ("Sifter", "Finds earlier posts about the same product. If there are any, keeps only the source's facts the reader does not have yet (each quote checked in code); nothing new (or only trivia) and the item stops here."),
     "writer": ("Writer", "Bold first line, • lines, bold key words, link last. No emoji. Simple enough for a 12-year-old."),
     "editor": ("Editor", "Checks the post against the source, including JARGON. Sees its own earlier reason on the rewrite."),
     "repeat_check": ("Repeat check", "The exit. Refuses a finished post that tells the reader what a recent post already did."),
-    "image_analyst": ("Image analyst", "Chooses the one picture that goes with the post, or none. A failure means no picture."),
+    "image_analyst": ("Image analyst", "Checks image resolution in code (800px long edge, 400px short edge by default), then chooses the one picture that goes with the post, or none."),
     "video_analyst": ("Video analyst", "Downloads clips and video players (yt-dlp) and keeps one that shows what the post says. Over 2 minutes is refused unseen."),
     "publish": ("Publish", "Fills in the product link, adds the 'AI Flow | Subscribe' signature, sends with the chosen media."),
 }
@@ -80,6 +81,13 @@ def _known_node_health(node_id: str) -> dict | None:
     if node_id == "company_limit":
         return {
             "last_invocation": _max_value("items", "updated_at", "WHERE status = 'waiting_digest'"),
+            "error_count": 0,
+        }
+    if node_id == "sifter":
+        return {
+            "last_invocation": _max_value("items", "updated_at",
+                                          "WHERE status_reason LIKE 'nothing new for the reader%' "
+                                          "OR status_reason LIKE 'not worth a new post%'"),
             "error_count": 0,
         }
     if node_id == "writer":
