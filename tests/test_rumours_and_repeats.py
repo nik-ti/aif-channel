@@ -195,6 +195,63 @@ class ALinkToTheThingItself(unittest.IsolatedAsyncioTestCase):
     def test_the_link_finder_takes_an_open_source_projects_code_page(self):
         self.assertIn("GitHub", link_finder.PROMPT)
 
+    async def find(self, answers, results, pages=None):
+        """link_finder.find with each search answering from `answers` and returning `results`."""
+        replies, asked = iter(answers), []
+
+        async def search(**kwargs):
+            asked.append(kwargs["user"])
+            return next(replies), results.pop(0)
+
+        async def loads(url):
+            return url, (pages or {}).get(url, "")
+        item_id = _item("Fireship — Every app on Earth is now open source",
+                        url="https://ai-tldr.dev/releases/fireship-every-app-open-source-oct12/")
+        with patch.object(openrouter, "web_search", search), patch.object(link_finder, "_loads", loads):
+            return await link_finder.find(dict(db.get_item(item_id)), "<b>Seven Adobe apps</b>"), asked
+
+    async def test_news_in_the_results_leads_to_a_second_search_on_the_name(self):
+        news = "https://devops.com/open-source-final-has-its-take-on-the-adobe-creative-suite"
+        found, asked = await self.find(
+            [f"NAME: ArtCraft\nURL: {news}", "https://getartcraft.app/"],
+            [[news], ["https://github.com/storytold/artcraft", "https://getartcraft.app/"]])
+        self.assertEqual(found, "https://getartcraft.app/")
+        self.assertEqual(len(asked), 2)
+        self.assertIn("ArtCraft", asked[1])
+
+    async def test_an_address_the_search_never_returned_is_refused(self):
+        found, _ = await self.find(
+            ["NAME: ArtCraft\nURL: NONE", "https://github.com/ArtCraft-Studio"],
+            [["https://xda-developers.com/x"], ["https://github.com/storytold/artcraft"]])
+        self.assertEqual(found, "")
+
+    async def test_a_referral_code_is_dropped_and_a_home_page_is_not_left_for_its_app(self):
+        home = '<a href="https://app.getartcraft.com/create-image">Launch App</a>'
+        found, _ = await self.find(
+            ["NAME: ArtCraft\nURL: https://getartcraft.com/?r=rbohan9388"],
+            [["https://getartcraft.com/?r=rbohan9388"]], pages={"https://getartcraft.com/": home})
+        self.assertEqual(found, "https://getartcraft.com/")
+
+    async def test_an_old_date_on_a_product_page_does_not_matter(self):
+        dated = '<meta property="article:published_time" content="2026-06-25"/>'
+        found, _ = await self.find(
+            ["NAME: Atomic Agent Desktop\nURL: https://atomicagent.io/download/"],
+            [["https://atomicagent.io/download/"]], pages={"https://atomicagent.io/download/": dated})
+        self.assertEqual(found, "https://atomicagent.io/download/")
+
+    async def test_an_announcement_gives_its_try_link(self):
+        page = '<a href="https://experience.odyssey.systems"><span>Explore</span></a>'
+        url = "https://odyssey.systems/introducing-odyssey-3"
+        found, _ = await self.find([f"NAME: Odyssey-3\nURL: {url}"], [[url]], pages={url: page})
+        self.assertEqual(found, "https://experience.odyssey.systems")
+
+    def test_a_headline_address_is_an_article(self):
+        from nodes import article
+        self.assertTrue(article.is_article_url(
+            "https://devops.com/open-source-final-has-its-take-on-the-adobe-creative-suite"))
+        self.assertFalse(article.is_article_url("https://getartcraft.com/apps"))
+        self.assertFalse(article.is_article_url("https://github.com/someone/a-very-long-repo-name-here"))
+
 
 class TheSourceIsNotTheStory(unittest.TestCase):
     """"The video claims...", "A user report says...": the post tells the news, not where it read it."""

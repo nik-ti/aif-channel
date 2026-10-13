@@ -180,6 +180,33 @@ async def _chat_text_once(
     raise LLMError(f"model {model} kept running out of room (stopped because: {reason})")
 
 
+async def web_search(*, model: str, system: str, user: str,
+                     max_tokens: int = 300) -> tuple[str, list[str]]:
+    """Search the web on `user`, then answer. Returns (the answer, the pages the search found).
+
+    OpenRouter's web plugin runs ONE search built from the user message and shows the model
+    five results; the model cannot search again. The pages come back as url_citation
+    annotations, so a caller can refuse an address the model made up.
+    """
+    payload = {
+        "model": model,
+        "messages": [{"role": "system", "content": system},
+                     {"role": "user", "content": with_now(user)}],
+        "temperature": 0.0,
+        "max_tokens": max_tokens,
+        "plugins": [{"id": "web", "max_results": 5}],
+    }
+    _apply_model_settings(payload)
+    data = await _post(payload)
+    content, reason = _extract(data)
+    if reason in _TRUNCATED:
+        raise LLMError(f"model {model} ran out of room (stopped because: {reason})")
+    message = data["choices"][0].get("message") or {}
+    pages = [note["url_citation"]["url"] for note in message.get("annotations") or []
+             if note.get("type") == "url_citation" and note.get("url_citation", {}).get("url")]
+    return content.strip(), pages
+
+
 # A model that cannot produce the schema is the quietest failure this system
 # has. Every station asking for one fails OPEN, so "no usable answer" and "yes,
 # publish" leave the same trace, and the log line reads the same either way.

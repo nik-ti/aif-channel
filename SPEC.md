@@ -262,3 +262,13 @@ sorter cases x3: 88/90 (yesterday's rubric 77/90: posted Apple TV 3/3 and the De
 approved both source-talk posts 3/3); the misses are older cases whose "this week" went stale.
 Trade-off nikita should know: the FIRST post about a product wins the 12 hours, so a tracker's
 early "now in Agent Studio" can shut out the official launch post with prices an hour later.
+Link finder, same evening (nikita asked whether it would have found the repos): it would not.
+Replayed on item 1133 it answered a devops.com article 3/3, and the code accepted it (the
+article check only knew /blog/, /news/...). OpenRouter's web plugin runs one search on our
+message, and the results were all news. Now: NAME + URL from the first search; with no usable
+page, a second search on the name; only an address among the returned pages (url_citation
+annotations) is used, without its query (a referral code came back); headline-like addresses
+and introducing-... pages are articles; an article gives only its fresh "try it" link; a
+product's own page is used as is. Replayed: 1133 -> getartcraft.com 3/3, 906 -> atomicagent.io/
+download/, 1045 -> dev.meta.ai/models/muse-wonder, 1157 -> kylon.io, 1144 -> its docs, 1135 ->
+none. Tests: 21 in test_rumours_and_repeats, 52 channel (3 link tests updated).

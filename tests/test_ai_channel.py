@@ -847,26 +847,27 @@ def a_post_never_links_to_x():
 async def the_link_finder_keeps_only_a_real_page_off_x():
     from nodes import link_finder
     from utils import openrouter
-    answers = iter(["https://x.com/odysseyml/status/1", "NONE",
-                    "Here it is: https://odyssey.world/experience."])
+    found = ["https://x.com/odysseyml/status/1", "https://odyssey.world/experience"]
+    answers = iter(["NAME: Odyssey-3\nURL: https://x.com/odysseyml/status/1", "NONE",
+                    "NAME: NONE\nURL: NONE",
+                    "NAME: Odyssey-3\nURL: Here it is: https://odyssey.world/experience."])
 
     async def fake(**kwargs):
-        assert kwargs["web_search"]
-        return next(answers)
+        return next(answers), found
 
     async def loads(url):
         return url, ""
-    real = openrouter.chat_text, link_finder._loads
-    openrouter.chat_text, link_finder._loads = fake, loads
+    real = openrouter.web_search, link_finder._loads
+    openrouter.web_search, link_finder._loads = fake, loads
     item_id = db.insert_item(origin="x", source_name="testingcatalog", external_id="odyssey3",
                              url="https://x.com/testingcatalog/status/2", title="Odyssey-3")
     item = dict(db.get_item(item_id))
     try:
-        assert await link_finder.find(item, "<b>Odyssey-3</b>") == ""
-        assert await link_finder.find(item, "<b>Odyssey-3</b>") == ""
+        assert await link_finder.find(item, "<b>Odyssey-3</b>") == ""   # X, then NONE on the name
+        assert await link_finder.find(item, "<b>Odyssey-3</b>") == ""   # not a product
         assert await link_finder.find(item, "<b>Odyssey-3</b>") == "https://odyssey.world/experience"
     finally:
-        openrouter.chat_text, link_finder._loads = real
+        openrouter.web_search, link_finder._loads = real
     assert db.get_item(item_id)["link_url"] == "https://odyssey.world/experience"
     page = ('<a href="https://odyssey.systems/blog">Blog</a> <a href="https://x.com/odysseyml">X</a>'
             '<a href="https://experience.odyssey.systems"><span>Explore</span></a>')
@@ -875,12 +876,13 @@ async def the_link_finder_keeps_only_a_real_page_off_x():
     assert link_finder.demo_link('<a href="https://other.com/try">Try it</a>', "https://odyssey.systems/x") == ""
 
     async def announcement(**kwargs):
-        return "https://openai.com/index/introducing-something/"
-    openrouter.chat_text, link_finder._loads = announcement, loads
+        url = "https://openai.com/index/introducing-something/"
+        return f"NAME: Something\nURL: {url}", [url]
+    openrouter.web_search, link_finder._loads = announcement, loads
     try:
         assert await link_finder.find(item, "<b>Something</b>") == ""
     finally:
-        openrouter.chat_text, link_finder._loads = real
+        openrouter.web_search, link_finder._loads = real
 
 
 
@@ -898,18 +900,19 @@ async def an_old_page_is_neither_news_nor_the_link():
     assert article.is_old(article.page_date(old), 48) and not article.is_old(None, 48)
 
     async def fake(**kwargs):
-        return "https://claude.com/blog/introducing-dynamic-workflows-in-claude-code"
+        url = "https://claude.com/blog/introducing-dynamic-workflows-in-claude-code"
+        return f"NAME: Dynamic workflows\nURL: {url}", [url]
 
     async def loads(url):
         return url, old
-    real = openrouter.chat_text, link_finder._loads
-    openrouter.chat_text, link_finder._loads = fake, loads
+    real = openrouter.web_search, link_finder._loads
+    openrouter.web_search, link_finder._loads = fake, loads
     item_id = db.insert_item(origin="x", source_name="claudedevs", external_id="dynwf",
                              url="https://x.com/ClaudeDevs/status/3", title="Dynamic workflows")
     try:
         assert await link_finder.find(dict(db.get_item(item_id)), "<b>Dynamic workflows</b>") == ""
     finally:
-        openrouter.chat_text, link_finder._loads = real
+        openrouter.web_search, link_finder._loads = real
 
     async def plain(url):
         return "The article text. " * 40, old

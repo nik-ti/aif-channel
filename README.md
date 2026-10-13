@@ -165,14 +165,23 @@ misled the reader (Odyssey-3, 2026-10-08). Two layers:
 - When a tweet has no outside link, `nodes/link_finder.py` runs just before sending (called
   from `publish_node`). **Only a new product someone can try gets a link**; an announcement,
   feature update or research news is just reported, with no link line, because the post
-  already says what the article would (2026-10-09). It sends Gemini one request with
-  OpenRouter's **web plugin** switched on (`web_search=True`): OpenRouter searches the web
-  first (Exa, 5 results, ~2 cents); Gemini answers with the try/use/download page or NONE.
-  Code then checks the page loads, is not on X and is not dated more than
-  `LINK_MAX_AGE_DAYS` (14) ago. If it is an announcement page (`/blog/`, `/news/`,
-  `/index/`…), only a "try it" link on it (`experience.`, `app.`, "Try", "Demo"…) is used;
-  otherwise there is no link. (A fresh Managed Agents tweet once got the May 28 dynamic
-  workflows blog post as its link, 2026-10-09.)
+  already says what the article would (2026-10-09). OpenRouter's **web plugin**
+  (`openrouter.web_search`) runs ONE search on the message and shows Gemini 5 results; the model
+  cannot search again (~2 cents a search). First search: the post and its source; Gemini answers
+  the product's NAME and, if a result is the makers' own page, its URL. Those results are mostly
+  news about the product (for the Adobe clones, devops.com 3 times out of 3, 2026-10-13), so when
+  there is no usable page a second search runs on the name alone ("ArtCraft: official site,
+  download page or GitHub"), which finds the project itself.
+  Code then checks: the address must be **among the pages the search returned** (the model once
+  made up `github.com/ArtCraft-Apps` and picked an unrelated `ArtCraft-Studio`); everything after
+  `?` is dropped (one came with a referral code); it loads and is not on X. An article (`/blog/`,
+  `/news/`, `/index/`, `introducing-…`, or a headline as an address, 5+ words like
+  `open-source-final-has-its-take-on-the-adobe-creative-suite`; code hosts exempt) counts only
+  for the "try it" link on it, and only if not dated more than `LINK_MAX_AGE_DAYS` (14) ago (a
+  fresh Managed Agents tweet once got the May 28 dynamic workflows blog post as its link,
+  2026-10-09). A product's own page is taken as it is, never left for its "Launch App" button
+  (ArtCraft's led to a different product). Replayed on 2026-10-13: Adobe clones → getartcraft.com
+  (3/3), Atomic Agent → its download page, Muse Wonder → dev.meta.ai's page, X subscription → none.
 
 ### Fixing a post that already went out
 

@@ -232,6 +232,8 @@ _ARTICLE_PATH = re.compile(r"/(blog|news|index|research|announcements?|posts?|pr
                            re.IGNORECASE)
 # Where a released thing itself lives when the maker has no product page: its code or model.
 _CODE_HOSTS = ("github.com", "huggingface.co")
+# This many words in an address's last part reads as a headline, not a product page.
+HEADLINE_WORDS = 5
 TRY_HOSTS = ("experience.", "demo.", "try.", "play.", "playground.", "app.", "studio.", "chat.")
 
 
@@ -243,10 +245,22 @@ def site_of(url: str) -> str:
 
 
 def is_article_url(url: str) -> bool:
-    """True for a blog post or news page (blog.x.com, /blog/, /news/...), not a product."""
+    """True for a blog post or news page (blog.x.com, /blog/, /news/...), not a product.
+
+    Also a headline turned into an address: devops.com/open-source-final-has-its-take-on-the-
+    adobe-creative-suite was taken as the Adobe clones' page (2026-10-13). A product page's
+    address is short (/apps, /experience); code hosts are exempt, where repo names run long.
+    """
     from urllib.parse import urlparse
     parsed = urlparse(url)
-    return parsed.netloc.lower().startswith(("blog.", "news.")) or bool(_ARTICLE_PATH.search(parsed.path))
+    host = parsed.netloc.lower()
+    if host.startswith(("blog.", "news.")) or _ARTICLE_PATH.search(parsed.path):
+        return True
+    last = parsed.path.rstrip("/").rsplit("/", 1)[-1]
+    if last.lower().startswith(("introducing-", "announcing-")):
+        return True
+    on_code_host = any(host == site or host.endswith("." + site) for site in _CODE_HOSTS)
+    return not on_code_host and len(re.split(r"[-_]", last)) >= HEADLINE_WORDS
 
 
 def product_link(html: str, page_url: str) -> str:
