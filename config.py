@@ -118,6 +118,10 @@ SOURCES = [
     {"name": "anthropic",  "topic": "launch",
      "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml"},
     {"name": "hf_blog",    "topic": "launch", "url": "https://huggingface.co/blog/feed.xml"},
+    # Google: the developer blog carries the hands-on launches (Gemma, on-device tools, the
+    # Gemini API) and has no dates in its feed; the AI blog has the bigger, slower ones.
+    {"name": "google_dev", "topic": "launch", "url": "https://developers.googleblog.com/feeds/posts/default"},
+    {"name": "google_ai",  "topic": "launch", "url": "https://blog.google/technology/ai/rss/"},
 
     # New tools and releases, already sorted by someone.
     {"name": "ai_tldr",    "topic": "tool",   "url": "https://ai-tldr.dev/feed.xml"},
@@ -138,6 +142,18 @@ SOURCES = [
     # there last time is a new story.
     {"name": "xai", "kind": "page", "topic": "launch", "every_minutes": 60,
      "url": "https://x.ai/news", "link_pattern": r"^https://x\.ai/news/[a-z0-9-]+$"},
+    # Microsoft AI's own models (MAI-*). Its news.microsoft.com feed sits behind a Cloudflare
+    # challenge that fails about every other request; this page needs the browser.
+    {"name": "microsoft_ai", "kind": "page", "topic": "launch", "every_minutes": 60,
+     "url": "https://microsoft.ai/news/", "link_pattern": r"^https://microsoft\.ai/news/[a-z0-9-]+$"},
+    # Kimi (Moonshot AI). moonshot.ai/blog shows no links; kimi.com/blog lists them.
+    {"name": "kimi_blog", "kind": "page", "topic": "launch", "every_minutes": 120,
+     "url": "https://www.kimi.com/blog", "link_pattern": r"^https://www\.kimi\.com/blog/[a-z0-9-]+$"},
+    # Z.ai (GLM). Its blog has no index page and is not in its sitemap, so the release notes
+    # stand in: each new model links its guide page. Blog-only news (GLM-Legal) is missed.
+    {"name": "zai_models", "kind": "page", "topic": "launch", "every_minutes": 120,
+     "url": "https://docs.z.ai/release-notes/new-released",
+     "link_pattern": r"^https://docs\.z\.ai/guides/(?!overview/)[a-z]+/[a-z0-9.-]+$"},
     # Skills climbing the chart, and companies newly publishing official skills.
     {"name": "skills_trending", "kind": "page", "topic": "tool", "every_minutes": 360,
      "url": "https://www.skills.sh/trending",
@@ -155,6 +171,9 @@ X_ACCOUNTS: dict[str, str] = {
     "googledeepmind": "launch",
     "claudeai": "launch",
     "claudedevs": "launch",        # Claude's developer platform and API news
+    "openaidevs": "launch",        # OpenAI Developers: Codex and the API (also service status)
+    "googleaidevs": "launch",      # Google AI Developers: Gemini API, AI Studio, Gemma
+    "microsoftai": "launch",       # Microsoft AI: the MAI models
     "testingcatalog": "launch",    # tracks new AI features as they roll out, and leaks
     "btibor91": "launch",          # Tibor Blaho: AI product changes and leaks
 }

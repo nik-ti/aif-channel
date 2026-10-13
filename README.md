@@ -54,7 +54,7 @@ dashboard's Graph tab draws the same graph from the running code (LangGraph's ow
 | Step | File | What it decides |
 |---|---|---|
 | dedup | `nodes/dedup.py`, `nodes/judge.py` | Have we seen this? Five checks, cheapest first; the last one is an AI reading both texts. |
-| fetch_article | `nodes/article.py` | Reads the full page *before* anything is judged (feeds often give one line). Plain request, then a stealth browser, then a reader service. Collects pictures, video players and the product link. A feed article whose own page is dated older than `ARTICLE_MAX_AGE_HOURS` (+1 day) is dropped as `skipped_stale`: aggregators like Future Tools date an item when *they* list it. AI/TLDR pages explicitly categorized as `video` are dropped as `irrelevant` before editorial models run. For a tweet it reads up to 3 pages the tweet links to instead (see below). |
+| fetch_article | `nodes/article.py` | Reads the full page *before* anything is judged (feeds often give one line). Plain request, then a stealth browser, then a reader service (Jina Reader, free; its failures are logged as warnings). Collects pictures, video players and the product link. A feed article whose own page is dated older than `ARTICLE_MAX_AGE_HOURS` (+1 day) is dropped as `skipped_stale`: aggregators like Future Tools date an item when *they* list it. AI/TLDR pages explicitly categorized as `video` are dropped as `irrelevant` before editorial models run. For a tweet it reads up to 3 pages the tweet links to instead (see below). |
 | labeler | `nodes/labeler.py` + `prompts/labeler.md` | What kind is it, and which company made it? Both from fixed lists in `config.py` (`KINDS`, `COMPANIES`); anything off the list is stored as "other". A **roundup** stops here. A cheap model. |
 | sorter | `nodes/sorter.py` + `prompts/rubric.md` | Is it worth posting? Concrete news or a usable resource, with a supporting source quote; code rejects missing/invented evidence. Who can use it and usefulness 1-5. 4+ goes on. "Nobody can use it" caps at 3 in code. |
 | company_limit | `nodes/company_digest.py` | Has this company had its 2 posts today? If so the item waits for the company's evening digest. A 5/5 always goes. |
@@ -122,7 +122,7 @@ tail -f logs/aif-channel.log                # what is it doing right now?
 python3 main.py stats                       # how is it doing?
 python3 tools/stats.py --declines           # what did the editor reject, and was it right?
 python3 tools/stats.py --dropped            # what did the sorter refuse?
-python3 tools/check_sources.py              # are the feeds alive?
+python3 tools/check_sources.py              # are the feeds and watched pages alive? (read-only)
 python3 tools/check_dedup.py                # is the meaning check actually running?
 ```
 
@@ -131,10 +131,21 @@ then `sudo systemctl restart aif-channel`.
 **Change what gets posted:** edit `prompts/rubric.md`. If you add a topic, also add it to
 `TOPICS` in `config.py` (the model physically cannot answer with a topic the list lacks).
 **Add a feed:** add it to `SOURCES` in `config.py`, run `tools/check_sources.py`, restart.
+A feed's (or page's) first read only records what is already there; from the next read on,
+anything new is queued. So a new source never floods the queue with its back catalogue, even
+one without dates (Google's developer blog). A site with no feed can be watched as a page:
+`"kind": "page"` plus a `link_pattern` its story links match.
+
+**Sources now** (2026-10-13). Feeds: OpenAI, Anthropic, Hugging Face, Google Developers blog,
+Google AI blog, AI/TLDR, Tom Dörr, Future Tools. Pages: x.ai news, Microsoft AI news
+(browser), Kimi blog, Z.ai release notes (each new GLM model), skills.sh. Not covered: Z.ai's
+own blog (no index page; GLM-Legal-style news arrives through aggregators) and news.microsoft.com
+(a Cloudflare challenge on about every other request).
 **Add an X account:** it needs two edits: `X_ACCOUNTS` in `config.py` and the tweet relay's
 `/home/nikita/systems/infra/tweet-relay/accounts.txt` (then `sudo systemctl restart tweet-relay`
 and `aif-channel`). A test fails if the two lists differ. Followed now: openai, googledeepmind,
-claudeai, claudedevs, testingcatalog, btibor91.
+claudeai, claudedevs, openaidevs (Codex and the API), googleaidevs, microsoftai,
+testingcatalog, btibor91.
 
 ### Tweets
 

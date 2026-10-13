@@ -183,9 +183,10 @@ async def _reader(url: str) -> str | None:
                                      follow_redirects=True) as client:
             response = await client.get(config.READER_FALLBACK_URL + url)
         if response.status_code != 200:
+            log.warning("Reader service answered %s for %s", response.status_code, url[:80])
             return None
     except Exception as error:  # noqa: BLE001
-        log.debug("Reader service failed for %s: %s", url[:80], error)
+        log.warning("Reader service failed for %s: %s", url[:80], error)
         return None
     text = response.text
     # Its reply opens with Title / URL Source lines; the article follows this marker.

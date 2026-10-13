@@ -1,10 +1,13 @@
 """Fetch every feed once and report which ones work: status, article count, sample headlines.
-Safe on live system (writes and sends nothing). Run twice; second run shows "unchanged" feeds if free-polling (ETag/Last-Modified) works."""
+Safe on live system: it works on a temporary copy of the database, so a feed it reads still
+counts as never read by the channel (whose first read is recorded, not queued)."""
 
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 import sys
+import tempfile
 from pathlib import Path
 
 # Allow running this file directly (python tools/check_sources.py) by making the
@@ -14,13 +17,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx  # noqa: E402
 
 import config  # noqa: E402
-from nodes import fetch_rss  # noqa: E402
+from nodes import fetch_pages, fetch_rss  # noqa: E402
 from utils import db, logger as log_setup  # noqa: E402
 
 
 async def main() -> None:
     """Fetch every configured feed once and print a readable report."""
     log_setup.setup(level="WARNING", to_file=False)   # keep the output clean
+    copy = Path(tempfile.mkdtemp()) / "check.db"
+    if Path(config.DB_PATH).exists():
+        # SQLite's own backup, so the live database's unsaved WAL pages come along.
+        with sqlite3.connect(config.DB_PATH) as live, sqlite3.connect(copy) as target:
+            live.backup(target)
+    config.DB_PATH = copy
     db.init_db()
     db.sync_sources(config.SOURCES)
 
@@ -33,9 +42,28 @@ async def main() -> None:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         for source in sources:
             row = dict(source)
-            articles, status = await fetch_rss.fetch_one(client, row)
-
             label = f"{row['name']}  [{row['topic']}]"
+
+            if (row["kind"] or "rss") == "page":
+                # A watched page, read the way nodes/fetch_pages.py reads it.
+                config_source = next(s for s in config.SOURCES if s["name"] == row["name"])
+                links, how = await fetch_pages.read_page(config_source)
+                if links:
+                    working += 1
+                    print(f"\n✅ {label}  (page, read via {how})")
+                    print(f"   {row['url']}")
+                    print(f"   {len(links)} story link(s). First ones:")
+                    for url, text in links[:3]:
+                        print(f"      • {fetch_pages._title(url, text)[:60]}  {url}")
+                else:
+                    broken += 1
+                    print(f"\n❌ {label}  (page)")
+                    print(f"   {row['url']}")
+                    print(f"   NO STORY LINKS ({how}): the site may have changed its layout,")
+                    print("   or link_pattern in config.SOURCES no longer matches its links.")
+                continue
+
+            articles, status = await fetch_rss.fetch_one(client, row)
 
             if status == "cached":
                 cached += 1
@@ -82,7 +110,7 @@ async def main() -> None:
     if cached and not working:
         print("   Everything came back 'unchanged', which means you have run this")
         print("   recently. That is the caching working as intended. To force a")
-        print("   full re-read:  sqlite3 data/markets.db \"UPDATE sources SET etag='',")
+        print("   full re-read:  sqlite3 data/aif-channel.db \"UPDATE sources SET etag='',")
         print("   last_modified=''\"\n")
 
 

@@ -239,6 +239,14 @@ async def fetch_one(client: httpx.AsyncClient, source: dict) -> tuple[list[Artic
         db.record_source_failure(name, str(error))
         return [], f"error:{type(error).__name__}"
 
+    # A feed never read before: what it lists now is its back catalogue, remembered but not
+    # queued (as fetch_pages does). An undated feed would otherwise all count as fresh.
+    if not source.get("last_ok_at"):
+        for article in articles:
+            article.baseline = True
+        log.info("Feed '%s' read for the first time: %d entries recorded, not queued",
+                 name, len(articles[:_MAX_PER_FEED]))
+
     # Remember the new tokens for next time.
     db.record_source_success(
         name,

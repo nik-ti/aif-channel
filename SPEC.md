@@ -206,3 +206,26 @@ repeat no old fact. nikita chose (after a dry run turned 1048's leftovers - data
 overhaul - into a 4th post) that the sifter also judges worth_a_post: trivia -> held "not worth
 a new post". Checked 12/12: 1046 after #64 and 1048 after #64-65 post; 1048 after all three and
 the 1053 recap are held. Next: watch the first live follow-ups on the dashboard.
+
+## More lab sources (2026-10-13, nikita approved)
+Asked: Google, Microsoft, OpenAI's developer/Codex account on X, Z.ai, Kimi. Checked first:
+AI Edge Foresight was posted (message 44, 2026-10-08); GLM-Legal arrived (item 1054) and the
+sorter scored it 3/5 (gated beta for law firms). Jina Reader works (10 rescues since 10-07).
+GOAL: feeds google_dev (developers.googleblog.com, undated) and google_ai (blog.google AI);
+pages microsoft_ai (microsoft.ai/news, browser), kimi_blog (kimi.com/blog), zai_models
+(docs.z.ai release notes -> each model's guide page); X @openaidevs, @googleaidevs, @microsoftai
+(relay accounts.txt + config.X_ACCOUNTS, relay restarted). A feed's first successful read is
+recorded, not queued (as pages already do), so an undated feed cannot flood the queue.
+Jina Reader failures are logged as warnings (they were debug-only and invisible).
+Not possible: Z.ai's blog has no index page and is not in its sitemap (nikita: pages only, no
+@Zai_org); news.microsoft.com's AI feed is behind an intermittent Cloudflare challenge.
+FAILURE: 1. A new feed's back catalogue is queued. 2. Existing feeds change behaviour. 3. A
+page pattern takes navigation links (guides/overview, /blog itself). 4. config and the relay's
+accounts.txt disagree. 5. tools/check_sources.py fails on a new source. 6. Existing tests fail.
+Run: /usr/bin/python3 tests/test_new_sources.py; /usr/bin/python3 tools/check_sources.py
+Status: LIVE 2026-10-13 00:50 UTC. Relay follows 9 accounts (rule confirmed by X); first reads
+recorded 15 google_dev, 32 microsoft_ai, 9 kimi_blog, 8 zai_models, queued none (google_ai's 15
+were all over 48h old). tools/check_sources.py: 11 working, 3 unchanged, 0 broken; it now works on
+a temporary DB copy (it used to mark feeds as read in the live DB, which would have defeated the
+first-read rule) and checks pages as pages (x.ai always showed as broken before). Tests: 6 new
+sources, 18 follow-up, 52 channel, 24 media, 11 labels/digest pass; reader-memory 27/28 (known).
